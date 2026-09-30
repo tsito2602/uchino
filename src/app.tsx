@@ -30,6 +30,7 @@ export function App({session}:{session:Session}){
   const [tab,setTab]=useState<Tab>('recipes'),[query,setQuery]=useState(''),[selectedCategories,setSelectedCategories]=useState<string[]>([]),[favorites,setFavorites]=useState(false);
   const [view,setView]=useState<View|null>(null),[closing,setClosing]=useState(false),[formError,setFormError]=useState(''),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
   const [servings,setServings]=useState(2),[checked,setChecked]=useState<string[]>([]),[shopName,setShopName]=useState(''),[shopQuantity,setShopQuantity]=useState('');
+  const shopNameInput=useRef<HTMLInputElement>(null),shoppingInFlight=useRef(false),shoppingComposing=useRef(false);
   const [importMode,setImportMode]=useState<'url'|'image'|'text'>('url'),[ai,setAI]=useState(false),[allowDemo,setAllowDemo]=useState(false),[updateReady,setUpdateReady]=useState(false);
   const recipes=store.rows.filter(r=>r.kind==='recipe').map(r=>r.data as Recipe).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
   const shopping=store.rows.filter(r=>r.kind==='shopping').map(r=>r.data as ShoppingItem).sort((a,b)=>Number(a.done)-Number(b.done)||b.createdAt.localeCompare(a.createdAt));
@@ -37,14 +38,27 @@ export function App({session}:{session:Session}){
   const filtered=recipes.filter(r=>(!favorites||r.favorite)&&(!selectedCategories.length||selectedCategories.includes(r.category))&&(!query.trim()||`${r.title} ${r.ingredients.map(i=>i.name).join(' ')} ${r.memo}`.toLowerCase().includes(query.trim().toLowerCase())));
   useEffect(()=>{void fetch('/api/config').then(r=>r.json() as Promise<{ai:boolean;demoImport:boolean}>).then(v=>{setAI(!!v.ai);setAllowDemo(v.demoImport===true);}).catch(()=>{});},[]);
   useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(''),4500);return()=>clearTimeout(timer);},[notice]);
-  function open(next:View){setFormError('');setClosing(false);setView(next);}
+  function open(next:View){shoppingComposing.current=false;setFormError('');setClosing(false);setView(next);}
   function close(){if(busy)return;setClosing(true);}
   function changeTab(next:Tab){setTab(next);window.scrollTo({top:0,behavior:'instant'});}
   async function run(action:()=>Promise<void>){if(busy)return;setBusy(true);try{await action();}catch(e){setFormError(e instanceof Error?e.message:'処理できませんでした。');}finally{setBusy(false);}}
   const saveRecipe=()=>void run(async()=>{if(view?.kind!=='edit')return;const form=document.getElementById('recipe-form') as HTMLFormElement|null;if(!form?.reportValidity())return;const record=validateRecord('recipe',view.draft);if(!record)throw new Error('材料・手順・人数などの入力内容を確認してください。');await store.save('recipe',record);setNotice('レシピを保存しました');setClosing(true);});
   async function removeRecipe(){const saved=view?.kind==='edit'&&!view.isNew?recipes.find(recipe=>recipe.id===view.draft.id):undefined;if(!saved||busy||!confirm(`「${saved.title}」を削除しますか？`))return;await run(async()=>{await store.save('recipe',saved,true);setClosing(true);setNotice('レシピを削除しました');});}
   async function addIngredients(){if(!detail)return;await run(async()=>{const selected=detail.ingredients.filter((_,i)=>checked.includes(String(i)));for(const ingredient of selected){await store.save('shopping',{id:crypto.randomUUID(),name:ingredient.name,quantity:[scaleQuantity(ingredient.quantity,detail.servings,servings),ingredient.unit].filter(Boolean).join(' '),done:false,createdAt:new Date().toISOString()});}setNotice(`${selected.length}件を買い物メモに追加しました`);setChecked([]);});}
-  async function addShopping(){await run(async()=>{if(!shopName.trim())throw new Error('買うものを入力してください。');await store.save('shopping',{id:crypto.randomUUID(),name:shopName.trim(),quantity:shopQuantity.trim(),done:false,createdAt:new Date().toISOString()});setShopName('');setShopQuantity('');setClosing(true);setNotice('買い物メモに追加しました');});}
+  async function addShopping(keepOpen=false){
+    if(busy||shoppingInFlight.current||shoppingComposing.current)return;
+    const form=document.getElementById('shopping-form') as HTMLFormElement|null;if(!form?.reportValidity())return;
+    if(!shopName.trim()){setFormError('買うものを入力してください。');shopNameInput.current?.focus({preventScroll:true});return;}
+    const name=shopName,quantity=shopQuantity;shoppingInFlight.current=true;setFormError('');
+    // Move focus within the submitting gesture. Awaiting storage first can
+    // dismiss iOS's keyboard when Enter is pressed in the quantity field.
+    if(keepOpen)shopNameInput.current?.focus({preventScroll:true});
+    try{await run(async()=>{
+      await store.save('shopping',{id:crypto.randomUUID(),name:name.trim(),quantity:quantity.trim(),done:false,createdAt:new Date().toISOString()});
+      setShopName(current=>current===name?'':current);setShopQuantity(current=>current===quantity?'':current);
+      if(!keepOpen)setClosing(true);setNotice(`「${name.trim()}」を追加しました`);
+    });}finally{shoppingInFlight.current=false;}
+  }
   async function exportData(){const blob=new Blob([JSON.stringify({app:'uchino',version:1,exportedAt:new Date().toISOString(),records:store.allRows.map(({kind,data,deleted,pending})=>({kind,data,deleted,pending}))},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`uchino-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);}
   const PageIcon=tab==='recipes'?BookOpen:tab==='shopping'?ShoppingBasket:Settings;
   const filterCount=Number(!!query.trim())+Number(selectedCategories.length>0)+Number(favorites);
@@ -78,7 +92,7 @@ export function App({session}:{session:Session}){
       </div>}
       {view.kind==='edit'&&<RecipeEditor value={view.draft} onChange={draft=>setView({...view,draft})} onSubmit={saveRecipe} error={formError}/>}
       {view.kind==='detail'&&detail&&<div className="recipe-detail"><span className="recipe-category">{detail.category}</span><h3>{detail.title}</h3><div className="recipe-meta"><span>{detail.servings}人分</span>{detail.minutes&&<span><Clock size={15}/>{detail.minutes}分</span>}</div><section><div className="section-head"><h3>材料</h3><div className="servings-control" aria-label="人数を変更"><button aria-label="人数を減らす" disabled={servings<=1} onClick={()=>setServings(servings-1)}><Minus size={16}/></button><span>{servings}人分</span><button aria-label="人数を増やす" disabled={servings>=100} onClick={()=>setServings(servings+1)}><Plus size={16}/></button></div></div><div className="ingredient-list">{detail.ingredients.map((ingredient,index)=><label className="ingredient-row" key={index}><input type="checkbox" checked={checked.includes(String(index))} onChange={e=>setChecked(e.target.checked?[...checked,String(index)]:checked.filter(i=>i!==String(index)))}/><span>{ingredient.name}</span><strong>{scaleQuantity(ingredient.quantity,detail.servings,servings)}{ingredient.unit&&` ${ingredient.unit}`}</strong></label>)}</div><p className="subtle">選んだ材料を買い物メモに追加できます。</p></section><section><h3>作り方</h3><ol className="recipe-steps">{detail.steps.map((step,i)=><li key={i}><span>{i+1}</span><p>{step}</p></li>)}</ol></section>{detail.memo&&<section><h3>メモ</h3><p className="recipe-memo">{detail.memo}</p></section>}{detail.sourceUrl&&<a className="source-link" href={detail.sourceUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={16}/>元のレシピを見る</a>}{formError&&<p className="form-error" role="alert">{formError}</p>}</div>}
-      {view.kind==='shopping'&&<form className="form" onSubmit={e=>{e.preventDefault();void addShopping();}}><label className="field">買うもの<input required maxLength={200} placeholder="牛乳" value={shopName} onChange={e=>setShopName(e.target.value)}/></label><label className="field">分量・個数<input maxLength={100} placeholder="1本" value={shopQuantity} onChange={e=>setShopQuantity(e.target.value)}/></label>{formError&&<p className="form-error" role="alert">{formError}</p>}<button className="visually-hidden" tabIndex={-1} type="submit">追加</button></form>}
+      {view.kind==='shopping'&&<form id="shopping-form" className="form" onCompositionStart={()=>{shoppingComposing.current=true;}} onCompositionEnd={()=>{shoppingComposing.current=false;}} onKeyDown={e=>{if(e.key==='Enter'&&(shoppingComposing.current||e.nativeEvent.isComposing||e.nativeEvent.keyCode===229))e.preventDefault();}} onSubmit={e=>{e.preventDefault();void addShopping(true);}}><label className="field">買うもの<input ref={shopNameInput} required maxLength={200} enterKeyHint="enter" aria-describedby="shopping-enter-hint" placeholder="牛乳" value={shopName} onChange={e=>setShopName(e.target.value)}/></label><label className="field">分量・個数<input maxLength={100} enterKeyHint="enter" aria-describedby="shopping-enter-hint" placeholder="1本" value={shopQuantity} onChange={e=>setShopQuantity(e.target.value)}/></label><p id="shopping-enter-hint" className="subtle">Enterで追加して、続けて入力できます。</p>{formError&&<p className="form-error" role="alert">{formError}</p>}<button className="visually-hidden" tabIndex={-1} type="submit">追加</button></form>}
 
     </Panel>}
     </FloatingViewport>
