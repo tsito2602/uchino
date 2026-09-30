@@ -5,6 +5,14 @@
   "compatibility_date": "2026-09-25",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "uchino-staging",
+      "database_id": "9a27aa3f-5592-4d67-bfb6-86f4a417afef",
+      "migrations_dir": "migrations"
+    }
+  ],
   "vars": { "APP_ENV": "staging" },
   "observability": { "enabled": true }
 }
