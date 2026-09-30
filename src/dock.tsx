@@ -1,3 +1,5 @@
+import {StudioActionLabel} from './studio-action-label';
+import {ImportProcessingLabel} from './import-processing-label';
 import {useEffect,useLayoutEffect,useRef,useState,type PointerEvent,type CSSProperties} from 'react';
 import {Search,BookOpen,ShoppingBasket,Settings,Plus,Check,Pencil,Trash2,ClipboardList,type LucideIcon} from 'lucide-react';
 import {FluidDockSurface,type FluidDockHandle} from './kondo-fluid-dock';
@@ -5,7 +7,7 @@ import {DockContent} from './kondo-dock-content';
 import {PanelBackButton} from './panel-back-button';
 import {dockTabAt} from './dock-tab-hit';
 export type Tab='recipes'|'shopping'|'settings';
-export type DockContext={key:string;label:string;back:()=>void;action?:()=>void;actionLabel?:string;icon?:LucideIcon;disabled?:boolean;remove?:()=>void;commit?:boolean;iconOnly?:boolean};
+export type DockContext={key:string;label:string;back:()=>void;action?:()=>void;actionLabel?:string;icon?:LucideIcon;disabled?:boolean;remove?:()=>void;commit?:boolean;iconOnly?:boolean;appearance?:'studio'|'breathing'};
 export const tabs=[{key:'recipes',label:'レシピ',icon:BookOpen},{key:'shopping',label:'買い物',icon:ShoppingBasket},{key:'settings',label:'設定',icon:Settings}] as const;
 export function Dock({tab,onTab,onAdd,addOpen=false,onSearch,filterCount=0,context}:{tab:Tab;onTab:(tab:Tab)=>void;onAdd?:()=>void;addOpen?:boolean;onSearch?:()=>void;filterCount?:number;context?:DockContext}){
   const [preview,setPreview]=useState<number|null>(null);
@@ -48,7 +50,7 @@ export function Dock({tab,onTab,onAdd,addOpen=false,onSearch,filterCount=0,conte
     if(index!==null)onTab(tabs[index].key);
   }
   const Icon=context?.icon??Check;
-  return <div className={`floating-nav-host${context?' context-host':''}`}><div ref={root} className="kondo-floating-dock thumb-dock" data-mode={context?'context':'browse'}><FluidDockSurface root={root} ref={morph} addOpen={addOpen}/><DockContent identity={context?.key??'browse'} mode={context?'context':'browse'}>{context?<nav className="context-dock" aria-label={context.label}><div className="context-island context-back"><PanelBackButton onBack={context.back}/></div>{context.action&&<div className={`context-island context-primary${context.iconOnly?' context-compact':''}`} data-commit={context.commit||undefined}><button aria-label={context.actionLabel} disabled={context.disabled} onClick={context.action}><Icon size={20}/>{!context.iconOnly&&<span>{context.actionLabel}</span>}</button></div>}{context.remove&&<div className="context-island context-delete"><button aria-label="削除" disabled={context.disabled} onClick={context.remove}><Trash2 size={20}/></button></div>}</nav>:<div className="browse-dock no-month has-add"><nav className="safari-dock" data-wide="true" aria-label="メインメニュー" onPointerDown={down} onPointerMove={move} onPointerUp={up}
+  return <div className={`floating-nav-host${context?' context-host':''}`}><div ref={root} className="kondo-floating-dock thumb-dock" data-mode={context?'context':'browse'}><FluidDockSurface root={root} ref={morph} addOpen={addOpen}/><DockContent identity={context?.key??'browse'} mode={context?'context':'browse'}>{context?<nav className="context-dock" aria-label={context.label}><div className="context-island context-back"><PanelBackButton onBack={context.back}/></div>{context.action&&<div className={`context-island context-primary${context.iconOnly?' context-compact':''}`} data-commit={context.commit||undefined}><button className={context.appearance?`${context.appearance}-action`:undefined} aria-label={context.actionLabel} disabled={context.disabled} onClick={context.action}>{context.appearance==='studio'?<StudioActionLabel label={context.actionLabel||''}/>:context.appearance==='breathing'?<ImportProcessingLabel label={context.actionLabel||''}/>:<><Icon size={20}/>{!context.iconOnly&&<span>{context.actionLabel}</span>}</>}</button></div>}{context.remove&&<div className="context-island context-delete"><button aria-label="削除" disabled={context.disabled} onClick={context.remove}><Trash2 size={20}/></button></div>}</nav>:<div className="browse-dock no-month has-add"><nav className="safari-dock" data-wide="true" aria-label="メインメニュー" onPointerDown={down} onPointerMove={move} onPointerUp={up}
         onPointerCancel={event=>{if(pointer.current?.id===event.pointerId)release();}}
         onLostPointerCapture={event=>{if(pointer.current?.id===event.pointerId)release();}}
         onContextMenu={event=>event.preventDefault()}

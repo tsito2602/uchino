@@ -33,3 +33,28 @@ test('same-origin protection, tenant isolation, revisions and retry idempotence'
 test('unconfigured import fails clearly and all API responses are non-cacheable',async()=>{
  const response=await request('/api/import',{method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json',Cookie:auth},body:JSON.stringify({text:'レシピ'})});assert.equal(response.status,422);assert.match((await response.json()).error,/準備中/);assert.equal(response.headers.get('cache-control'),'no-store');
 });
+test('demo import is explicitly staging-only, needs no AI, and writes no data',async()=>{
+ const options={method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json'},body:'{}'};
+ const before=database.prepare('SELECT count(*) AS count FROM user_data').get().count;
+ for(const APP_ENV of [undefined,'production','local','Staging']){
+  const bindings={APP_ENV};
+  assert.equal((await (await request('/api/config',{},bindings)).json()).demoImport,false);
+  assert.equal((await request('/api/import/demo',options,bindings)).status,404);
+ }
+ assert.equal((await (await request('/api/config')).json()).demoImport,true);
+ const response=await request('/api/import/demo',options,{APP_ENV:'staging'});
+ assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');
+ const result=await response.json();assert.equal(result.demo,true);assert.equal(result.recipe.ingredients.length,7);assert.equal(result.issues.length,2);assert.match(result.source.text,/バター ？/);
+ assert.equal(database.prepare('SELECT count(*) AS count FROM user_data').get().count,before);
+ assert.equal((await request('/api/import/demo',{...options,headers:{...options.headers,Origin:'https://elsewhere.test'}})).status,403);
+});
+test('live import streams real phases, preserves uncertainty, and rejects invalid model fields',async()=>{
+ const bindings={...env,AI_GATEWAY_ID:'test',AI_RECIPE_MODEL:'test',AI:{async run(){return {status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify({...recipe,issues:[{field:'servings',reason:'数字がかすれています。'},{field:'ingredients.99.quantity',reason:'does not exist'},{field:'__proto__',reason:'invalid'}]})}]}]};}}};
+ const response=await request('/api/import',{method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json',Accept:'application/x-ndjson',Cookie:auth},body:JSON.stringify({text:'卵 2個 焼く'})},bindings);
+ assert.match(response.headers.get('content-type'),/application\/x-ndjson/);
+ const events=(await response.text()).trim().split('\n').map(line=>JSON.parse(line));
+ assert.deepEqual(events.filter(e=>e.type==='phase').map(e=>e.phase),['reading','sorting','checking']);
+ const result=events.at(-1).result;assert.equal(result.recipe.title,recipe.title);assert.deepEqual(result.issues,[{field:'servings',reason:'数字がかすれています。'}]);
+ const failed=await request('/api/import',{method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json',Accept:'application/x-ndjson',Cookie:auth},body:JSON.stringify({text:'test'})});
+ assert.equal((await failed.text()).trim().split('\n').map(JSON.parse).at(-1).type,'error');
+});

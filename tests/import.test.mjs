@@ -10,3 +10,13 @@ test('JSON-LD recipe sections retain ingredients and source',()=>{
 test('untrusted or private URL destinations cannot be fetched',async()=>{
  for(const url of ['http://localhost/','https://127.0.0.1/','https://example.com/','https://user:pass@www.kurashiru.com/','https://www.kurashiru.com:444/'])await assert.rejects(importUrl(url));
 });
+test('URL import keeps source evidence and flags unsplit quantities for review',async()=>{
+ const previous=globalThis.fetch,phases=[];
+ const schema={'@type':'Recipe',name:'卵焼き',recipeIngredient:['卵 2個'],recipeInstructions:['焼く']};
+ globalThis.fetch=async()=>new Response(`<script type="application/ld+json">${JSON.stringify(schema)}</script>`,{headers:{'content-type':'text/html'}});
+ try{
+  const result=await importUrl('https://www.kurashiru.com/recipes/test',{onPhase:phase=>phases.push(phase)});
+  assert.deepEqual(phases,['sorting','checking']);assert.match(result.source.text,/卵 2個/);
+  assert.ok(result.issues.some(i=>i.field==='servings'));assert.ok(result.issues.some(i=>i.field==='ingredients.0.quantity'));
+ }finally{globalThis.fetch=previous;}
+});

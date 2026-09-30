@@ -1,4 +1,7 @@
 import {Hono} from 'hono';
+import {stream} from 'hono/streaming';
+import {demoImport} from './import-demo';
+import type {ImportEvent} from '../src/import-model';
 import {authRoutes,sessionUser,type AuthBindings,type AuthUser} from './auth';
 import {validateRecord,type Kind} from '../src/domain';
 import {importUrl,importAI,type ImportBindings} from './import';
@@ -17,7 +20,7 @@ app.use('*',async(c,next)=>{
 });
 app.onError((_error,c)=>c.json({error:'処理できませんでした。時間をおいて再試行してください。'},500));
 app.get('/api/health',c=>c.json({ok:true,app:'uchino',environment:c.env.APP_ENV??'local',version:'0.1.0'}));
-app.get('/api/config',c=>c.json({ai:Boolean(c.env.AI&&c.env.AI_GATEWAY_ID&&c.env.AI_RECIPE_MODEL)}));
+app.get('/api/config',c=>c.json({ai:Boolean(c.env.AI&&c.env.AI_GATEWAY_ID&&c.env.AI_RECIPE_MODEL),demoImport:c.env.APP_ENV==='staging'}));
 app.route('/api/auth',authRoutes);
 app.use('/api/data/*',async(c,next)=>{const user=await sessionUser(c);if(!user)return c.json({error:'ログインしてください。'},401);c.set('user',user);if(!c.env.DB)return c.json({error:'同期の準備中です。'},503);await next();});
 app.use('/api/data',async(c,next)=>{const user=await sessionUser(c);if(!user)return c.json({error:'ログインしてください。'},401);c.set('user',user);if(!c.env.DB)return c.json({error:'同期の準備中です。'},503);await next();});
@@ -41,10 +44,21 @@ app.put('/api/data/:kind/:id',async c=>{
   if(input.revision>0){const updated=await db.prepare('UPDATE user_data SET data=?,revision=revision+1,deleted=?,edit_id=?,updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND kind=? AND id=? AND revision=? RETURNING revision').bind(JSON.stringify(data),Number(input.deleted),input.editId,user,kind,data.id,input.revision).first<{revision:number}>();if(updated)return c.json(updated);}
   return c.json({error:'他の端末で変更されています。'},409);
 });
+app.post('/api/import/demo',c=>c.env.APP_ENV==='staging'?c.json(demoImport()):c.json({error:'見つかりません。'},404));
 app.post('/api/import',async c=>{
   if(!await sessionUser(c))return c.json({error:'取り込みにはGoogleログインが必要です。'},401);
   let input;try{input=await body(c.req.raw,8_100_000);}catch{return c.json({error:'ファイルが大きすぎるか、読み取れませんでした。'},400);}
-  try{const recipe=input?.url?await importUrl(String(input.url)):await importAI(c.env,input??{});return c.json({recipe});}catch(error){return c.json({error:error instanceof Error?error.message:'読み取れませんでした。'},422);}
+  const execute=(signal:AbortSignal,onPhase?:(phase:'reading'|'sorting'|'checking')=>void)=>input?.url?importUrl(String(input.url),{signal,onPhase}):importAI(c.env,input??{},{signal,onPhase});
+  if(c.req.header('Accept')==='application/x-ndjson'){
+    c.header('Content-Type','application/x-ndjson; charset=utf-8');
+    return stream(c,async output=>{
+      const controller=new AbortController();output.onAbort(()=>controller.abort());
+      const send=(event:ImportEvent)=>output.writeln(JSON.stringify(event));
+      try{await send({type:'phase',phase:'reading'});const result=await execute(AbortSignal.any([c.req.raw.signal,controller.signal]),phase=>{void send({type:'phase',phase});});await send({type:'result',result});}
+      catch(error){if(!controller.signal.aborted)await send({type:'error',error:error instanceof Error?error.message:'読み取れませんでした。'});}
+    });
+  }
+  try{return c.json(await execute(c.req.raw.signal));}catch(error){return c.json({error:error instanceof Error?error.message:'読み取れませんでした。'},422);}
 });
 app.all('/api/*',c=>c.json({error:'見つかりません。'},404));
 app.get('*',c=>{
