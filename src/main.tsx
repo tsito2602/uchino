@@ -1,0 +1,11 @@
+import {createRoot} from 'react-dom/client';
+import {AuthGate} from './auth';
+import {App} from './app';
+import {registerPWA} from './pwa';
+import './styles.css';
+import './kondo-style.css';
+import './theme.css';
+import './login.css';
+import './uchino.css';
+createRoot(document.getElementById('root')!).render(<AuthGate>{session=><App key={session.user.id} session={session}/>}</AuthGate>);
+void registerPWA().catch(()=>{});

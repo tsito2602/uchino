@@ -1,0 +1,4 @@
+let registration:ServiceWorkerRegistration|undefined;
+export async function registerPWA(){if('serviceWorker' in navigator&&!import.meta.env.DEV){registration=await navigator.serviceWorker.register('/sw.js');}}
+export async function checkUpdate(){if(!registration)return false;await registration.update();if(registration.waiting)return true;if(registration.installing)await new Promise<void>(resolve=>{const worker=registration!.installing!;worker.addEventListener('statechange',()=>{if(worker.state==='installed'||worker.state==='redundant')resolve();});setTimeout(resolve,10000);});return !!registration.waiting;}
+export async function applyUpdate(){if(!registration?.waiting)return false;const reload=()=>location.reload();navigator.serviceWorker.addEventListener('controllerchange',reload,{once:true});registration.waiting.postMessage({type:'SKIP_WAITING'});return true;}
