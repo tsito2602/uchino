@@ -360,7 +360,9 @@ h2 { font-size: 20px; font-weight: 650; letter-spacing: -.025em; line-height: 1.
 .demo-view-banner { width: fit-content; margin-bottom: 20px; padding: 8px 13px; border-radius: 999px; background: var(--soft); color: var(--ink); font-size: 12px; font-weight: 650; }
 .demo-settings .mode-options { margin-top: 17px; }
 .card-panel-backdrop { position: fixed; z-index: calc(60 + var(--panel-depth, 0)); inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; isolation: isolate; }
-.card-panel-scrim { position: absolute; z-index: -1; inset: 0; background: #00000014; pointer-events: none; }
+/* Keep the viewport-sized overlay clear, including the space around the dock.
+   Page depth comes from the main content's scale/blur, not a rectangular tint. */
+.card-panel-scrim { position: absolute; z-index: -1; inset: 0; background: transparent; pointer-events: none; }
 .card-panel-backdrop[data-panel-nested='true'] > .card-panel-scrim { visibility: hidden; }
 /* The fixed glass is outside the sole scrolling viewport. Do not nest a
    scrolling body under a second overflow/clip container. */
