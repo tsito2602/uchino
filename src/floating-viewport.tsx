@@ -2,9 +2,9 @@ import {useLayoutEffect,useRef,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {panelEditor,revealPanelField} from './panel-focus';
 
-// One fixed coordinate system for every panel and its dock. Safari positions
-// fixed layers while panning to a focused field; adding offsetTop again moves
-// the dock a second time. Only the available height belongs in our layout.
+// One coordinate system for every panel and its dock. The overlay lock prevents
+// native iOS focus panning; this layer sizes the panel and reveals its input
+// after the keyboard resizes, without scrolling the page or repositioning the dock.
 export function FloatingViewport({children}:{children:ReactNode}){
   const root=useRef<HTMLDivElement>(null);
   useLayoutEffect(()=>{

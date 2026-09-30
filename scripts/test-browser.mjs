@@ -112,7 +112,8 @@ try{
  const keyboardDock=await page.getByRole('navigation',{name:'操作'}).boundingBox();assert.ok(keyboardDock.y+keyboardDock.height<=470,JSON.stringify(keyboardDock));
  assert.equal(await page.getByLabel('手順1',{exact:true}).inputValue(),'卵を混ぜて焼く。');await page.screenshot({path:'test-results/keyboard-editor.png'});
  await clearSurround();
- // Focus deeply placed text/number fields with different Safari pan offsets.
+ // Exercise viewport notifications with deeply placed text/number fields.
+ // Changing a mock offset does not emulate Safari's native focus pan.
  for(const [label,offsetTop] of [['レシピ名',0],['人数',60],['分量1',160],['単位1',110],['手順1',220]]){
   await page.getByLabel(label,{exact:true}).focus();await page.evaluate(offsetTop=>{window.testViewport.offsetTop=offsetTop;window.testViewport.dispatchEvent(new Event('scroll'));window.testViewport.dispatchEvent(new Event('resize'));},offsetTop);await page.waitForTimeout(100);
   const dockNow=await page.locator('.floating-nav-host').boundingBox(),panelNow=await page.getByRole('dialog').boundingBox();
@@ -143,7 +144,7 @@ try{
  for(const offsetTop of [40,28,50,35]){
   await page.evaluate(offsetTop=>{window.testViewport.offsetTop=offsetTop;window.testViewport.dispatchEvent(new Event('scroll'));},offsetTop);await page.waitForTimeout(60);
   assert.equal(await page.locator('.card-panel').evaluate(el=>el.scrollTop),0,'Viewport scroll does not reveal the input again');
-  const navBounds=await page.getByRole('navigation',{name:'操作'}).boundingBox();assert.ok(Math.abs(navBounds.y-keyboardDock.y)<1,'Focus-driven viewport pan must not be added to fixed dock position');
+  const navBounds=await page.getByRole('navigation',{name:'操作'}).boundingBox();assert.ok(Math.abs(navBounds.y-keyboardDock.y)<1,'Offset notifications do not alter the dock layout');
  }
  await page.getByLabel('手順1',{exact:true}).blur();await page.waitForTimeout(60);
  assert.equal((await page.getByRole('navigation',{name:'操作'}).boundingBox()).y,keyboardDock.y,'Blur does not drop the dock before the keyboard closes');
