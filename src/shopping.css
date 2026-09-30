@@ -1,0 +1,35 @@
+.shopping-entry { overflow: hidden; }
+.shopping-list { overflow-anchor: none; }
+.shopping-list:empty { border-top: 0; }
+.shopping-row { gap: 8px; padding: 0; }
+.shopping-item-toggle { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; min-height: 64px; padding: 16px 2px; border: 0; border-radius: 8px; background: none; color: var(--ink); text-align: left; }
+.shopping-item-copy { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 9px; min-width: 0; }
+.shopping-quantity { color: var(--muted); font-size: 13px; }
+.shopping-item-toggle .shopping-check::before { display: none; }
+.shopping-item-toggle:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.shopping-check { transition: color .16s,background .16s,border-color .16s; }
+.shopping-row.done .shopping-check { border-color: var(--brand); }
+.shopping-row .row-icon { flex: none; width: 44px; min-height: 48px; }
+.shopping-entry-panel #shopping-form { margin-bottom: 22px; }
+.shopping-entry-panel #shopping-form .subtle { margin-top: 0; font-size: 11px; }
+.shopping-entry-panel .shopping-entry-empty { padding: 18px 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.shopping-entry-panel .shopping-list { margin-top: 4px; }
+.shopping-list-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 4px 0 12px; }
+.shopping-list-heading h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.shopping-list-heading span { font-size: 11px; color: var(--muted); }
+.dock-month.shopping-finish button { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; padding: 0 6px; border-radius: 999px; font-size: 12px; line-height: 1.35; }
+.dock-month.shopping-finish button > svg { flex: none; }
+.dock-month.shopping-finish .shopping-finish-label { display: flex; flex-direction: column; align-items: center; gap: 2px; white-space: normal; }
+.shopping-finish-summary { display: grid; gap: 18px; }
+.shopping-finish-summary h3 { margin: 0; font-size: 22px; letter-spacing: -.03em; }
+.shopping-finish-summary p { color: var(--muted); font-size: 13px; line-height: 1.8; }
+.shopping-finish-counts { display: flex; gap: 20px; padding: 18px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.shopping-finish-counts span { display: flex; flex: 1; flex-direction: column; gap: 6px; color: var(--muted); font-size: 12px; }
+.shopping-finish-counts b { font-size: 24px; font-weight: 550; color: var(--ink); }
+.shopping-finish-all { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); color: var(--danger); font-size: 13px; }
+.uchino-toast .shopping-undo { flex: none; padding: 3px 4px; color: var(--ink); font-size: 12px; text-decoration: underline; }
+@media(max-width:350px) {
+  .dock-month.shopping-finish button { font-size: 11px; gap: 0; padding: 0 2px; }
+  .dock-month.shopping-finish button > svg { display: none; }
+}
+@media(prefers-reduced-motion:reduce) { .shopping-check { transition: none; } }

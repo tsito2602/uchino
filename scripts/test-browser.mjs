@@ -94,13 +94,13 @@ try{
  const edit=page.getByRole('navigation',{name:'操作'}).getByRole('button',{name:'編集',exact:true});assert.equal(await edit.innerText(),'');
  await page.waitForTimeout(650);await page.screenshot({path:'test-results/detail-actions.png',fullPage:true});
  await page.locator('.ingredient-row input').check();await page.getByRole('button',{name:'買い物に追加（1）',exact:true}).click();await page.getByRole('navigation',{name:'操作'}).getByRole('button',{name:'戻る',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});
- await page.getByRole('navigation',{name:'メインメニュー'}).getByRole('button',{name:'買い物',exact:true}).click();assert.equal(await page.locator('.shopping-row strong').innerText(),'卵');assert.equal(await page.locator('.shopping-row p').innerText(),'4 個');await page.getByRole('checkbox',{name:'卵を購入済みにする'}).click();
+ await page.getByRole('navigation',{name:'メインメニュー'}).getByRole('button',{name:'買い物',exact:true}).click();assert.equal(await page.locator('.shopping-row strong').innerText(),'卵');assert.equal(await page.locator('.shopping-quantity').innerText(),'4 個');await page.getByRole('checkbox',{name:'卵 4 個を購入済みにする'}).click();
  await page.locator('.dock-add').click();await page.getByLabel('買うもの',{exact:true}).waitFor();await clearSurround();
  const fullShoppingPanel=await page.getByRole('dialog').boundingBox();
  await page.getByLabel('買うもの',{exact:true}).focus();await page.evaluate(()=>{Object.assign(window.testViewport,{height:470,offsetTop:0});window.testViewport.dispatchEvent(new Event('resize'));});await page.waitForTimeout(650);
  assert.ok(await page.locator('.card-panel').evaluate(el=>el.scrollHeight<=el.clientHeight),'Short shopping form fits');
  const shortDock=await page.locator('.floating-nav-host').boundingBox();
- for(const [label,offsetTop] of [['分量・個数',70],['買うもの',10],['分量・個数',110]]){
+ for(const [label,offsetTop] of [['買うもの',70],['買うもの',10],['買うもの',110]]){
   await page.getByLabel(label,{exact:true}).focus();await page.evaluate(offsetTop=>{window.testViewport.offsetTop=offsetTop;window.testViewport.dispatchEvent(new Event('scroll'));window.testViewport.dispatchEvent(new Event('resize'));},offsetTop);await page.waitForTimeout(100);
   assert.equal((await page.locator('.floating-nav-host').boundingBox()).y,shortDock.y,'Shopping fields share one dock position');
   const panel=await page.getByRole('dialog').boundingBox();assert.ok(Math.abs(panel.height-fullShoppingPanel.height)<.01,'Shopping panel keeps its full height behind the dock');
