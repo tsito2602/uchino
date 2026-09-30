@@ -5,10 +5,10 @@ export function panelEditor(focused:Element|null):HTMLElement|null {
   return focused;
 }
 
-export function dockKeyboardInset(layoutHeight:number,viewport:Pick<VisualViewport,'height'|'offsetTop'|'scale'>|null,focused:Element|null) {
+export function dockKeyboardInset(layoutHeight:number,viewport:Pick<VisualViewport,'height'|'offsetTop'|'scale'>|null,focused:Element|null,wasOpen=false) {
   if(!viewport||Math.abs(viewport.scale-1)>.01)return 0;
   const editable=panelEditor(focused);
-  if(!editable||editable.matches('select')||layoutHeight-viewport.height<120)return 0;
+  if((!wasOpen&&(!editable||editable.matches('select')))||layoutHeight-viewport.height<120)return 0;
   return Math.max(0,layoutHeight-viewport.height-Math.max(0,viewport.offsetTop));
 }
 

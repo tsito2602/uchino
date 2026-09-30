@@ -1,4 +1,4 @@
-type ScrollLock = {count:number;overflow:string};
+type ScrollLock = {count:number;restore:()=>void};
 type InertLock = {count:number;inert:boolean};
 const scrollLocks=new WeakMap<HTMLElement,ScrollLock>();
 const inertLocks=new WeakMap<HTMLElement,InertLock>();
@@ -7,7 +7,22 @@ const inertLocks=new WeakMap<HTMLElement,InertLock>();
 // Only the last owner restores the state from before the first overlay opened.
 export function lockOverlayBackground(layers:HTMLElement[],body:HTMLElement=document.body):()=>void {
  let scroll=scrollLocks.get(body);
- if(!scroll){scroll={count:0,overflow:body.style.overflow};scrollLocks.set(body,scroll);}
+ if(!scroll){
+  const root=body.ownerDocument.documentElement;
+  const x=window.scrollX,y=window.scrollY;
+  const properties=['overflow','position','top','left','right','overscroll-behavior'] as const;
+  const saved=properties.map(key=>[key,body.style.getPropertyValue(key)] as const);
+  const rootOverflow=root.style.overflow,rootOverscroll=root.style.overscrollBehavior;
+  // overflow:hidden alone still lets iOS pan the page behind a keyboard.
+  Object.assign(body.style,{overflow:'hidden',position:'fixed',top:`${-y}px`,left:'0px',right:'0px',overscrollBehavior:'none'});
+  root.style.overflow='hidden';root.style.overscrollBehavior='none';
+  scroll={count:0,restore:()=>{
+   saved.forEach(([key,value])=>{if(value)body.style.setProperty(key,value);else body.style.removeProperty(key);});
+   root.style.overflow=rootOverflow;root.style.overscrollBehavior=rootOverscroll;
+   window.scrollTo({left:x,top:y,behavior:'instant'});
+  }};
+  scrollLocks.set(body,scroll);
+ }
  scroll.count++;
  body.style.overflow='hidden';
  const backgrounds=[...new Set(layers)].map(layer=>{
@@ -24,6 +39,6 @@ export function lockOverlayBackground(layers:HTMLElement[],body:HTMLElement=docu
   for(const {layer,state} of backgrounds){
    if(--state.count===0){layer.inert=state.inert;inertLocks.delete(layer);}
   }
-  if(--scroll.count===0){body.style.overflow=scroll.overflow;scrollLocks.delete(body);}
+  if(--scroll.count===0){scroll.restore();scrollLocks.delete(body);}
  };
 }

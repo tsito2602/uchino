@@ -22,10 +22,10 @@ export function FuseAddMenu({options,closing,onClose,onSelect,onExited}:{options
     if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
       const timing:KeyframeAnimationOptions={duration:300,easing:'cubic-bezier(.22, 1, .36, 1)',fill:'both'};
       const veil=node.querySelector<HTMLElement>('.fuse-add-veil')!;
-      animations.current=[veil.animate([{opacity:0,backdropFilter:'blur(0px)'},{opacity:1,backdropFilter:'blur(8px)'}],timing)];
+      animations.current=[veil.animate([{opacity:0},{opacity:1}],timing)];
       const main=layers.find(layer=>layer.matches('main.shell'));
-      // The veil already blurs the page; share the panel's depth motion only.
-      if(main)animations.current.push(animatePanelBackground(main,false));
+      // Blur the page itself, keeping the dock surround fully transparent.
+      if(main)animations.current.push(animatePanelBackground(main));
       const anchor=buttons.at(-1)?.getBoundingClientRect();
       buttons.forEach((button,index)=>{
         const bounds=button.getBoundingClientRect();

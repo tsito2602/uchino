@@ -34,17 +34,22 @@ export function usePanelMorph(panel:RefObject<HTMLElement|null>,origin:PanelOrig
     shell.style.setProperty('--panel-depth',String(currentLayer.parents.length));
     shell.dataset.panelNested=String(!currentLayer.ownsBackground);
     const viewport=window.visualViewport;
-    let revealFrame=0;
+    let revealFrame=0,viewportFrame=0;
+    let lastHeight=-1;
     const reveal=()=>{cancelAnimationFrame(revealFrame);revealFrame=requestAnimationFrame(()=>{if(node.contains(document.activeElement))revealPanelField(document.activeElement);});};
     const updateViewport=()=>{
-      shell.style.setProperty('--panel-viewport-top',`${viewport?.offsetTop||0}px`);
-      shell.style.setProperty('--panel-viewport-height',`${viewport?.height||window.innerHeight}px`);
-      reveal();
+      const height=viewport?.height||window.innerHeight;
+      shell.style.setProperty('--panel-viewport-top',`${Math.max(0,viewport?.offsetTop||0)}px`);
+      shell.style.setProperty('--panel-viewport-height',`${height}px`);
+      // Scrolling is user-controlled. Reveal the editor only when the available
+      // height changes (keyboard/orientation), never on viewport pan events.
+      if(Math.abs(height-lastHeight)>1){lastHeight=height;reveal();}
     };
+    const scheduleViewport=()=>{cancelAnimationFrame(viewportFrame);viewportFrame=requestAnimationFrame(updateViewport);};
     updateViewport();
-    window.addEventListener('resize',updateViewport);
-    viewport?.addEventListener('resize',updateViewport);
-    viewport?.addEventListener('scroll',updateViewport);
+    window.addEventListener('resize',scheduleViewport);
+    viewport?.addEventListener('resize',scheduleViewport);
+    viewport?.addEventListener('scroll',scheduleViewport);
     node.addEventListener('focusin',reveal);
     const main=document.querySelector<HTMLElement>('main.shell');
     const unlockBackground=lockOverlayBackground([...(main?[main]:[]),...currentLayer.parents]);
@@ -58,9 +63,10 @@ export function usePanelMorph(panel:RefObject<HTMLElement|null>,origin:PanelOrig
       if(parentContent)parentContent.style.filter='blur(6px)';
     }
     return()=>{
-      window.removeEventListener('resize',updateViewport);
-      viewport?.removeEventListener('resize',updateViewport);
-      viewport?.removeEventListener('scroll',updateViewport);
+      window.removeEventListener('resize',scheduleViewport);
+      viewport?.removeEventListener('resize',scheduleViewport);
+      viewport?.removeEventListener('scroll',scheduleViewport);
+      cancelAnimationFrame(viewportFrame);
       node.removeEventListener('focusin',reveal);cancelAnimationFrame(revealFrame);
       if(motion.current)cancelPanel(motion.current);
       companions.current.forEach(animation=>animation.cancel());
