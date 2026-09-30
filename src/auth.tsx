@@ -2,7 +2,7 @@ import {useEffect,useState,type ReactNode} from 'react';
 import {Smartphone} from 'lucide-react';
 export type User={id:string;email:string;name:string;avatarUrl?:string};
 export type Session={user:User;local:boolean;logout:()=>Promise<void>};
-export function Brand({small=false}:{small?:boolean}){return <div className={`uchino-brand${small?' small':''}`}><img src="/icon.svg" alt="うと鍋のアイコン"/><span>uchino</span></div>;}
+export function Brand({small=false}:{small?:boolean}){return <div className={`uchino-brand${small?' small':''}`}><img src="/logo.svg" alt="うと鍋のアイコン"/><span>uchino</span></div>;}
 export function AuthGate({children}:{children:(session:Session)=>ReactNode}){
   const [user,setUser]=useState<User|null>(null),[local,setLocal]=useState(false),[loading,setLoading]=useState(true),[configured,setConfigured]=useState(false),[error,setError]=useState('');
   useEffect(()=>{const controller=new AbortController();
