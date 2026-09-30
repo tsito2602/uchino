@@ -37,7 +37,6 @@ html, body, #root { background: var(--canvas); color: var(--ink); }
 .modal { background: var(--panel-tint); }
 .card-panel-glass, .modal { box-shadow: inset 0 1px 0 var(--surface-glow), 0 12px 40px #0003; }
 .modal-head { background: var(--panel-header-tint); }
-:root[data-brand-theme='dark'] .floating-nav-host::before { background: linear-gradient(to bottom, #0000, #00000099); }
 :root[data-brand-theme='dark'] .fuse-add-veil { background: #00000075; }
 :root[data-brand-theme='dark'] .card-panel-scrim { background: #0005; }
 .field input, .field select, .row-content select { background: var(--paper); color: var(--ink); border-color: var(--line); }

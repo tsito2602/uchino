@@ -110,15 +110,6 @@ h2 { font-size: 20px; font-weight: 650; letter-spacing: -.025em; line-height: 1.
     justify-content: center;
     pointer-events: none;
   }
-  .floating-nav-host::before {
-    content: '';
-    position: fixed;
-    z-index: -1;
-    left: 0; right: 0; bottom: 0;
-    height: calc(160px + env(safe-area-inset-bottom));
-    background: linear-gradient(to bottom, #ffffff00 0%, #ffffff0d 22%, #ffffff24 50%, #ffffff5c 78%, #ffffff99 100%);
-    pointer-events: none;
-  }
   .kondo-floating-dock {
     --safari-press-scale: 1.06;
     --safari-press-scale-y: 1.1;
