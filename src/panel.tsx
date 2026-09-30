@@ -1,8 +1,7 @@
 import {useRef,type ReactNode} from 'react';
-import {createPortal} from 'react-dom';
 import type {LucideIcon} from 'lucide-react';
 import {usePanelMorph,type PanelOrigin} from './use-panel-morph';
-export function Panel({title,children,closing,onClose,onExited,origin,icon:Icon,compact=false}:{title:string;children:ReactNode;closing?:boolean;onClose:()=>void;onExited:()=>void;origin?:PanelOrigin;icon?:LucideIcon;compact?:boolean}){
+export function Panel({title,children,closing,onClose,onExited,origin,icon:Icon}:{title:string;children:ReactNode;closing?:boolean;onClose:()=>void;onExited:()=>void;origin?:PanelOrigin;icon?:LucideIcon}){
   const panel=useRef<HTMLElement>(null);usePanelMorph(panel,origin,closing,onExited,onClose);
-  return createPortal(<div className={`card-panel-backdrop${compact?' compact-panel':''}`}><div className="card-panel-scrim" onClick={onClose}/><div className="card-panel-frame"><div className="card-panel-glass"/><section className="card-panel" role="dialog" aria-modal="true" aria-labelledby="panel-title" ref={panel}><header className="card-panel-header"><h2 id="panel-title" tabIndex={-1}>{Icon&&<Icon size={20} aria-hidden="true"/>}{title}</h2></header><div className="card-panel-scroll">{children}</div></section></div></div>,document.body);
+  return <div className="card-panel-backdrop"><div className="card-panel-scrim" onClick={onClose}/><div className="card-panel-frame"><div className="card-panel-glass"/><section className="card-panel" role="dialog" aria-modal="true" aria-labelledby="panel-title" ref={panel}><header className="card-panel-header"><h2 id="panel-title" tabIndex={-1}>{Icon&&<Icon size={20} aria-hidden="true"/>}{title}</h2></header><div className="card-panel-scroll">{children}</div></section></div></div>;
 }

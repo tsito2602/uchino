@@ -3,7 +3,6 @@ import {Search,BookOpen,ShoppingBasket,Settings,Plus,Check,Pencil,Trash2,Clipboa
 import {FluidDockSurface,type FluidDockHandle} from './kondo-fluid-dock';
 import {DockContent} from './kondo-dock-content';
 import {PanelBackButton} from './panel-back-button';
-import {dockKeyboardInset} from './panel-focus';
 import {dockTabAt} from './dock-tab-hit';
 export type Tab='recipes'|'shopping'|'settings';
 export type DockContext={key:string;label:string;back:()=>void;action?:()=>void;actionLabel?:string;icon?:LucideIcon;disabled?:boolean;remove?:()=>void;commit?:boolean;iconOnly?:boolean};
@@ -14,24 +13,6 @@ export function Dock({tab,onTab,onAdd,addOpen=false,onSearch,filterCount=0,conte
   const swallowClick=useRef(false);
   const root=useRef<HTMLDivElement>(null),morph=useRef<FluidDockHandle>(null);
   useLayoutEffect(()=>{morph.current?.measure();},[context,tab,onAdd,onSearch]);
-  useEffect(()=>{
-    const viewport=window.visualViewport;
-    let frame=0,keyboardOpen=false;
-    const update=()=>{
-      const inset=context?dockKeyboardInset(window.innerHeight,viewport,document.activeElement,keyboardOpen):0;
-      keyboardOpen=inset>0;
-      document.documentElement.style.setProperty('--dock-keyboard-inset',`${inset}px`);
-    };
-    const schedule=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(update);};
-    update();
-    viewport?.addEventListener('resize',schedule);viewport?.addEventListener('scroll',schedule);
-    window.addEventListener('resize',schedule);window.addEventListener('focusin',schedule);window.addEventListener('focusout',schedule);
-    return()=>{
-      cancelAnimationFrame(frame);viewport?.removeEventListener('resize',schedule);viewport?.removeEventListener('scroll',schedule);
-      window.removeEventListener('resize',schedule);window.removeEventListener('focusin',schedule);window.removeEventListener('focusout',schedule);
-      document.documentElement.style.removeProperty('--dock-keyboard-inset');
-    };
-  },[!!context]);
   function hit(event:PointerEvent<HTMLElement>) {
     // Scope to the captured nav, excluding calendar controls and outgoing copies.
     const buttons=event.currentTarget.querySelectorAll<HTMLButtonElement>('[data-dock-index]');

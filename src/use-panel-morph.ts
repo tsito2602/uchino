@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import { animatePanel, animatePanelSurroundings, cancelPanel, reversePanel, type PanelOrigin } from './kondo-panel-motion';
-import { revealPanelField } from './panel-focus';
 import { lockOverlayBackground } from './overlay-lock';
 import { registerPanel } from './panel-stack';
 export type { PanelOrigin } from './kondo-panel-motion';
@@ -33,24 +32,6 @@ export function usePanelMorph(panel:RefObject<HTMLElement|null>,origin:PanelOrig
     const parentFilter=parentContent?.style.filter;
     shell.style.setProperty('--panel-depth',String(currentLayer.parents.length));
     shell.dataset.panelNested=String(!currentLayer.ownsBackground);
-    const viewport=window.visualViewport;
-    let revealFrame=0,viewportFrame=0;
-    let lastHeight=-1;
-    const reveal=()=>{cancelAnimationFrame(revealFrame);revealFrame=requestAnimationFrame(()=>{if(node.contains(document.activeElement))revealPanelField(document.activeElement);});};
-    const updateViewport=()=>{
-      const height=viewport?.height||window.innerHeight;
-      shell.style.setProperty('--panel-viewport-top',`${Math.max(0,viewport?.offsetTop||0)}px`);
-      shell.style.setProperty('--panel-viewport-height',`${height}px`);
-      // Scrolling is user-controlled. Reveal the editor only when the available
-      // height changes (keyboard/orientation), never on viewport pan events.
-      if(Math.abs(height-lastHeight)>1){lastHeight=height;reveal();}
-    };
-    const scheduleViewport=()=>{cancelAnimationFrame(viewportFrame);viewportFrame=requestAnimationFrame(updateViewport);};
-    updateViewport();
-    window.addEventListener('resize',scheduleViewport);
-    viewport?.addEventListener('resize',scheduleViewport);
-    viewport?.addEventListener('scroll',scheduleViewport);
-    node.addEventListener('focusin',reveal);
     const main=document.querySelector<HTMLElement>('main.shell');
     const unlockBackground=lockOverlayBackground([...(main?[main]:[]),...currentLayer.parents]);
     const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -63,11 +44,6 @@ export function usePanelMorph(panel:RefObject<HTMLElement|null>,origin:PanelOrig
       if(parentContent)parentContent.style.filter='blur(6px)';
     }
     return()=>{
-      window.removeEventListener('resize',scheduleViewport);
-      viewport?.removeEventListener('resize',scheduleViewport);
-      viewport?.removeEventListener('scroll',scheduleViewport);
-      cancelAnimationFrame(viewportFrame);
-      node.removeEventListener('focusin',reveal);cancelAnimationFrame(revealFrame);
       if(motion.current)cancelPanel(motion.current);
       companions.current.forEach(animation=>animation.cancel());
       if(reduced&&parentContent)parentContent.style.filter=parentFilter||'';
