@@ -21,6 +21,27 @@ try{
   return event.defaultPrevented;
  },{dy,count});
  const clearSurround=async()=>{for(const selector of ['.floating-viewport','.floating-nav-host','.card-panel-backdrop','.card-panel-scrim','.fuse-add-veil'])for(const element of await page.locator(selector).all())assert.equal(await element.evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)',selector);};
+ const glassPaintBoundary=async()=>{
+  const frame=await page.locator('.card-panel-frame').boundingBox(),nav=await page.locator('.floating-nav-host').boundingBox();
+  const clip={x:Math.ceil(frame.x+24),y:Math.ceil(frame.y+frame.height+2),width:Math.floor(frame.width-48),height:Math.floor(nav.y-frame.y-frame.height-4)};
+  const saved=await page.locator('.card-panel-glass').evaluate(el=>{const old=el.style.cssText;el.style.height=`${innerHeight}px`;el.style.bottom='auto';return old;});
+  const theme=await page.locator('html').getAttribute('data-brand-theme');
+  try{
+   // Model an oversized compositor layer after keyboard resize. The pixels
+   // between panel and dock must match having no glass there, in both themes.
+   for(const mode of ['light','dark']){
+    await page.locator('html').evaluate((el,mode)=>el.setAttribute('data-brand-theme',mode),mode);
+    const bounded=await page.screenshot({clip});
+    await page.locator('.card-panel-glass').evaluate(el=>el.style.visibility='hidden');
+    const transparent=await page.screenshot({clip});
+    assert.ok(bounded.equals(transparent),`${mode}: panel glass cannot paint a rectangle behind the dock`);
+    await page.locator('.card-panel-glass').evaluate(el=>el.style.removeProperty('visibility'));
+   }
+  }finally{
+   await page.locator('.card-panel-glass').evaluate((el,css)=>el.style.cssText=css,saved);
+   await page.locator('html').evaluate((el,theme)=>theme===null?el.removeAttribute('data-brand-theme'):el.setAttribute('data-brand-theme',theme),theme);
+  }
+ };
  const dock=page.getByRole('navigation',{name:'メインメニュー'});
  const dockBounds=await dock.boundingBox();assert.ok(dockBounds.width>=140&&dockBounds.width<=150,`Compact dock: ${dockBounds.width}`);assert.equal(dockBounds.height,56);
  // Holding the dock previews a different tab; release commits and leaving cancels.
@@ -112,6 +133,7 @@ try{
  const keyboardDock=await page.getByRole('navigation',{name:'操作'}).boundingBox();assert.ok(keyboardDock.y+keyboardDock.height<=470,JSON.stringify(keyboardDock));
  assert.equal(await page.getByLabel('手順1',{exact:true}).inputValue(),'卵を混ぜて焼く。');await page.screenshot({path:'test-results/keyboard-editor.png'});
  await clearSurround();
+ await glassPaintBoundary();
  // Exercise viewport notifications with deeply placed text/number fields.
  // Changing a mock offset does not emulate Safari's native focus pan.
  for(const [label,offsetTop] of [['レシピ名',0],['人数',60],['分量1',160],['単位1',110],['手順1',220]]){

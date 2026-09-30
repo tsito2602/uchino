@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import { animatePanel, animatePanelSurroundings, cancelPanel, reversePanel, type PanelOrigin } from './kondo-panel-motion';
 import { lockOverlayBackground } from './overlay-lock';
 import { registerPanel } from './panel-stack';
+import { boundPanelGlass } from './panel-glass';
 export type { PanelOrigin } from './kondo-panel-motion';
 
 export const panelOrigin = (element:HTMLElement):PanelOrigin => {
@@ -25,6 +26,7 @@ export function usePanelMorph(panel:RefObject<HTMLElement|null>,origin:PanelOrig
     if(!node)return;
     const currentLayer=registerPanel(node);layer.current=currentLayer;
     const frame=node.parentElement!;
+    const releaseGlass=boundPanelGlass(frame);
     const shell=frame.parentElement!;
     const parentFrames=currentLayer.parents.map(parent=>parent.parentElement!);
     const parent=parentFrames.at(-1);
@@ -45,6 +47,7 @@ export function usePanelMorph(panel:RefObject<HTMLElement|null>,origin:PanelOrig
     }
     return()=>{
       if(motion.current)cancelPanel(motion.current);
+      releaseGlass();
       companions.current.forEach(animation=>animation.cancel());
       if(reduced&&parentContent)parentContent.style.filter=parentFilter||'';
       shell.style.removeProperty('--panel-depth');
