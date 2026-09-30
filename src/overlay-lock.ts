@@ -1,3 +1,4 @@
+import {guardOverlayTouchScroll} from './overlay-touch-scroll';
 type ScrollLock = {count:number;restore:()=>void};
 type InertLock = {count:number;inert:boolean};
 const scrollLocks=new WeakMap<HTMLElement,ScrollLock>();
@@ -16,7 +17,9 @@ export function lockOverlayBackground(layers:HTMLElement[],body:HTMLElement=docu
   // overflow:hidden alone still lets iOS pan the page behind a keyboard.
   Object.assign(body.style,{overflow:'hidden',position:'fixed',top:`${-y}px`,left:'0px',right:'0px',overscrollBehavior:'none'});
   root.style.overflow='hidden';root.style.overscrollBehavior='none';
+  const releaseTouches=guardOverlayTouchScroll(body.ownerDocument);
   scroll={count:0,restore:()=>{
+   releaseTouches();
    saved.forEach(([key,value])=>{if(value)body.style.setProperty(key,value);else body.style.removeProperty(key);});
    root.style.overflow=rootOverflow;root.style.overscrollBehavior=rootOverscroll;
    window.scrollTo({left:x,top:y,behavior:'instant'});

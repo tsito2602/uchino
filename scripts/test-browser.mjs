@@ -11,6 +11,15 @@ try{
  const errors=[];const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1});const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{const native=window.visualViewport;const viewport=new EventTarget();Object.assign(viewport,{height:innerHeight,offsetTop:0,scale:1});native?.addEventListener('resize',()=>{viewport.height=native.height;viewport.offsetTop=native.offsetTop;viewport.dispatchEvent(new Event('resize'));});window.testViewport=viewport;Object.defineProperty(window,'visualViewport',{configurable:true,value:viewport});});
  await page.goto('http://127.0.0.1:8787');await page.getByRole('button',{name:'この端末で使う',exact:true}).click();
+ // Check the cancelable gesture itself: Chromium does not reproduce iOS root panning.
+ const touchMove=async(selector,dy,count=1)=>page.locator(selector).evaluate((target,{dy,count})=>{
+  const touches=Array.from({length:count},(_,identifier)=>new Touch({identifier,target,clientX:150+identifier*40,clientY:220}));
+  target.dispatchEvent(new TouchEvent('touchstart',{touches,targetTouches:touches,changedTouches:touches,bubbles:true,cancelable:true}));
+  const moved=touches.map(t=>new Touch({identifier:t.identifier,target,clientX:t.clientX,clientY:t.clientY+dy}));
+  const event=new TouchEvent('touchmove',{touches:moved,targetTouches:moved,changedTouches:moved,bubbles:true,cancelable:true});
+  target.dispatchEvent(event);target.dispatchEvent(new TouchEvent('touchend',{touches:[],changedTouches:moved,bubbles:true}));
+  return event.defaultPrevented;
+ },{dy,count});
  const clearSurround=async()=>{for(const selector of ['.floating-nav-host','.card-panel-backdrop','.card-panel-scrim','.fuse-add-veil'])for(const element of await page.locator(selector).all())assert.equal(await element.evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)',selector);};
  const dock=page.getByRole('navigation',{name:'メインメニュー'});
  const dockBounds=await dock.boundingBox();assert.ok(dockBounds.width>=140&&dockBounds.width<=150,`Compact dock: ${dockBounds.width}`);assert.equal(dockBounds.height,56);
@@ -65,7 +74,15 @@ try{
  await page.waitForTimeout(650);await page.screenshot({path:'test-results/detail-actions.png',fullPage:true});
  await page.locator('.ingredient-row input').check();await page.getByRole('button',{name:'買い物に追加（1）',exact:true}).click();await page.getByRole('navigation',{name:'操作'}).getByRole('button',{name:'戻る',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});
  await page.getByRole('navigation',{name:'メインメニュー'}).getByRole('button',{name:'買い物',exact:true}).click();assert.equal(await page.locator('.shopping-row strong').innerText(),'卵');assert.equal(await page.locator('.shopping-row p').innerText(),'4 個');await page.getByRole('checkbox',{name:'卵を購入済みにする'}).click();
- await page.locator('.dock-add').click();await page.getByLabel('買うもの',{exact:true}).waitFor();await clearSurround();await page.getByRole('button',{name:'戻る',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});
+ await page.locator('.dock-add').click();await page.getByLabel('買うもの',{exact:true}).waitFor();await clearSurround();
+ await page.getByLabel('買うもの',{exact:true}).focus();await page.evaluate(()=>{Object.assign(window.testViewport,{height:470,offsetTop:0});window.testViewport.dispatchEvent(new Event('resize'));});await page.waitForTimeout(650);
+ assert.ok(await page.locator('.card-panel').evaluate(el=>el.scrollHeight<=el.clientHeight),'Short shopping form fits');
+ const shortDock=await page.locator('.floating-nav-host').boundingBox();
+ for(const dy of [-60,60]){assert.equal(await touchMove('.card-panel-scroll',dy),true,'Short form cannot pan the root viewport');assert.equal(await touchMove('.context-primary button',dy),true,'Dock swipe cannot pan the root viewport');}
+ assert.equal(await touchMove('.card-panel-scroll',40,2),false,'Pinch gestures remain available');
+ assert.equal((await page.locator('.floating-nav-host').boundingBox()).y,shortDock.y);
+ await page.getByRole('button',{name:'キーボードを閉じる',exact:true}).click();await page.evaluate(()=>{Object.assign(window.testViewport,{height:844,offsetTop:0});window.testViewport.dispatchEvent(new Event('resize'));});await page.waitForTimeout(100);
+ await page.getByRole('button',{name:'戻る',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});
  await page.getByRole('navigation',{name:'メインメニュー'}).getByRole('button',{name:'設定',exact:true}).click();assert.equal((await dock.boundingBox()).width,dockBounds.width,'Settings keeps the navigation width');
  assert.equal(await page.getByRole('button',{name:'買い物を追加',exact:true}).count(),0);
  await page.waitForTimeout(650);await page.screenshot({path:'test-results/settings-light.png',fullPage:true});
@@ -89,6 +106,20 @@ try{
  const keyboardDock=await page.getByRole('navigation',{name:'操作'}).boundingBox();assert.ok(keyboardDock.y+keyboardDock.height<=505,JSON.stringify(keyboardDock));
  assert.equal(await page.getByLabel('手順1',{exact:true}).inputValue(),'卵を混ぜて焼く。');await page.screenshot({path:'test-results/keyboard-editor.png'});
  await clearSurround();
+ // Long forms still scroll; only gestures escaping their top/bottom are canceled.
+ await page.locator('.card-panel').evaluate(el=>el.scrollTop=0);
+ assert.equal(await touchMove('.card-panel-scroll',50),true,'Top boundary blocks viewport pan');
+ assert.equal(await touchMove('.card-panel-scroll',-50),false,'Long form can scroll down');
+ const touchSession=await context.newCDPSession(page);
+ await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:200,y:350}]});
+ for(let y=335;y>=200;y-=15){await touchSession.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:200,y}]});await page.waitForTimeout(20);}
+ await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.waitForTimeout(400);
+ assert.ok(await page.locator('.card-panel').evaluate(el=>el.scrollTop>0),'Native touch scroll moves the long form');
+ assert.equal((await page.locator('.floating-nav-host').boundingBox()).y,keyboardDock.y,'Native form scroll keeps the dock stationary');
+ await touchSession.detach();
+ await page.locator('.card-panel').evaluate(el=>el.scrollTop=el.scrollHeight);
+ assert.equal(await touchMove('.card-panel-scroll',-50),true,'Bottom boundary blocks viewport pan');
+ assert.equal(await touchMove('.card-panel-scroll',50),false,'Long form can scroll back up');
  // A user's scroll must not be pulled back to the editor on viewport pan.
  await page.locator('.card-panel').evaluate(el=>el.scrollTop=0);
  for(const offsetTop of [40,28,50,35]){
@@ -105,5 +136,6 @@ try{
  await page.locator('.dock-add').click();await page.getByRole('menuitem',{name:'URLから取り込む'}).click();await page.getByLabel('レシピのURL').waitFor();await clearSurround();
  await page.getByRole('navigation',{name:'操作'}).getByRole('button',{name:'戻る',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});
  assert.equal(await page.locator('main.shell').evaluate(el=>el.inert),false);
+ assert.equal(await touchMove('main.shell',50),false,'Dismissal releases the touch guard');
  assert.deepEqual(errors,[]);console.log('PASS: create, reload persistence, serving scale, shopping, theme, offline PWA and widths 360/390/1280.');
 }catch(error){failed=true;console.error(error);}finally{await browser.close();process.exit(failed?1:0);}

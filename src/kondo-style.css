@@ -368,7 +368,7 @@ h2 { font-size: 20px; font-weight: 650; letter-spacing: -.025em; line-height: 1.
    scrolling body under a second overflow/clip container. */
 .card-panel-frame { position: relative; display: flex; flex-direction: column; width: min(100%, 600px); max-height: min(88dvh, 850px); min-height: 0; border: 0; border-radius: 28px; }
 .card-panel-glass { position: absolute; inset: 0; z-index: 0; border-radius: inherit; box-shadow: inset 0 1px 0 #ffffffbd, 0 12px 40px #0003; background: var(--panel-tint); -webkit-backdrop-filter: blur(32px) saturate(1.05); backdrop-filter: blur(32px) saturate(1.05); pointer-events: none; }
-.card-panel { position: relative; z-index: 1; display: block; width: 100%; max-height: inherit; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scroll-padding-top: 88px; scroll-padding-bottom: 24px; border: 0; border-radius: inherit; background: transparent; }
+.card-panel { position: relative; z-index: 1; display: block; width: 100%; max-height: inherit; min-height: 0; overflow-y: auto; overscroll-behavior: none; scroll-padding-top: 88px; scroll-padding-bottom: 24px; border: 0; border-radius: inherit; background: transparent; }
 .card-panel > .card-panel-header { position: sticky; top: 0; z-index: 2; background: var(--panel-header-tint); -webkit-backdrop-filter: blur(24px) saturate(1.05); backdrop-filter: blur(24px) saturate(1.05); }
 .card-panel-header { flex-shrink: 0; }
 .card-panel-header h2:focus { outline: none; }
@@ -536,7 +536,7 @@ h2 { font-size: 20px; font-weight: 650; letter-spacing: -.025em; line-height: 1.
 /* Fuse-style + menu: labels float above the launch point, without a box. */
 .fuse-add-overlay { position: fixed; inset: 0; z-index: 100; }
 .fuse-add-veil { position: absolute; inset: 0; background: transparent; }
-.fuse-add-options { position: absolute; right: max(var(--dock-side-gap),env(safe-area-inset-right)); bottom: calc(var(--dock-bottom-gap) + var(--dock-safe-bottom) + var(--dock-keyboard-inset,0px)); display: flex; flex-direction: column; gap: 8px; max-width: calc(100vw - 32px); max-height: calc(100dvh - 120px - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; padding-left: 8px; align-items: flex-end; pointer-events: none; }
+.fuse-add-options { position: absolute; right: max(var(--dock-side-gap),env(safe-area-inset-right)); bottom: calc(var(--dock-bottom-gap) + var(--dock-safe-bottom) + var(--dock-keyboard-inset,0px)); display: flex; flex-direction: column; gap: 8px; max-width: calc(100vw - 32px); max-height: calc(100dvh - 120px - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: none; padding-left: 8px; align-items: flex-end; pointer-events: none; }
 .fuse-add-options button { width: max-content; max-width: 100%; pointer-events: auto; display: flex; align-items: center; justify-content: flex-end; gap: 16px; flex-shrink: 0; min-height: var(--dock-height); padding: 0; border: 0; background: none; color: var(--ink); font-size: 16px; font-weight: 550; transform-origin: calc(100% - 28px) center; }
 .fuse-add-options button span { min-width: 0; overflow-wrap: anywhere; text-align: right; }
 .fuse-add-options button svg { flex: 0 0 25px; margin: 0 15.5px; }
