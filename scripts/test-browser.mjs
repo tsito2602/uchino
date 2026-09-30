@@ -37,11 +37,20 @@ try{
  // All recipe filtering is available from the bottom dock and persists on close.
  await page.getByRole('button',{name:'レシピの検索・絞り込み',exact:true}).click();
  await page.getByRole('searchbox',{name:'レシピを検索'}).fill('見つからない料理');
+ assert.equal(await page.getByRole('searchbox',{name:'レシピを検索'}).evaluate(el=>getComputedStyle(el).outlineStyle),'none');
+ assert.equal(await page.locator('.recipe-search').evaluate(el=>getComputedStyle(el).outlineStyle),'solid');
  await page.getByRole('button',{name:'0件を表示',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});assert.equal(await page.locator('.recipe-row').count(),0);
  await page.getByRole('button',{name:'レシピの検索・絞り込み',exact:true}).click();await page.getByRole('button',{name:'条件をリセット',exact:true}).click();
  await page.getByRole('searchbox',{name:'レシピを検索'}).fill('卵');await page.getByRole('button',{name:'お気に入りのみ',exact:true}).click();assert.equal(await page.getByRole('button',{name:'0件を表示',exact:true}).count(),1);
  await page.getByRole('button',{name:'条件をリセット',exact:true}).click();await page.waitForTimeout(650);await page.screenshot({path:'test-results/recipe-filters.png',fullPage:true});
- const filterBounds=await page.getByRole('dialog').boundingBox();assert.ok(filterBounds.y>100&&filterBounds.y+filterBounds.height<(await page.getByRole('navigation',{name:'操作'}).boundingBox()).y,JSON.stringify(filterBounds));
+ const filterBounds=await page.getByRole('dialog').boundingBox();assert.ok(filterBounds.y<=20&&filterBounds.height>700&&filterBounds.y+filterBounds.height<(await page.getByRole('navigation',{name:'操作'}).boundingBox()).y,JSON.stringify(filterBounds));
+ const categoryGroup=page.getByRole('group',{name:'カテゴリ',exact:true});
+ await categoryGroup.getByRole('button',{name:'副菜',exact:true}).click();assert.equal(await page.getByRole('button',{name:'0件を表示',exact:true}).count(),1);
+ await categoryGroup.getByRole('button',{name:'主菜',exact:true}).click();
+ assert.equal(await categoryGroup.getByRole('button',{pressed:true}).count(),2);assert.equal(await page.getByRole('button',{name:'1件を表示',exact:true}).count(),1);
+ await categoryGroup.getByRole('button',{name:'主菜',exact:true}).click();assert.equal(await page.getByRole('button',{name:'0件を表示',exact:true}).count(),1);
+ await categoryGroup.getByRole('button',{name:'副菜',exact:true}).click();assert.equal(await categoryGroup.getByRole('button',{name:'すべて',exact:true}).getAttribute('aria-pressed'),'true');
+ await categoryGroup.getByRole('button',{name:'主菜',exact:true}).click();await categoryGroup.getByRole('button',{name:'副菜',exact:true}).click();await categoryGroup.getByRole('button',{name:'すべて',exact:true}).click();assert.equal(await categoryGroup.getByRole('button',{pressed:true}).count(),1);
  await page.getByRole('button',{name:'1件を表示',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});assert.equal(await page.locator('.recipe-row').count(),1);
  await page.locator('.recipe-open').first().click();await page.getByRole('button',{name:'人数を増やす',exact:true}).click();await page.getByRole('button',{name:'人数を増やす',exact:true}).click();assert.equal((await page.locator('.ingredient-row strong').innerText()).trim(),'4 個');
  assert.equal(await page.getByRole('dialog').getByRole('button',{name:'閉じる',exact:true}).count(),0);
