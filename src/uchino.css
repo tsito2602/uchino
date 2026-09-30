@@ -44,6 +44,10 @@ html{scrollbar-gutter:stable}body{min-width:320px}button,input,textarea,select{f
 
 /* Shared by browsing, search, detail, every editor and import form. */
 .floating-viewport{position:fixed;inset:0 0 auto;height:100dvh;z-index:40;pointer-events:none;background:transparent}
-.floating-viewport[data-keyboard=true]{--dock-safe-bottom:8px;--dock-bottom-gap:0px}
-.floating-viewport>.floating-nav-host{position:absolute;bottom:calc(var(--dock-bottom-gap) + var(--dock-safe-bottom))}
+.floating-viewport[data-keyboard=true]>.floating-nav-host{--dock-safe-bottom:8px;--dock-bottom-gap:0px}
+.floating-viewport>.floating-nav-host{position:absolute;bottom:calc(var(--dock-bottom-gap) + var(--dock-safe-bottom) + var(--dock-keyboard-inset,0px))}
 .floating-viewport>.card-panel-backdrop{position:absolute;top:0;bottom:0;height:100%;pointer-events:auto;background:transparent}
+/* Keep the panel behind the floating controls. Extra scroll space lets even the
+   last field rise above the dock without reducing the panel or its glass. */
+.floating-viewport .card-panel{scroll-padding-bottom:calc(16px + var(--dock-keyboard-inset,0px))}
+.floating-viewport .card-panel-scroll{padding-bottom:calc(32px + var(--dock-keyboard-inset,0px))}

@@ -11,7 +11,9 @@ export function revealPanelField(focused:Element|null) {
   if(!editor||!scroll)return;
   const bounds=scroll.getBoundingClientRect();
   const header=scroll.querySelector<HTMLElement>(':scope > .card-panel-header');
-  const top=Math.max(bounds.top,header?.getBoundingClientRect().bottom??bounds.top)+12,bottom=bounds.bottom-12;
+  const dock=scroll.closest('.floating-viewport')?.querySelector<HTMLElement>('.floating-nav-host');
+  const top=Math.max(bounds.top,header?.getBoundingClientRect().bottom??bounds.top)+12;
+  const bottom=Math.min(bounds.bottom,dock?dock.getBoundingClientRect().top-16:bounds.bottom)-12;
   if(bottom<=top)return;
   const input=editor.getBoundingClientRect();
   const field=editor.closest('.field')?.getBoundingClientRect();

@@ -22,7 +22,7 @@ try{
  const visible=async field=>{
   await page.waitForTimeout(80);
   const bounds=await field.boundingBox(),panel=await page.getByRole('dialog').boundingBox(),dock=await page.locator('.floating-nav-host').boundingBox();
-  assert.ok(bounds.y>=panel.y+50&&bounds.y+bounds.height<=panel.y+panel.height+1,'Only the form scrolls to reveal the editor');
+  assert.ok(bounds.y>=panel.y+50&&bounds.y+bounds.height<=dock.y-16,'Only the form scrolls to reveal the editor above the dock');
   assert.equal(await field.evaluate(el=>el.style.transform),'','The editor returns to its normal position after focus');
   assert.equal(470-dock.y-dock.height,8,'All panels use the same keyboard-to-dock gap');
   for(const selector of ['.floating-viewport','.floating-nav-host','.card-panel-backdrop'])assert.equal(await page.locator(selector).evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
@@ -32,7 +32,8 @@ try{
   await field.evaluate(el=>{window.lastTouchEnd=null;el.addEventListener('touchend',event=>{window.lastTouchEnd={prevented:event.defaultPrevented,focused:document.activeElement===el};},{once:true});});
   await field.tap();
   assert.deepEqual(await page.evaluate(()=>window.lastTouchEnd),{prevented:true,focused:true},'A real tap focuses synchronously and cancels native centering');
-  await keyboard(470);await visible(field);
+  const fullPanel=await page.getByRole('dialog').boundingBox();
+  await keyboard(470);assert.deepEqual(await page.getByRole('dialog').boundingBox(),fullPanel,'The panel keeps its geometry when the keyboard opens');await visible(field);
  };
  await page.locator('main.shell').evaluate(el=>el.style.minHeight='1600px');await page.evaluate(()=>window.scrollTo(0,200));
  await page.getByRole('button',{name:'レシピの検索・絞り込み',exact:true}).click();

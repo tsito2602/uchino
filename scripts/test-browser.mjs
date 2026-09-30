@@ -96,13 +96,14 @@ try{
  await page.locator('.ingredient-row input').check();await page.getByRole('button',{name:'買い物に追加（1）',exact:true}).click();await page.getByRole('navigation',{name:'操作'}).getByRole('button',{name:'戻る',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});
  await page.getByRole('navigation',{name:'メインメニュー'}).getByRole('button',{name:'買い物',exact:true}).click();assert.equal(await page.locator('.shopping-row strong').innerText(),'卵');assert.equal(await page.locator('.shopping-row p').innerText(),'4 個');await page.getByRole('checkbox',{name:'卵を購入済みにする'}).click();
  await page.locator('.dock-add').click();await page.getByLabel('買うもの',{exact:true}).waitFor();await clearSurround();
+ const fullShoppingPanel=await page.getByRole('dialog').boundingBox();
  await page.getByLabel('買うもの',{exact:true}).focus();await page.evaluate(()=>{Object.assign(window.testViewport,{height:470,offsetTop:0});window.testViewport.dispatchEvent(new Event('resize'));});await page.waitForTimeout(650);
  assert.ok(await page.locator('.card-panel').evaluate(el=>el.scrollHeight<=el.clientHeight),'Short shopping form fits');
  const shortDock=await page.locator('.floating-nav-host').boundingBox();
  for(const [label,offsetTop] of [['分量・個数',70],['買うもの',10],['分量・個数',110]]){
   await page.getByLabel(label,{exact:true}).focus();await page.evaluate(offsetTop=>{window.testViewport.offsetTop=offsetTop;window.testViewport.dispatchEvent(new Event('scroll'));window.testViewport.dispatchEvent(new Event('resize'));},offsetTop);await page.waitForTimeout(100);
   assert.equal((await page.locator('.floating-nav-host').boundingBox()).y,shortDock.y,'Shopping fields share one dock position');
-  const panel=await page.getByRole('dialog').boundingBox();assert.ok(Math.abs(shortDock.y-panel.y-panel.height-16)<1,'Panel ends above the dock with a clear gap');
+  const panel=await page.getByRole('dialog').boundingBox();assert.ok(Math.abs(panel.height-fullShoppingPanel.height)<.01,'Shopping panel keeps its full height behind the dock');
  }
 
  for(const dy of [-60,60]){assert.equal(await touchMove('.card-panel-scroll',dy),true,'Short form cannot pan the root viewport');assert.equal(await touchMove('.context-primary button',dy),true,'Dock swipe cannot pan the root viewport');}
@@ -125,27 +126,28 @@ try{
  assert.equal(await remove.evaluate(el=>getComputedStyle(el).color),'rgb(180, 35, 24)');
  const deleteBounds=await remove.boundingBox();const saveBounds=await page.getByRole('navigation',{name:'操作'}).getByRole('button',{name:'保存',exact:true}).boundingBox();assert.ok(deleteBounds.x>saveBounds.x+saveBounds.width);
  await page.screenshot({path:'test-results/edit-actions.png',fullPage:true});
+ const fullRecipePanel=await page.getByRole('dialog').boundingBox();await glassPaintBoundary();
  // Simulate the separate visual viewport used by mobile software keyboards.
  assert.ok(await page.locator('.card-panel input:not([type=checkbox]),.card-panel textarea,.card-panel select').evaluateAll(els=>els.every(el=>parseFloat(getComputedStyle(el).fontSize)>=16)));
  await page.getByLabel('手順1',{exact:true}).focus();await page.evaluate(()=>{Object.assign(window.testViewport,{height:470,offsetTop:35});window.testViewport.dispatchEvent(new Event('resize'));});await page.waitForTimeout(200);
  const fieldBounds=await page.getByLabel('手順1',{exact:true}).boundingBox();const panelBounds=await page.getByRole('dialog').boundingBox();
- assert.ok(panelBounds.y>=0&&panelBounds.y+panelBounds.height<=470,JSON.stringify(panelBounds));assert.ok(fieldBounds.y>=panelBounds.y+50&&fieldBounds.y+fieldBounds.height<=panelBounds.y+panelBounds.height,JSON.stringify({fieldBounds,panelBounds}));
+ assert.deepEqual(panelBounds,fullRecipePanel,'Keyboard opening must not shrink or move the panel');
  const keyboardDock=await page.getByRole('navigation',{name:'操作'}).boundingBox();assert.ok(keyboardDock.y+keyboardDock.height<=470,JSON.stringify(keyboardDock));
+ assert.ok(fieldBounds.y>=panelBounds.y+50&&fieldBounds.y+fieldBounds.height<=keyboardDock.y-16,'The active field is above the floating dock');
  assert.equal(await page.getByLabel('手順1',{exact:true}).inputValue(),'卵を混ぜて焼く。');await page.screenshot({path:'test-results/keyboard-editor.png'});
  await clearSurround();
- await glassPaintBoundary();
  // Exercise viewport notifications with deeply placed text/number fields.
  // Changing a mock offset does not emulate Safari's native focus pan.
- for(const [label,offsetTop] of [['レシピ名',0],['人数',60],['分量1',160],['単位1',110],['手順1',220]]){
+ for(const [label,offsetTop] of [['レシピ名',0],['人数',60],['分量1',160],['単位1',110],['手順1',220],['参照URL',50],['メモ',80]]){
   await page.getByLabel(label,{exact:true}).focus();await page.evaluate(offsetTop=>{window.testViewport.offsetTop=offsetTop;window.testViewport.dispatchEvent(new Event('scroll'));window.testViewport.dispatchEvent(new Event('resize'));},offsetTop);await page.waitForTimeout(100);
   const dockNow=await page.locator('.floating-nav-host').boundingBox(),panelNow=await page.getByRole('dialog').boundingBox();
   assert.equal(dockNow.y,keyboardDock.y,'Every recipe field has the same dock position');
-  assert.ok(Math.abs(dockNow.y-panelNow.y-panelNow.height-16)<1,'Recipe glass stops above the dock');
-  const field=await page.getByLabel(label,{exact:true}).boundingBox();assert.ok(field.y>=panelNow.y+50&&field.y+field.height<=panelNow.y+panelNow.height,'Focused editor stays visible');
+  assert.deepEqual(panelNow,fullRecipePanel,'Recipe panel stays full size behind the keyboard and dock');
+  const field=await page.getByLabel(label,{exact:true}).boundingBox();assert.ok(field.y>=panelNow.y+50&&field.y+field.height<=dockNow.y-16,'Even the last editor can scroll above the floating dock');
  }
  // Text and numeric keyboards may have different heights; the bottom gap is shared.
  await page.evaluate(()=>{window.testViewport.height=510;window.testViewport.dispatchEvent(new Event('resize'));});await page.waitForTimeout(100);
- const resizedDock=await page.locator('.floating-nav-host').boundingBox();assert.equal(510-resizedDock.y-resizedDock.height,8);
+ const resizedDock=await page.locator('.floating-nav-host').boundingBox();assert.equal(510-resizedDock.y-resizedDock.height,8);assert.deepEqual(await page.getByRole('dialog').boundingBox(),fullRecipePanel,'Changing keyboard types leaves the panel size unchanged');
  await page.evaluate(()=>{Object.assign(window.testViewport,{height:470,offsetTop:35});window.testViewport.dispatchEvent(new Event('resize'));});await page.waitForTimeout(100);
  // Long forms still scroll; only gestures escaping their top/bottom are canceled.
  await page.locator('.card-panel').evaluate(el=>el.scrollTop=0);
@@ -168,7 +170,7 @@ try{
   assert.equal(await page.locator('.card-panel').evaluate(el=>el.scrollTop),0,'Viewport scroll does not reveal the input again');
   const navBounds=await page.getByRole('navigation',{name:'操作'}).boundingBox();assert.ok(Math.abs(navBounds.y-keyboardDock.y)<1,'Offset notifications do not alter the dock layout');
  }
- await page.getByLabel('手順1',{exact:true}).blur();await page.waitForTimeout(60);
+ await page.evaluate(()=>document.activeElement?.blur());await page.waitForTimeout(60);
  assert.equal((await page.getByRole('navigation',{name:'操作'}).boundingBox()).y,keyboardDock.y,'Blur does not drop the dock before the keyboard closes');
  await page.evaluate(()=>{Object.assign(window.testViewport,{height:innerHeight,offsetTop:0});window.testViewport.dispatchEvent(new Event('resize'));});await page.waitForTimeout(100);
  page.once('dialog',dialog=>dialog.dismiss());await remove.click();assert.equal(await page.getByLabel('レシピ名',{exact:true}).inputValue(),'保存テストの卵焼き');
