@@ -42,6 +42,7 @@ export function usePanelMorph(panel:RefObject<HTMLElement|null>,origin:PanelOrig
       reveal();
     };
     updateViewport();
+    window.addEventListener('resize',updateViewport);
     viewport?.addEventListener('resize',updateViewport);
     viewport?.addEventListener('scroll',updateViewport);
     node.addEventListener('focusin',reveal);
@@ -57,6 +58,7 @@ export function usePanelMorph(panel:RefObject<HTMLElement|null>,origin:PanelOrig
       if(parentContent)parentContent.style.filter='blur(6px)';
     }
     return()=>{
+      window.removeEventListener('resize',updateViewport);
       viewport?.removeEventListener('resize',updateViewport);
       viewport?.removeEventListener('scroll',updateViewport);
       node.removeEventListener('focusin',reveal);cancelAnimationFrame(revealFrame);

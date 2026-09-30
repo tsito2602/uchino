@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useSyncExternalStore,type CSSProperties } from 'react';
 import { Monitor, Sun, Moon, Paintbrush } from 'lucide-react';
 import { getThemePreference, setThemePreference, THEME_EVENT } from './theme';
 
@@ -11,7 +11,7 @@ export function AppearanceSettings() {
   const preference = useSyncExternalStore(subscribe, getThemePreference);
   return <section className="section settings-section appearance-settings">
     <h2 className="section-heading"><Paintbrush size={20} aria-hidden="true"/>外観</h2>
-    <div className="appearance-control" role="group" aria-label="表示モード">
+    <div className="appearance-control" role="group" aria-label="表示モード" style={{'--appearance-index':['system','light','dark'].indexOf(preference)} as CSSProperties}><span className="appearance-selection" aria-hidden="true"/>
       {([
         { value: 'system', label: '自動', accessibleLabel: '端末に合わせる', icon: Monitor },
         { value: 'light', label: 'ライト', accessibleLabel: 'ライト', icon: Sun },
