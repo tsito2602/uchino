@@ -1,0 +1,42 @@
+// Verify rapid badge feedback, content-only navigation, and the retained detail under editing.
+import {strict as assert} from 'node:assert';
+import {mkdir} from 'node:fs/promises';
+import './preview.mjs';
+const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
+const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}),args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+await mkdir('test-results',{recursive:true});let failed=false;
+try{
+ const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block'}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('http://127.0.0.1:8787');await page.getByRole('button',{name:'この端末で使う',exact:true}).click();await page.getByRole('button',{name:'サンプルを見てみる',exact:true}).click();await page.locator('.recipe-row').nth(2).waitFor();
+ await page.locator('.recipe-open').first().click();await page.waitForTimeout(650);
+ const nav=page.getByRole('navigation',{name:'操作',exact:true}),inputs=page.locator('.ingredient-row input'),badge=page.locator('.context-action-count');
+ await inputs.nth(0).evaluate(el=>el.click());await page.waitForTimeout(90);
+ const first=await badge.evaluate(el=>({start:el.getAnimations()[0]?.startTime,scale:new DOMMatrix(getComputedStyle(el).transform).a}));assert.ok(first.scale>1.2);
+ await inputs.nth(1).evaluate(el=>el.click());await page.waitForTimeout(20);
+ const second=await badge.evaluate(el=>({start:el.getAnimations()[0]?.startTime,scale:new DOMMatrix(getComputedStyle(el).transform).a}));assert.equal(await badge.innerText(),'2');assert.ok(second.start>first.start,'Rapid selection restarts the badge transition');assert.ok(second.scale<first.scale,'Each bump resets the entire badge, including its background');
+ await page.waitForTimeout(150);assert.ok(await badge.evaluate(el=>new DOMMatrix(getComputedStyle(el).transform).a)>1.35);await page.screenshot({path:'test-results/selection-badge-bump.png'});
+ await page.waitForTimeout(550);assert.equal(await badge.evaluate(el=>el.classList.contains('is-bumping')),false);assert.ok(Math.abs(await badge.evaluate(el=>new DOMMatrix(getComputedStyle(el).transform).a)-1)<.01);
+ await inputs.nth(0).evaluate(el=>el.click());await inputs.nth(1).evaluate(el=>el.click());
+ const detail=page.locator('.recipe-detail-panel');await detail.evaluate(el=>{el.scrollTop=260;window.retainedDetail=el;window.retainedScroll=el.scrollTop;});
+ await nav.getByRole('button',{name:'編集',exact:true}).click();const editor=page.locator('.recipe-editor-panel');await editor.waitFor();await page.waitForTimeout(650);
+ assert.equal(await page.getByRole('dialog').count(),1,'Only the child editor is exposed as a modal');assert.equal(await page.locator('.card-panel').count(),2);assert.equal(await detail.evaluate(el=>el===window.retainedDetail&&el.inert),true);assert.equal(await detail.getAttribute('aria-hidden'),'true');assert.equal(await editor.evaluate(el=>el.closest('.card-panel-backdrop').dataset.panelNested),'true');
+ const labels=await page.locator('.card-panel').evaluateAll(els=>els.map(el=>el.getAttribute('aria-labelledby')));assert.equal(new Set(labels).size,2,'Parent and child titles use unique IDs');assert.equal(await detail.evaluate(el=>getComputedStyle(el).filter),'blur(6px)');
+ await page.screenshot({path:'test-results/recipe-child-editor.png'});
+ await page.getByLabel('レシピ名',{exact:true}).fill('取り消す編集');await page.getByLabel('レシピ名',{exact:true}).blur();await page.waitForTimeout(100);await nav.getByRole('button',{name:'戻る',exact:true}).click();await editor.waitFor({state:'detached'});await page.waitForTimeout(650);
+ assert.equal(await detail.evaluate(el=>el===window.retainedDetail&&!el.inert&&el.scrollTop===window.retainedScroll),true,'Returning preserves the live parent and its scroll');assert.equal(await detail.locator('h2').innerText(),'豚のしょうが焼き');assert.equal(await detail.evaluate(el=>getComputedStyle(el).filter),'none');
+ await nav.getByRole('button',{name:'編集',exact:true}).click();await editor.waitFor();await page.waitForTimeout(650);await page.getByLabel('レシピ名',{exact:true}).fill('保存したしょうが焼き');await page.getByLabel('レシピ名',{exact:true}).blur();await nav.getByRole('button',{name:'保存',exact:true}).click();await editor.waitFor({state:'detached'});await page.waitForTimeout(650);
+ assert.equal(await detail.locator('h2').innerText(),'保存したしょうが焼き');assert.equal(await detail.evaluate(el=>el===window.retainedDetail&&!el.inert),true,'Saving returns to the same detail with fresh data');
+ await nav.getByRole('button',{name:'戻る',exact:true}).click();await detail.waitFor({state:'detached'});await page.waitForTimeout(650);
+ await page.getByRole('button',{name:'買い物',exact:true}).evaluate(el=>el.click());const layer=page.locator('.route-page-layer');await layer.waitFor({state:'attached'});
+ assert.equal(await layer.evaluate(el=>el.inert&&el.getAttribute('aria-hidden')==='true'),true);assert.equal(await layer.locator('.floating-nav-host').count(),0);assert.equal(await page.locator('#main-content .page-heading').innerText(),'買い物メモ');await page.waitForTimeout(70);assert.ok(await page.locator('.route-page-copy').evaluate(el=>Number(el.style.opacity))<1);assert.equal(await page.locator('.thumb-dock-content:not([data-outgoing])').evaluate(el=>getComputedStyle(el).opacity),'1');
+ await page.getByRole('button',{name:'設定',exact:true}).evaluate(el=>el.click());assert.equal(await layer.count(),1,'Rapid switches replace the prior page copy');await layer.waitFor({state:'detached'});
+ await page.emulateMedia({reducedMotion:'reduce'});await page.getByRole('button',{name:'レシピ',exact:true}).click();assert.equal(await layer.count(),0);await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.getByRole('button',{name:'レシピの検索・絞り込み',exact:true}).click();await page.waitForTimeout(650);
+ const toggle=page.getByRole('button',{name:'お気に入りのみ',exact:true});
+ for(const theme of ['light','dark']){await page.locator('html').evaluate((el,theme)=>el.dataset.brandTheme=theme,theme);const off=await toggle.locator('.filter-toggle').evaluate(el=>getComputedStyle(el,'::after').backgroundColor);assert.ok(!['rgb(23, 23, 23)','rgb(255, 255, 255)'].includes(off),'Off thumb is muted');await toggle.click();await page.waitForTimeout(250);assert.equal(await toggle.locator('.filter-toggle').evaluate(el=>getComputedStyle(el,'::after').backgroundColor),theme==='light'?'rgb(23, 23, 23)':'rgb(255, 255, 255)');await toggle.click();await page.waitForTimeout(250);}
+ await page.locator('html').evaluate(el=>el.dataset.brandTheme='light');await page.getByRole('searchbox',{name:'レシピを検索'}).fill('しょうが');await page.getByRole('searchbox',{name:'レシピを検索'}).blur();await nav.getByRole('button',{name:'1件を表示',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});await page.waitForTimeout(650);
+ for(const width of [320,390,1280]){await page.setViewportSize({width,height:844});await page.waitForTimeout(100);const button=page.locator('.thumb-dock-content:not([data-outgoing]) .recipe-tools button');assert.equal(await button.innerText(),'絞り込み中');assert.equal(await button.locator('small').count(),0);assert.ok(await button.evaluate(el=>el.scrollWidth<=el.clientWidth),'The active label fits at every width');}
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:'test-results/search-active-label.png'});
+ await page.getByRole('button',{name:'レシピの検索・絞り込み',exact:true}).click();await page.waitForTimeout(650);await nav.getByRole('button',{name:'条件をリセット',exact:true}).click();await nav.getByRole('button',{name:'3件を表示',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});await page.waitForTimeout(650);assert.equal(await page.locator('.thumb-dock-content:not([data-outgoing]) .recipe-tools button').innerText(),'検索');
+ assert.deepEqual(errors,[]);console.log('PASS: rapid full-badge spring, retained nested editor cancel/save, unique modal titles, content-only and interrupted/reduced page motion, muted off toggle and clear search state at 320–1280px.');
+}catch(e){failed=true;console.error(e);for(const c of browser.contexts())for(const p of c.pages())await p.screenshot({path:'test-results/navigation-edit-failure.png'}).catch(()=>{});}finally{await browser.close();process.exit(failed?1:0);}

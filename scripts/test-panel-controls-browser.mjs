@@ -17,14 +17,14 @@ try{
  await page.waitForTimeout(500);assert.equal(await row.locator('.glass-checkbox-mark path').evaluate(el=>getComputedStyle(el).strokeDashoffset),'0px');await checkbox.focus();await page.keyboard.press('Space');assert.equal(await checkbox.isChecked(),false,'Native keyboard checkbox behavior is retained');
  const glass=async locator=>locator.evaluate(el=>{const style=getComputedStyle(el);return {background:style.backgroundColor,blur:style.backdropFilter,filter:style.filter};});
  for(const theme of ['light','dark']){
-  await page.locator('html').evaluate((el,theme)=>{el.dataset.brandTheme=theme;el.style.colorScheme=theme;},theme);
+  await page.locator('html').evaluate((el,theme)=>{el.dataset.brandTheme=theme;el.style.colorScheme=theme;},theme);await page.waitForTimeout(200);
   for(const locator of [checkbox,page.locator('.recipe-steps li>span').first()]){const style=await glass(locator);assert.ok(style.blur.includes('blur(10px)'));assert.ok(style.background.includes('/ 0.52')||style.background.includes(', 0.52'),style.background);assert.equal(style.filter,'none','Text and check marks stay sharp');}
   if(theme==='dark')await page.waitForTimeout(650);if(theme==='dark')await page.screenshot({path:'test-results/header-favorite-dark.png'});
  }
  await page.locator('html').evaluate(el=>{el.dataset.brandTheme='light';el.style.colorScheme='light';});await nav.getByRole('button',{name:'編集',exact:true}).click();await page.getByLabel('レシピ名',{exact:true}).waitFor();await page.waitForTimeout(650);
  for(const locator of [page.getByLabel('レシピ名',{exact:true}),page.getByRole('combobox',{name:/^カテゴリ/}),page.getByLabel('分量1',{exact:true}),page.getByLabel('手順1',{exact:true}),page.locator('.step-edit>span').first()]){const style=await glass(locator);assert.ok(style.blur.includes('blur(10px)'));assert.equal(style.filter,'none');}
  await page.screenshot({path:'test-results/glass-recipe-form.png'});
- await nav.getByRole('button',{name:'戻る',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});await page.waitForTimeout(650);await page.getByRole('button',{name:'レシピの検索・絞り込み',exact:true}).click();await page.waitForTimeout(650);
+ await nav.getByRole('button',{name:'戻る',exact:true}).click();await page.locator('.recipe-editor-panel').waitFor({state:'detached'});await page.waitForTimeout(650);await nav.getByRole('button',{name:'戻る',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});await page.waitForTimeout(650);await page.getByRole('button',{name:'レシピの検索・絞り込み',exact:true}).click();await page.waitForTimeout(650);
  assert.equal(await page.locator('.card-panel-header .lucide-search').count(),1);assert.equal(await page.getByRole('dialog').getByRole('button',{name:'条件をリセット',exact:true}).count(),0);
  const reset=nav.getByRole('button',{name:'条件をリセット',exact:true});assert.equal(await reset.isDisabled(),true);
  const rice=page.getByRole('group',{name:'カテゴリ',exact:true}).getByRole('button',{name:'主食',exact:true});assert.equal(await rice.locator('.recipe-rice-icon').count(),1);await rice.click();

@@ -39,6 +39,7 @@
 .filter-favorite-row[aria-pressed=true] .filter-toggle{background:color-mix(in srgb,#e64b87 22%,transparent);border-color:#e64b8766}
 .filter-favorite-row .filter-toggle:after,.filter-favorite-row[aria-pressed=true] .filter-toggle:after{background:#171717}
 :root[data-brand-theme=dark] .filter-favorite-row .filter-toggle:after{background:#fff}
+:root .filter-favorite-row[aria-pressed=false] .filter-toggle:after{background:color-mix(in srgb,var(--muted) 60%,var(--paper))}
 .filter-favorite-row:active .filter-toggle{transform:scale(.93)}
 .filter-favorite-row[aria-pressed=true]>svg{animation:favorite-pop 620ms cubic-bezier(.22,1,.36,1)}
 .appearance-selection{transition:transform 480ms cubic-bezier(.34,1.35,.64,1),background 240ms}
