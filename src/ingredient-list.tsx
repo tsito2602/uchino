@@ -1,5 +1,6 @@
 import {useEffect,useRef,type Dispatch,type SetStateAction} from 'react';
 import {scaleQuantity,isSpoonUnit,type Recipe} from './domain';
+import {GlassCheckbox} from './glass-checkbox';
 import {QuantityTicker} from './quantity-ticker';
 
 type Props={recipe:Recipe;servings:number;checked:string[];onChange:Dispatch<SetStateAction<string[]>>;disabled?:boolean};
@@ -111,5 +112,5 @@ export function IngredientList({recipe,servings,checked,onChange,disabled=false}
       window.removeEventListener('blur',stop);document.removeEventListener('keydown',keyDown);
     };
   },[recipe.id]);
-  return <div className="ingredient-list" ref={root} role="group" aria-label="材料を選択">{recipe.ingredients.map((ingredient,index)=><label className="ingredient-row" data-ingredient-index={index} data-checked={checked.includes(String(index))||undefined} key={index}><input type="checkbox" disabled={disabled} checked={checked.includes(String(index))} onChange={event=>{const select=event.target.checked;onChange(current=>select?[...new Set([...current,String(index)])]:current.filter(id=>id!==String(index)));}}/><span>{ingredient.name}</span><strong className="ingredient-quantity">{isSpoonUnit(ingredient.unit)&&<span>{ingredient.unit}</span>}<QuantityTicker value={scaleQuantity(ingredient.quantity,recipe.servings,servings)}/>{ingredient.unit&&!isSpoonUnit(ingredient.unit)&&<span>{ingredient.unit}</span>}</strong></label>)}</div>;
+  return <div className="ingredient-list" ref={root} role="group" aria-label="材料を選択">{recipe.ingredients.map((ingredient,index)=><label className="ingredient-row" data-ingredient-index={index} data-checked={checked.includes(String(index))||undefined} key={index}><GlassCheckbox disabled={disabled} checked={checked.includes(String(index))} onChange={event=>{const select=event.target.checked;onChange(current=>select?[...new Set([...current,String(index)])]:current.filter(id=>id!==String(index)));}}/><span>{ingredient.name}</span><strong className="ingredient-quantity">{isSpoonUnit(ingredient.unit)&&<span>{ingredient.unit}</span>}<QuantityTicker value={scaleQuantity(ingredient.quantity,recipe.servings,servings)}/>{ingredient.unit&&!isSpoonUnit(ingredient.unit)&&<span>{ingredient.unit}</span>}</strong></label>)}</div>;
 }

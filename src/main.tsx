@@ -14,5 +14,6 @@ import './studio-action.css';
 import './import-effects.css';
 import './recipe-import.css';
 import './shopping.css';
+import './panel-controls.css';
 createRoot(document.getElementById('root')!).render(<AuthGate>{session=><App key={session.user.id} session={session}/>}</AuthGate>);
 void registerPWA().catch(()=>{});

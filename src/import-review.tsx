@@ -2,6 +2,7 @@ import {useId,useState} from 'react';
 import {AnimatePresence,motion,useReducedMotion} from 'motion/react';
 import {AlertCircle,Check,ChevronDown,ExternalLink,FileText,Pencil} from 'lucide-react';
 import {issueLabel,type ImportResult,type ImportSource} from './import-model';
+import {GlassCheckbox} from './glass-checkbox';
 import {RecipeEditor} from './recipe-editor';
 import type {Recipe} from './domain';
 
@@ -19,7 +20,7 @@ export function ImportReview({result,source,onChange,onSubmit,error,acknowledged
   return <div className="recipe-import-review">
     <div className="import-review-heading"><span className="import-processing-symbol import-complete-symbol"><Check className="import-animated-check" size={28}/></span><h3>読み取りが完了しました</h3><p>元のレシピと照らし合わせて、内容を確認・修正してください。</p>{result.demo&&<span className="import-demo-badge">デモ · staging限定</span>}</div>
     <ImportOriginal source={source}/>
-    {!!result.issues.length&&<section className="import-issues" aria-labelledby="import-issues-title"><h3 id="import-issues-title"><AlertCircle size={18}/>要確認 <span>{remaining.length}件</span></h3><p>仮設定や曖昧な箇所です。内容を確かめたらチェックしてください。</p>{result.issues.map(issue=><div className="import-issue" key={issue.field} data-checked={acknowledged.includes(issue.field)}><div><button type="button" onClick={()=>edit(issue.field)}><Pencil size={14}/>{issueLabel(issue.field)}を編集</button><p>{issue.reason}</p></div><label><input type="checkbox" aria-label={`${issueLabel(issue.field)}を確認した`} checked={acknowledged.includes(issue.field)} onChange={event=>onAcknowledge(event.target.checked?[...acknowledged,issue.field]:acknowledged.filter(field=>field!==issue.field))}/><span>確認した</span></label></div>)}</section>}
+    {!!result.issues.length&&<section className="import-issues" aria-labelledby="import-issues-title"><h3 id="import-issues-title"><AlertCircle size={18}/>要確認 <span>{remaining.length}件</span></h3><p>仮設定や曖昧な箇所です。内容を確かめたらチェックしてください。</p>{result.issues.map(issue=><div className="import-issue" key={issue.field} data-checked={acknowledged.includes(issue.field)}><div><button type="button" onClick={()=>edit(issue.field)}><Pencil size={14}/>{issueLabel(issue.field)}を編集</button><p>{issue.reason}</p></div><label><GlassCheckbox aria-label={`${issueLabel(issue.field)}を確認した`} checked={acknowledged.includes(issue.field)} onChange={event=>onAcknowledge(event.target.checked?[...acknowledged,issue.field]:acknowledged.filter(field=>field!==issue.field))}/><span>確認した</span></label></div>)}</section>}
     <div className="import-review-list-heading"><strong>保存するレシピ</strong><span className="import-edit-hint"><Pencil size={13}/>すべての項目を編集できます</span></div>
     <RecipeEditor onPhotoBusyChange={onPhotoBusyChange} onRemoveItem={onRemoveItem} value={result.recipe} onChange={onChange} onSubmit={onSubmit} error={error}/>
     <p className="import-review-demo">{result.demo?'デモの結果です。「サンプルとして保存」を押すとレシピに追加されます。':'「確認して保存」を押すまでレシピには追加されません。'}</p>
