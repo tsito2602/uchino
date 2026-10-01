@@ -31,9 +31,8 @@
 .shopping-finish-summary { display: grid; gap: 18px; }
 .shopping-finish-summary h3 { margin: 0; font-size: 22px; letter-spacing: -.03em; }
 .shopping-finish-summary p { color: var(--muted); font-size: 13px; line-height: 1.8; }
-.shopping-finish-counts { display: flex; gap: 20px; padding: 18px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.shopping-finish-counts span { display: flex; flex: 1; flex-direction: column; gap: 6px; color: var(--muted); font-size: 12px; }
-.shopping-finish-counts b { font-size: 24px; font-weight: 550; color: var(--ink); }
+.shopping-finish-items { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.shopping-finish-items li { padding: 16px 0; border-bottom: 1px solid var(--line); font-size: 16px; line-height: 1.6; overflow-wrap: anywhere; }
 @media(max-width:350px) {
   .dock-month.shopping-finish button { font-size: 11px; gap: 0; padding: 0 2px; }
   .dock-month.shopping-finish button > svg { display: none; }

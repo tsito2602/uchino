@@ -49,12 +49,13 @@ try{
  const mainItems=page.locator('main .shopping-row');
  const names=await mainItems.locator('strong').allTextContents();await page.getByRole('checkbox',{name:'卵 1パックを購入済みにする',exact:true}).click();
  await page.getByRole('checkbox',{name:'卵 1パックを未購入に戻す',exact:true}).waitFor();assert.deepEqual(await mainItems.locator('strong').allTextContents(),names,'Checking never reorders items');
- await finish.click();await page.getByRole('button',{name:'未購入を残して終了',exact:true}).waitFor();
- const carry=page.getByRole('navigation',{name:'操作'}).getByRole('button',{name:'未購入を残して終了',exact:true}),clearAll=page.getByRole('navigation',{name:'操作'}).getByRole('button',{name:'すべて消して終了',exact:true});
- assert.equal(await panel.getByRole('button',{name:'すべて消して終了',exact:true}).count(),0);
+ await finish.click();await page.getByRole('button',{name:'未購入を残す',exact:true}).waitFor();
+ const carry=page.getByRole('navigation',{name:'操作'}).getByRole('button',{name:'未購入を残す',exact:true}),clearAll=page.getByRole('navigation',{name:'操作'}).getByRole('button',{name:'すべて削除',exact:true});
+ assert.equal(await panel.getByRole('button',{name:'すべて削除',exact:true}).count(),0);
  for(const width of [320,390]){await page.setViewportSize({width,height:844});const left=await carry.boundingBox(),right=await clearAll.boundingBox();assert.ok(right.x>=left.x+left.width);assert.equal(await clearAll.evaluate(el=>el.scrollWidth<=el.clientWidth),true);await page.screenshot({path:`test-results/shopping-finish-${width}.png`,animations:'disabled'});}
  await page.screenshot({path:'test-results/shopping-finish-dark.png',animations:'disabled'});
- await page.getByRole('button',{name:'未購入を残して終了',exact:true}).click();await panel.waitFor({state:'detached'});
+ await page.getByRole('button',{name:'未購入を残す',exact:true}).click();await panel.waitFor({state:'detached'});
+ await page.waitForFunction(()=>document.querySelectorAll('main .shopping-row').length===1);
  assert.deepEqual(await mainItems.locator('strong').allTextContents(),['牛乳 1本']);
  assert.equal(await page.locator('.uchino-toast').getByRole('button',{name:'元に戻す',exact:true}).count(),0);
  await page.locator('.floating-nav-host').getByRole('button',{name:'元に戻す',exact:true}).waitFor();assert.equal(await finish.count(),0);
@@ -63,10 +64,10 @@ try{
  await finish.click();
  // Fail midway through the batch and prove the first deletion was rolled back.
  await page.evaluate(()=>{const put=IDBObjectStore.prototype.put;let count=0;IDBObjectStore.prototype.put=function(value,...args){if(value.kind==='shopping'&&value.deleted&&++count===2){IDBObjectStore.prototype.put=put;throw new Error('テスト：一括保存に失敗しました');}return put.call(this,value,...args);};});
- await page.getByRole('button',{name:'すべて消して終了',exact:true}).click();await page.getByRole('alert').filter({hasText:'一括保存に失敗'}).waitFor();
+ await page.getByRole('button',{name:'すべて削除',exact:true}).click();await page.getByRole('alert').filter({hasText:'一括保存に失敗'}).waitFor();
  const persisted=await page.evaluate(()=>new Promise((resolve,reject)=>{const open=indexedDB.open('uchino',1);open.onerror=()=>reject(open.error);open.onsuccess=()=>{const db=open.result,request=db.transaction('records').objectStore('records').getAll();request.onsuccess=()=>{resolve(request.result.filter(row=>row.kind==='shopping'&&!row.deleted).length);db.close();};};}));
  assert.equal(persisted,2,'A failed finish never partially clears the list');
- await page.getByRole('button',{name:'すべて消して終了',exact:true}).click();await panel.waitFor({state:'detached'});assert.equal(await mainItems.count(),0);assert.equal(await finish.count(),0);
+ await page.getByRole('button',{name:'すべて削除',exact:true}).click();await panel.waitFor({state:'detached'});assert.equal(await mainItems.count(),0);assert.equal(await finish.count(),0);
  // Finishing a fully purchased list is one action; undo restores it.
  await page.getByRole('button',{name:'元に戻す',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('main .shopping-row').length===2);
  await page.getByRole('checkbox',{name:'牛乳 1本を購入済みにする',exact:true}).click();await page.getByRole('checkbox',{name:'牛乳 1本を未購入に戻す',exact:true}).waitFor();
