@@ -11,7 +11,7 @@
 | 配信 | Workers.dev / Reactを埋め込んだHono Worker |
 | 環境 | APP_ENV=staging |
 
-`wrangler.staging.jsonc` に本番環境は定義していません。R2は初期版で使用しません。取り込み画像はAIリクエストに利用し、サーバーには保管しません。
+`wrangler.staging.jsonc` に本番環境は定義していません。R2は使用しません。AI読み取り用の元画像はサーバーには保管しません。別途登録する料理写真は端末で256KB以下のJPEGに変換し、レシピJSONの一部としてIndexedDB・D1に保存します。レシピJSONは1,800,000バイト以内、同期リクエストは1,810,000バイト以内に制限し、D1の行サイズ上限2,000,000バイトに余裕を持たせています。
 
 ## Cloudflare Workers Builds
 

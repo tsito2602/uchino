@@ -1,9 +1,9 @@
-import {newRecipe} from '../src/domain';
+import {newRecipe,demoPhotos} from '../src/domain';
 import type {ImportResult} from '../src/import-model';
 
 // Only served by the APP_ENV === 'staging' route; never bundled into the client.
 export function demoImport():ImportResult {
-  return {demo:true,recipe:{...newRecipe(),title:'鶏肉ときのこのクリーム煮',category:'主菜',servings:2,minutes:20,
+  return {demo:true,recipe:{...newRecipe(),photo:demoPhotos.chicken,title:'鶏肉ときのこのクリーム煮',category:'主菜',servings:2,minutes:20,
     ingredients:[{name:'鶏もも肉',quantity:'250',unit:'g'},{name:'しめじ',quantity:'1/2',unit:'パック'},{name:'玉ねぎ',quantity:'1/2',unit:'個'},{name:'牛乳',quantity:'200',unit:'ml'},{name:'薄力粉',quantity:'1',unit:'大さじ'},{name:'バター',quantity:'',unit:''},{name:'塩・こしょう',quantity:'少々',unit:''}],
     steps:['鶏肉はひと口大に切る。しめじはほぐし、玉ねぎは薄切りにする。','フライパンにバターを熱し、鶏肉、玉ねぎ、しめじを炒める。','薄力粉を振り入れて混ぜ、牛乳を少しずつ加える。','弱火で鶏肉に火が通るまで煮て、塩・こしょうで味を調える。'],
     memo:'デモ用レシピ。人数が不明なため、2人分を仮設定しています。'},

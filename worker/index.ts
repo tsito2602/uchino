@@ -31,7 +31,7 @@ app.get('/api/data',async c=>{
 async function body(request:Request,limit=100000){const length=Number(request.headers.get('content-length')||0);if(length>limit)throw new Error('入力が大きすぎます。');const reader=request.body?.getReader();if(!reader)throw new Error('入力がありません。');const chunks:Uint8Array[]=[];let size=0;try{while(true){const part=await reader.read();if(part.done)break;size+=part.value.length;if(size>limit){await reader.cancel();throw new Error('入力が大きすぎます。');}chunks.push(part.value);}}finally{reader.releaseLock();}const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}return JSON.parse(new TextDecoder().decode(bytes));}
 app.put('/api/data/:kind/:id',async c=>{
   const kind=c.req.param('kind');if(kind!=='recipe'&&kind!=='shopping')return c.json({error:'対象が見つかりません。'},404);
-  let input;try{input=await body(c.req.raw);}catch{return c.json({error:'入力内容を確認してください。'},400);}
+  let input;try{input=await body(c.req.raw,kind==='recipe'?1_810_000:100_000);}catch{return c.json({error:'入力内容を確認してください。'},400);}
   const data=validateRecord(kind,input?.data);
   if(!data||data.id!==c.req.param('id')||!Number.isInteger(input.revision)||input.revision<0||typeof input.deleted!=='boolean'||typeof input.editId!=='string'||!/^[a-zA-Z0-9_-]{1,80}$/.test(input.editId))return c.json({error:'入力内容を確認してください。'},400);
   const db=c.env.DB!,user=c.get('user').id;

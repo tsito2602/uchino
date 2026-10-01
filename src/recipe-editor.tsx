@@ -1,9 +1,11 @@
 import {Plus,Trash2} from 'lucide-react';
-import {categories,type Recipe} from './domain';
-export function RecipeEditor({value,onChange,onSubmit,error,onRemoveItem}:{value:Recipe;onChange:(recipe:Recipe)=>void;onSubmit:()=>void;error:string;onRemoveItem?:(kind:'ingredients'|'steps',index:number)=>void}){
+import {categories,recipePhoto,type Recipe} from './domain';
+import {RecipePhotoPicker} from './recipe-photo-picker';
+export function RecipeEditor({value,onChange,onSubmit,error,onRemoveItem,onPhotoBusyChange}:{value:Recipe;onChange:(recipe:Recipe)=>void;onSubmit:()=>void;error:string;onPhotoBusyChange?:(busy:boolean)=>void;onRemoveItem?:(kind:'ingredients'|'steps',index:number)=>void}){
   const update=(change:Partial<Recipe>)=>onChange({...value,...change});
   return <form id="recipe-form" className="form recipe-form" onSubmit={e=>{e.preventDefault();onSubmit();}}>
     {error&&<p role="alert" className="form-error">{error}</p>}
+    <RecipePhotoPicker photo={recipePhoto(value)} onChange={photo=>update({photo})} onBusyChange={onPhotoBusyChange}/>
     <label className="field">レシピ名<input data-import-field="title" required maxLength={200} value={value.title} placeholder="レシピ名を入力" onChange={e=>update({title:e.target.value})}/></label>
     <div className="field-pair"><label className="field">カテゴリ<select data-import-field="category" value={value.category} onChange={e=>update({category:e.target.value as Recipe['category']})}>{categories.slice(1).map(c=><option key={c}>{c}</option>)}</select></label><label className="field">人数<input data-import-field="servings" type="number" min={1} max={100} required inputMode="numeric" value={value.servings} onChange={e=>update({servings:Number(e.target.value)})}/></label></div>
     <label className="field">調理時間（分）<input data-import-field="minutes" type="number" min={1} max={10080} inputMode="numeric" value={value.minutes??''} placeholder="未設定" onChange={e=>update({minutes:e.target.value?Number(e.target.value):null})}/></label>

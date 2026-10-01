@@ -12,14 +12,14 @@ type Mode='url'|'image'|'text';
 type Props={active:boolean;mode:Mode;ai:boolean;allowDemo:boolean;local:boolean;closing:boolean;onClose:()=>void;onExited:()=>void;onManual:()=>void;onSave:(recipe:Recipe)=>Promise<void>};
 export function useRecipeImport(props:Props) {
   const [mode,setMode]=useState<Mode>(props.mode),[demo,setDemo]=useState(false),[value,setValue]=useState(''),[image,setImage]=useState(''),[imageName,setImageName]=useState('');
-  const [error,setError]=useState(''),[progress,setProgress]=useState<ImportProgress|null>(null),[result,setResult]=useState<ImportResult|null>(null),[source,setSource]=useState<ImportSource|null>(null),[acknowledged,setAcknowledged]=useState<string[]>([]),[saving,setSaving]=useState(false);
+  const [error,setError]=useState(''),[progress,setProgress]=useState<ImportProgress|null>(null),[result,setResult]=useState<ImportResult|null>(null),[source,setSource]=useState<ImportSource|null>(null),[acknowledged,setAcknowledged]=useState<string[]>([]),[saving,setSaving]=useState(false),[photoBusy,setPhotoBusy]=useState(false);
   const request=useRef<AbortController|null>(null),fileRead=useRef<FileReader|null>(null);
   useEffect(()=>{
     request.current?.abort();request.current=null;fileRead.current?.abort();
     setMode(props.mode);setDemo(false);setValue('');setImage('');setImageName('');setError('');setProgress(null);setResult(null);setSource(null);setAcknowledged([]);
     return()=>{request.current?.abort();fileRead.current?.abort();};
   },[props.active,props.mode]);
-  function back(){if(saving)return;if(request.current){request.current.abort();request.current=null;setProgress(null);setError('');return;}props.onClose();}
+  function back(){if(saving||photoBusy)return;if(request.current){request.current.abort();request.current=null;setProgress(null);setError('');return;}props.onClose();}
   async function selectImage(event:ChangeEvent<HTMLInputElement>){
     const file=event.target.files?.[0];if(!file)return;fileRead.current?.abort();setError('');
     if(file.size>6_000_000||!['image/png','image/jpeg','image/webp'].includes(file.type)){setError('6MB以内のPNG・JPEG・WebPを選んでください。');event.target.value='';return;}
@@ -60,17 +60,17 @@ export function useRecipeImport(props:Props) {
   }
   const remaining=result?.issues.filter(issue=>!acknowledged.includes(issue.field)).length??0;
   async function save(){
-    if(!result||saving)return;
+    if(!result||saving||photoBusy)return;
     if(remaining){setError('「要確認」の内容を確かめてチェックしてください。');return;}
     const form=document.getElementById('recipe-form') as HTMLFormElement|null;if(!form?.reportValidity())return;
     const recipe=validateRecord('recipe',result.recipe);if(!recipe){setError('材料・手順・人数などの入力内容を確認してください。');return;}
     setError('');setSaving(true);
     try{await props.onSave(recipe as Recipe);}catch(cause){setError(cause instanceof Error?cause.message:'保存できませんでした。');}finally{setSaving(false);}
   }
-  const disabled=props.closing||!!progress||saving||(!result&&!demo&&(props.local||(mode!=='url'&&!props.ai)||(mode==='image'?!image:!value.trim())));
+  const disabled=props.closing||!!progress||saving||photoBusy||(!result&&!demo&&(props.local||(mode!=='url'&&!props.ai)||(mode==='image'?!image:!value.trim())));
   const context:DockContext={key:'import',label:'取り込みの操作',back,action:()=>void(result?save():start()),actionLabel:progress?'読み取っています…':saving?'保存しています…':result?(result.demo?'サンプルとして保存':'確認して保存'):demo?'デモで読み取る':'読み取る',icon:Check,disabled:disabled||!!remaining,commit:true,appearance:progress?'breathing':result?undefined:'studio'};
   const panel=props.active?<Panel title={result?'取り込み内容を確認':'レシピを取り込む'} icon={result?Check:BookOpen} closing={props.closing} onClose={back} onExited={props.onExited} processing={!!progress} status={progress?<ImportPhaseStatus progress={progress}/>:undefined}>
-    {progress?<ImportProcessing progress={progress}/>:result&&source?<ImportReview onRemoveItem={removeItem} result={result} source={source} onChange={recipe=>setResult({...result,recipe})} onSubmit={()=>void save()} error={error} acknowledged={acknowledged} onAcknowledge={setAcknowledged}/>:<div className="import-form">
+    {progress?<ImportProcessing progress={progress}/>:result&&source?<ImportReview onPhotoBusyChange={setPhotoBusy} onRemoveItem={removeItem} result={result} source={source} onChange={recipe=>setResult({...result,recipe})} onSubmit={()=>void save()} error={error} acknowledged={acknowledged} onAcknowledge={setAcknowledged}/>:<div className="import-form">
       {props.allowDemo&&<div className="import-mode" role="group" aria-label="取り込み方法"><button aria-pressed={!demo} onClick={()=>{setDemo(false);setError('');}}>レシピを読み取る</button><button aria-pressed={demo} onClick={()=>{setDemo(true);setError('');}}>デモで試す</button></div>}
       {demo?<div className="import-demo-sample"><span className="import-demo-badge"><Sparkles size={13}/>デモ · staging限定</span><h3>レシピメモを読み取る</h3><p>読み取りから内容の確認・修正までを体験できます。</p><div className="import-sample-paper"><FileText size={24}/><strong>鶏肉ときのこのクリーム煮</strong><div><span>鶏もも肉</span><b>250 g</b></div><div><span>しめじ</span><b>1/2 パック</b></div><div><span>牛乳</span><b>200 ml</b></div><div><span>バター</span><b>？</b></div></div><small>保存するまでレシピは追加されません。</small></div>:<>
         <div className="mode-options">{([{value:'url',label:'URL'},{value:'image',label:'画像'},{value:'text',label:'本文'}] as const).map(item=><button key={item.value} aria-pressed={mode===item.value} className={mode===item.value?'selected':''} onClick={()=>{setMode(item.value);setValue('');setError('');}}>{item.label}</button>)}</div>

@@ -13,7 +13,7 @@ export function ImportOriginal({source}:{source:ImportSource}) {
   </section>;
 }
 
-export function ImportReview({result,source,onChange,onSubmit,error,acknowledged,onAcknowledge,onRemoveItem}:{result:ImportResult;source:ImportSource;onChange:(recipe:Recipe)=>void;onSubmit:()=>void;error:string;acknowledged:string[];onAcknowledge:(fields:string[])=>void;onRemoveItem:(kind:'ingredients'|'steps',index:number)=>void}) {
+export function ImportReview({result,source,onChange,onSubmit,error,acknowledged,onAcknowledge,onRemoveItem,onPhotoBusyChange}:{result:ImportResult;source:ImportSource;onChange:(recipe:Recipe)=>void;onSubmit:()=>void;error:string;onPhotoBusyChange:(busy:boolean)=>void;acknowledged:string[];onAcknowledge:(fields:string[])=>void;onRemoveItem:(kind:'ingredients'|'steps',index:number)=>void}) {
   const remaining=result.issues.filter(issue=>!acknowledged.includes(issue.field));
   function edit(field:string){const input=document.querySelector<HTMLElement>(`[data-import-field="${CSS.escape(field)}"]`);input?.focus({preventScroll:true});}
   return <div className="recipe-import-review">
@@ -21,7 +21,7 @@ export function ImportReview({result,source,onChange,onSubmit,error,acknowledged
     <ImportOriginal source={source}/>
     {!!result.issues.length&&<section className="import-issues" aria-labelledby="import-issues-title"><h3 id="import-issues-title"><AlertCircle size={18}/>要確認 <span>{remaining.length}件</span></h3><p>仮設定や曖昧な箇所です。内容を確かめたらチェックしてください。</p>{result.issues.map(issue=><div className="import-issue" key={issue.field} data-checked={acknowledged.includes(issue.field)}><div><button type="button" onClick={()=>edit(issue.field)}><Pencil size={14}/>{issueLabel(issue.field)}を編集</button><p>{issue.reason}</p></div><label><input type="checkbox" aria-label={`${issueLabel(issue.field)}を確認した`} checked={acknowledged.includes(issue.field)} onChange={event=>onAcknowledge(event.target.checked?[...acknowledged,issue.field]:acknowledged.filter(field=>field!==issue.field))}/><span>確認した</span></label></div>)}</section>}
     <div className="import-review-list-heading"><strong>保存するレシピ</strong><span className="import-edit-hint"><Pencil size={13}/>すべての項目を編集できます</span></div>
-    <RecipeEditor onRemoveItem={onRemoveItem} value={result.recipe} onChange={onChange} onSubmit={onSubmit} error={error}/>
+    <RecipeEditor onPhotoBusyChange={onPhotoBusyChange} onRemoveItem={onRemoveItem} value={result.recipe} onChange={onChange} onSubmit={onSubmit} error={error}/>
     <p className="import-review-demo">{result.demo?'デモの結果です。「サンプルとして保存」を押すとレシピに追加されます。':'「確認して保存」を押すまでレシピには追加されません。'}</p>
   </div>;
 }

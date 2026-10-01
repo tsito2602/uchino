@@ -5,6 +5,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {SignJWT} from 'jose';
 import app from '../dist/worker.mjs';
 import {newRecipe} from '../src/domain.ts';
+import {photoFixture} from './photo-fixture.mjs';
 const env={APP_ENV:'staging',GOOGLE_CLIENT_ID:'test',GOOGLE_CLIENT_SECRET:'test',SESSION_SECRET:'test-key-more-than-thirty-two-characters',ALLOWED_EMAILS:'a@example.test,b@example.test'};
 async function cookie(id='user-a',email='a@example.test'){
  const value=await new SignJWT({sub:id,email,name:id,purpose:'session'}).setProtectedHeader({alg:'HS256'}).setIssuer('uchino').setAudience('https://example.test').setIssuedAt().setExpirationTime('1h').sign(new TextEncoder().encode(env.SESSION_SECRET));
@@ -32,6 +33,21 @@ test('same-origin protection, tenant isolation, revisions and retry idempotence'
 });
 test('unconfigured import fails clearly and all API responses are non-cacheable',async()=>{
  const response=await request('/api/import',{method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json',Cookie:auth},body:JSON.stringify({text:'レシピ'})});assert.equal(response.status,422);assert.match((await response.json()).error,/準備中/);assert.equal(response.headers.get('cache-control'),'no-store');
+});
+test('photo records sync, remain private, reject oversized images and allow removal',async()=>{
+ const data={...recipe,id:'photo-recipe',photo:photoFixture(120000)};
+ assert.equal((await put(data,0,'photo-create')).status,200,'A photo larger than the old 100KB request limit saves');
+ const mine=await (await request('/api/data',{headers:{Cookie:auth}})).json();
+ assert.equal(mine.records.find(row=>row.id===data.id).data.photo,data.photo);
+ const theirs=await (await request('/api/data',{headers:{Cookie:await cookie('user-b','b@example.test')}})).json();
+ assert.ok(!theirs.records.some(row=>row.id===data.id));
+ assert.equal((await put({...data,photo:photoFixture(260000)},1,'photo-too-large')).status,400);
+ assert.equal((await put({...data,photo:'data:image/svg+xml;base64,PHN2Zz4='},1,'photo-svg')).status,400);
+ assert.equal((await put({...data,photo:''},1,'photo-remove')).status,200);
+ const after=await (await request('/api/data',{headers:{Cookie:auth}})).json();
+ assert.equal(after.records.find(row=>row.id===data.id).data.photo,'');
+ const asset=await request('/recipe-photos/ginger.webp');
+ assert.equal(asset.headers.get('content-type'),'image/webp');assert.equal(Buffer.from(await asset.arrayBuffer()).subarray(0,4).toString(),'RIFF');
 });
 test('demo import is explicitly staging-only, needs no AI, and writes no data',async()=>{
  const options={method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json'},body:'{}'};
