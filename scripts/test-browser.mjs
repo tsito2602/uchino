@@ -31,9 +31,9 @@ try{
    // between panel and dock must match having no glass there, in both themes.
    for(const mode of ['light','dark']){
     await page.locator('html').evaluate((el,mode)=>el.setAttribute('data-brand-theme',mode),mode);
-    const bounded=await page.screenshot({clip});
+    const bounded=await page.screenshot({clip,animations:'disabled'});
     await page.locator('.card-panel-glass').evaluate(el=>el.style.visibility='hidden');
-    const transparent=await page.screenshot({clip});
+    const transparent=await page.screenshot({clip,animations:'disabled'});
     assert.ok(bounded.equals(transparent),`${mode}: panel glass cannot paint a rectangle behind the dock`);
     await page.locator('.card-panel-glass').evaluate(el=>el.style.removeProperty('visibility'));
    }
@@ -126,14 +126,14 @@ try{
  assert.equal(await remove.evaluate(el=>getComputedStyle(el).color),'rgb(180, 35, 24)');
  const deleteBounds=await remove.boundingBox();const saveBounds=await page.getByRole('navigation',{name:'操作'}).getByRole('button',{name:'保存',exact:true}).boundingBox();assert.ok(deleteBounds.x>saveBounds.x+saveBounds.width);
  await page.screenshot({path:'test-results/edit-actions.png',fullPage:true});
- const fullRecipePanel=await page.getByRole('dialog').boundingBox();await glassPaintBoundary();
+ const fullRecipePanel=await page.getByRole('dialog').boundingBox(),restingRecipeDock=await page.getByRole('navigation',{name:'操作'}).boundingBox();await glassPaintBoundary();
  // Simulate the separate visual viewport used by mobile software keyboards.
  assert.ok(await page.locator('.card-panel input:not([type=checkbox]),.card-panel textarea,.card-panel select').evaluateAll(els=>els.every(el=>parseFloat(getComputedStyle(el).fontSize)>=16)));
  await page.getByLabel('手順1',{exact:true}).focus();await page.evaluate(()=>{Object.assign(window.testViewport,{height:470,offsetTop:35});window.testViewport.dispatchEvent(new Event('resize'));});await page.waitForTimeout(200);
  const fieldBounds=await page.getByLabel('手順1',{exact:true}).boundingBox();const panelBounds=await page.getByRole('dialog').boundingBox();
  assert.deepEqual(panelBounds,fullRecipePanel,'Keyboard opening must not shrink or move the panel');
- const keyboardDock=await page.getByRole('navigation',{name:'操作'}).boundingBox();assert.ok(keyboardDock.y+keyboardDock.height<=470,JSON.stringify(keyboardDock));
- assert.ok(fieldBounds.y>=panelBounds.y+50&&fieldBounds.y+fieldBounds.height<=keyboardDock.y-16,'The active field is above the floating dock');
+ const keyboardDock=await page.getByRole('navigation',{name:'操作'}).boundingBox();assert.deepEqual(keyboardDock,restingRecipeDock,'Keyboard does not lift the dock');
+ assert.ok(fieldBounds.y>=panelBounds.y+50&&fieldBounds.y+fieldBounds.height<=470-12,`The active field is above the keyboard: ${JSON.stringify({fieldBounds,panelBounds,viewport:await page.evaluate(()=>window.visualViewport.height)})}`);
  assert.equal(await page.getByLabel('手順1',{exact:true}).inputValue(),'卵を混ぜて焼く。');await page.screenshot({path:'test-results/keyboard-editor.png'});
  await clearSurround();
  // Exercise viewport notifications with deeply placed text/number fields.
@@ -143,11 +143,11 @@ try{
   const dockNow=await page.locator('.floating-nav-host').boundingBox(),panelNow=await page.getByRole('dialog').boundingBox();
   assert.equal(dockNow.y,keyboardDock.y,'Every recipe field has the same dock position');
   assert.deepEqual(panelNow,fullRecipePanel,'Recipe panel stays full size behind the keyboard and dock');
-  const field=await page.getByLabel(label,{exact:true}).boundingBox();assert.ok(field.y>=panelNow.y+50&&field.y+field.height<=dockNow.y-16,'Even the last editor can scroll above the floating dock');
+  const field=await page.getByLabel(label,{exact:true}).boundingBox();assert.ok(field.y>=panelNow.y+50&&field.y+field.height<=470-12,'Even the last editor can scroll above the keyboard');
  }
- // Text and numeric keyboards may have different heights; the bottom gap is shared.
+ // Changing keyboard height scrolls the field if necessary, without lifting the dock.
  await page.evaluate(()=>{window.testViewport.height=510;window.testViewport.dispatchEvent(new Event('resize'));});await page.waitForTimeout(100);
- const resizedDock=await page.locator('.floating-nav-host').boundingBox();assert.equal(510-resizedDock.y-resizedDock.height,8);assert.deepEqual(await page.getByRole('dialog').boundingBox(),fullRecipePanel,'Changing keyboard types leaves the panel size unchanged');
+ const resizedDock=await page.locator('.floating-nav-host').boundingBox();assert.deepEqual(resizedDock,restingRecipeDock);assert.deepEqual(await page.getByRole('dialog').boundingBox(),fullRecipePanel,'Changing keyboard types leaves the panel size unchanged');
  await page.evaluate(()=>{Object.assign(window.testViewport,{height:470,offsetTop:35});window.testViewport.dispatchEvent(new Event('resize'));});await page.waitForTimeout(100);
  // Long forms still scroll; only gestures escaping their top/bottom are canceled.
  await page.locator('.card-panel').evaluate(el=>el.scrollTop=0);

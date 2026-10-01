@@ -13,12 +13,15 @@ export function revealPanelField(focused:Element|null) {
   const header=scroll.querySelector<HTMLElement>(':scope > .card-panel-header');
   const dock=scroll.closest('.floating-viewport')?.querySelector<HTMLElement>('.floating-nav-host');
   const top=Math.max(bounds.top,header?.getBoundingClientRect().bottom??bounds.top)+12;
-  const bottom=Math.min(bounds.bottom,dock?dock.getBoundingClientRect().top-16:bounds.bottom)-12;
+  // The dock stays at the screen bottom, behind the keyboard. Use the visible
+  // viewport as a separate boundary; Safari's focus-pan offset must not move it.
+  const viewportBottom=window.visualViewport?.height??window.innerHeight;
+  const bottom=Math.min(bounds.bottom,viewportBottom,dock?dock.getBoundingClientRect().top-16:bounds.bottom)-12;
   if(bottom<=top)return;
   const input=editor.getBoundingClientRect();
   const field=editor.closest('.field')?.getBoundingClientRect();
   const start=field&&input.bottom-field.top<=bottom-top?field.top:input.top;
   const end=Math.min(input.bottom,start+bottom-top);
   const delta=start<top?start-top:end>bottom?end-bottom:0;
-  if(delta)scroll.scrollTop+=delta;
+  if(delta)scroll.scrollTop+=delta>0?Math.ceil(delta):Math.floor(delta);
 }

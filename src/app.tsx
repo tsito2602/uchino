@@ -1,3 +1,4 @@
+import {SHOPPING_UNDO_MS} from './shopping-undo';
 import {ShoppingList} from './shopping-list';
 import {useRecipeImport} from './recipe-import';
 import {useEffect,useState,useRef} from 'react';
@@ -30,7 +31,7 @@ export function App({session}:{session:Session}){
   const store=useRecords(scope);
   const [tab,setTab]=useState<Tab>('recipes'),[query,setQuery]=useState(''),[selectedCategories,setSelectedCategories]=useState<string[]>([]),[favorites,setFavorites]=useState(false);
   const [view,setView]=useState<View|null>(null),[closing,setClosing]=useState(false),[formError,setFormError]=useState(''),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
-  const [servings,setServings]=useState(2),[checked,setChecked]=useState<string[]>([]),[shopName,setShopName]=useState(''),[shoppingAdded,setShoppingAdded]=useState(''),[shoppingFocused,setShoppingFocused]=useState(false),[shoppingUndo,setShoppingUndo]=useState<{items:ShoppingItem[];message:string}|null>(null);
+  const [servings,setServings]=useState(2),[checked,setChecked]=useState<string[]>([]),[shopName,setShopName]=useState(''),[shoppingAdded,setShoppingAdded]=useState(''),[shoppingFocused,setShoppingFocused]=useState(false),[shoppingUndo,setShoppingUndo]=useState<{items:ShoppingItem[];message:string;expiresAt:number}|null>(null);
   const shopNameInput=useRef<HTMLInputElement>(null),shoppingInFlight=useRef(false),shoppingComposing=useRef(false);
   const [importMode,setImportMode]=useState<'url'|'image'|'text'>('url'),[ai,setAI]=useState(false),[allowDemo,setAllowDemo]=useState(false),[updateReady,setUpdateReady]=useState(false);
   const recipes=store.rows.filter(r=>r.kind==='recipe').map(r=>r.data as Recipe).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
@@ -38,7 +39,8 @@ export function App({session}:{session:Session}){
   const detail=view?.kind==='detail'?recipes.find(r=>r.id===view.id):undefined;
   const filtered=recipes.filter(r=>(!favorites||r.favorite)&&(!selectedCategories.length||selectedCategories.includes(r.category))&&(!query.trim()||`${r.title} ${r.ingredients.map(i=>i.name).join(' ')} ${r.memo}`.toLowerCase().includes(query.trim().toLowerCase())));
   useEffect(()=>{void fetch('/api/config').then(r=>r.json() as Promise<{ai:boolean;demoImport:boolean}>).then(v=>{setAI(!!v.ai);setAllowDemo(v.demoImport===true);}).catch(()=>{});},[]);
-  useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>{setNotice('');setShoppingUndo(null);},shoppingUndo?.message===notice?7000:4500);return()=>clearTimeout(timer);},[notice,shoppingUndo]);
+  useEffect(()=>{if(!notice||shoppingUndo?.message===notice)return;const timer=setTimeout(()=>setNotice(''),4500);return()=>clearTimeout(timer);},[notice,shoppingUndo]);
+  useEffect(()=>{if(!shoppingUndo)return;const timer=setTimeout(()=>{setShoppingUndo(null);setNotice(current=>current===shoppingUndo.message?'':current);},Math.max(0,shoppingUndo.expiresAt-Date.now()));return()=>clearTimeout(timer);},[shoppingUndo]);
   useEffect(()=>{
     if(view?.kind!=='shopping'){setShoppingFocused(false);return;}
     let frame=0;
@@ -75,13 +77,15 @@ export function App({session}:{session:Session}){
     try{await run(async()=>{
       await store.saveMany('shopping',removed,true);
       const message=remaining?`未購入の${remaining}点を残して終了しました`:'買い物を終了しました';
-      setShoppingUndo(removed.length?{items:removed,message}:null);setNotice(message);
+      setShoppingUndo(removed.length?{items:removed,message,expiresAt:Date.now()+SHOPPING_UNDO_MS}:null);setNotice(message);
       if(view?.kind==='shopping-finish')setClosing(true);
     });}finally{shoppingInFlight.current=false;}
   }
   function requestFinishShopping(){if(busy||!shopping.length)return;if(shopping.some(item=>!item.done))open({kind:'shopping-finish'});else void finishShopping(false);}
   async function undoShopping(){
-    if(!shoppingUndo||busy||shoppingInFlight.current)return;shoppingInFlight.current=true;
+    if(!shoppingUndo||busy||shoppingInFlight.current)return;
+    if(Date.now()>=shoppingUndo.expiresAt){setShoppingUndo(null);setNotice(current=>current===shoppingUndo.message?'':current);return;}
+    shoppingInFlight.current=true;
     const items=shoppingUndo.items;
     try{await run(async()=>{await store.saveMany('shopping',items);setShoppingUndo(null);setNotice('買い物リストを戻しました');});}finally{shoppingInFlight.current=false;}
   }
@@ -90,7 +94,7 @@ export function App({session}:{session:Session}){
   const filterCount=Number(!!query.trim())+Number(selectedCategories.length>0)+Number(favorites);
   const importFlow=useRecipeImport({active:view?.kind==='import',mode:importMode,ai,allowDemo,local:session.local,closing,onClose:close,onExited:()=>{setView(null);setClosing(false);},onManual:()=>open({kind:'edit',draft:newRecipe(),isNew:true}),onSave:async recipe=>{await store.save('recipe',recipe);setNotice('レシピを保存しました');setClosing(true);}});
   let context:DockContext|undefined;
-  if(view){context={key:view.kind,label:'操作',back:close,disabled:busy};if(view.kind==='filters')context={...context,action:close,actionLabel:`${filtered.length}件を表示`,icon:Check};if(view.kind==='edit')context={...context,action:saveRecipe,actionLabel:'保存',icon:Check,commit:true,remove:view.isNew?undefined:()=>void removeRecipe()};if(view.kind==='detail'&&detail)context={...context,action:checked.length?()=>void addIngredients():()=>open({kind:'edit',draft:structuredClone(detail),isNew:false}),actionLabel:checked.length?`買い物に追加（${checked.length}）`:'編集',icon:checked.length?ShoppingBasket:Pencil,iconOnly:!checked.length};if(view.kind==='shopping')context={...context,action:shoppingFocused?()=>void addShopping():undefined,actionLabel:'追加',icon:Plus,commit:true,preserveEditorFocus:true,disabled:busy||!shopName.trim()};if(view.kind==='shopping-finish')context={...context,action:()=>void finishShopping(true),actionLabel:shopping.some(item=>!item.done)?'未購入を残して終了':'買い物を終了',icon:Check,commit:true};if(view.kind==='import')context=importFlow.context;}
+  if(view){context={key:view.kind,label:'操作',back:close,disabled:busy};if(view.kind==='filters')context={...context,action:close,actionLabel:`${filtered.length}件を表示`,icon:Check};if(view.kind==='edit')context={...context,action:saveRecipe,actionLabel:'保存',icon:Check,commit:true,remove:view.isNew?undefined:()=>void removeRecipe()};if(view.kind==='detail'&&detail)context={...context,action:checked.length?()=>void addIngredients():()=>open({kind:'edit',draft:structuredClone(detail),isNew:false}),actionLabel:checked.length?`買い物に追加（${checked.length}）`:'編集',icon:checked.length?ShoppingBasket:Pencil,iconOnly:!checked.length};if(view.kind==='shopping')context={...context,action:shoppingFocused?()=>void addShopping():undefined,actionLabel:'追加',icon:Plus,commit:true,preserveEditorFocus:true,disabled:busy||!shopName.trim()};if(view.kind==='shopping-finish')context={...context,action:()=>void finishShopping(true),actionLabel:shopping.some(item=>!item.done)?'未購入を残して終了':'買い物を終了',icon:Check,commit:true,remove:()=>void finishShopping(false),removeLabel:'すべて消して終了',removeText:true};if(view.kind==='import')context=importFlow.context;}
   return <>
     <main className="shell">
       <header className="screen-page-top page-top"><div><h1 className="page-heading"><PageIcon aria-hidden="true"/>{tab==='recipes'?'レシピ':tab==='shopping'?'買い物メモ':'設定'}</h1><p className="page-count">{tab==='recipes'?`${recipes.length}件のレシピ`:tab==='shopping'?`${shopping.filter(i=>!i.done).length}件の買うもの`:session.local?'この端末に保存':session.user.name||session.user.email}</p></div></header>
@@ -106,7 +110,7 @@ export function App({session}:{session:Session}){
         onLogout={()=>{if(store.pending){store.setError('未同期の変更があります。同期または書き出し後にログアウトしてください。');return;}void session.logout().catch(e=>store.setError(e.message));}}/>}
     </main>
     <FloatingViewport>
-    <Dock onFinishShopping={tab==='shopping'&&shopping.length?requestFinishShopping:undefined} tab={tab} onTab={changeTab} onSearch={tab==='recipes'?()=>open({kind:'filters'}):undefined} filterCount={filterCount} addOpen={menuPhase==='open'} onAdd={tab==='settings'?undefined:()=>tab==='recipes'?setMenuPhase('open'):open({kind:'shopping'})} context={context}/>
+    <Dock shoppingUndo={tab==='shopping'&&shoppingUndo?{expiresAt:shoppingUndo.expiresAt,onUndo:()=>void undoShopping(),disabled:busy}:undefined} onFinishShopping={tab==='shopping'&&shopping.length?requestFinishShopping:undefined} tab={tab} onTab={changeTab} onSearch={tab==='recipes'?()=>open({kind:'filters'}):undefined} filterCount={filterCount} addOpen={menuPhase==='open'} onAdd={tab==='settings'?undefined:()=>tab==='recipes'?setMenuPhase('open'):open({kind:'shopping'})} context={context}/>
     {menuPhase!=='closed'&&<FuseAddMenu options={addOptions} closing={menuPhase==='closing'} onClose={()=>setMenuPhase('closing')} onSelect={option=>{pendingAdd.current=option.onClick;setMenuPhase('closing');}} onExited={exitAddMenu}/>}
     {importFlow.panel}
     {view&&view.kind!=='import'&&<Panel key={view.kind} icon={view.kind==='filters'?SlidersHorizontal:view.kind==='edit'?Pencil:view.kind==='shopping'?ShoppingBasket:view.kind==='shopping-finish'?Check:BookOpen} title={view.kind==='filters'?'検索・絞り込み':view.kind==='detail'?'レシピ':view.kind==='edit'?(view.isNew?'レシピを追加':'レシピを編集'):view.kind==='shopping-finish'?'この買い物を終了する':'買うものを追加'} closing={closing} onClose={close} onExited={()=>{setView(null);setClosing(false);}} origin={view.kind==='detail'?view.origin:undefined}>
@@ -119,11 +123,11 @@ export function App({session}:{session:Session}){
       {view.kind==='edit'&&<RecipeEditor value={view.draft} onChange={draft=>setView({...view,draft})} onSubmit={saveRecipe} error={formError}/>}
       {view.kind==='detail'&&detail&&<div className="recipe-detail"><span className="recipe-category">{detail.category}</span><h3>{detail.title}</h3><div className="recipe-meta"><span>{detail.servings}人分</span>{detail.minutes&&<span><Clock size={15}/>{detail.minutes}分</span>}</div><section><div className="section-head"><h3>材料</h3><div className="servings-control" aria-label="人数を変更"><button aria-label="人数を減らす" disabled={servings<=1} onClick={()=>setServings(servings-1)}><Minus size={16}/></button><span>{servings}人分</span><button aria-label="人数を増やす" disabled={servings>=100} onClick={()=>setServings(servings+1)}><Plus size={16}/></button></div></div><div className="ingredient-list">{detail.ingredients.map((ingredient,index)=><label className="ingredient-row" key={index}><input type="checkbox" checked={checked.includes(String(index))} onChange={e=>setChecked(e.target.checked?[...checked,String(index)]:checked.filter(i=>i!==String(index)))}/><span>{ingredient.name}</span><strong>{scaleQuantity(ingredient.quantity,detail.servings,servings)}{ingredient.unit&&` ${ingredient.unit}`}</strong></label>)}</div><p className="subtle">選んだ材料を買い物メモに追加できます。</p></section><section><h3>作り方</h3><ol className="recipe-steps">{detail.steps.map((step,i)=><li key={i}><span>{i+1}</span><p>{step}</p></li>)}</ol></section>{detail.memo&&<section><h3>メモ</h3><p className="recipe-memo">{detail.memo}</p></section>}{detail.sourceUrl&&<a className="source-link" href={detail.sourceUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={16}/>元のレシピを見る</a>}{formError&&<p className="form-error" role="alert">{formError}</p>}</div>}
       {view.kind==='shopping'&&<div className="shopping-entry-panel"><form id="shopping-form" className="form" onCompositionStart={()=>{shoppingComposing.current=true;}} onCompositionEnd={()=>{shoppingComposing.current=false;}} onKeyDown={e=>{if(e.key==='Enter'&&(shoppingComposing.current||e.nativeEvent.isComposing||e.nativeEvent.keyCode===229))e.preventDefault();}} onSubmit={e=>{e.preventDefault();void addShopping();}}><label className="field">買うもの<input ref={shopNameInput} required maxLength={200} enterKeyHint="enter" aria-describedby="shopping-enter-hint" placeholder="牛乳 1本、卵 1パックなど" value={shopName} onChange={e=>setShopName(e.target.value)}/></label><p id="shopping-enter-hint" className="subtle">Enterで追加して、続けて入力できます。</p><span className="visually-hidden" role="status">{shoppingAdded}</span>{formError&&<p className="form-error" role="alert">{formError}</p>}</form>{shopping.length?<div className="shopping-list-heading"><h3>今回の買い物</h3><span>{shopping.length}点</span></div>:<p className="shopping-entry-empty">追加したものがここに並びます。</p>}{shoppingList('追加した買うもの')}</div>}
-      {view.kind==='shopping-finish'&&<div className="shopping-finish-summary"><h3>{shopping.filter(item=>!item.done).length}点が未購入です</h3><p>未購入のものを次の買い物に残しますか？<br/>購入済みのものはリストから消えます。</p><div className="shopping-finish-counts"><span>購入済み<b>{shopping.filter(item=>item.done).length}点</b></span><span>未購入<b>{shopping.filter(item=>!item.done).length}点</b></span></div><button className="shopping-finish-all" type="button" disabled={busy} onClick={()=>void finishShopping(false)}><Trash2 size={17}/>すべて消して終了</button>{formError&&<p className="form-error" role="alert">{formError}</p>}</div>}
+      {view.kind==='shopping-finish'&&<div className="shopping-finish-summary"><h3>{shopping.filter(item=>!item.done).length}点が未購入です</h3><p>未購入のものを次の買い物に残しますか？<br/>購入済みのものはリストから消えます。</p><div className="shopping-finish-counts"><span>購入済み<b>{shopping.filter(item=>item.done).length}点</b></span><span>未購入<b>{shopping.filter(item=>!item.done).length}点</b></span></div>{formError&&<p className="form-error" role="alert">{formError}</p>}</div>}
 
     </Panel>}
     </FloatingViewport>
-    {notice&&<div className="uchino-toast" role="status"><Check size={17}/>{notice}{shoppingUndo?.message===notice&&<button type="button" className="shopping-undo" disabled={busy} onClick={()=>void undoShopping()}>元に戻す</button>}</div>}
+    {notice&&<div className="uchino-toast" role="status"><Check size={17}/>{notice}</div>}
     {!view&&formError&&<div className="uchino-toast" role="alert">{formError}<button onClick={()=>setFormError('')} aria-label="閉じる">×</button></div>}
   </>;
 }

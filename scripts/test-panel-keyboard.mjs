@@ -19,12 +19,13 @@ try{
   await page.evaluate(()=>document.activeElement?.blur());await keyboard(844);
   await page.getByRole('button',{name:'戻る',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});
  };
+ const restingDockY=(await page.locator('.floating-nav-host').boundingBox()).y;
  const visible=async field=>{
   await page.waitForTimeout(80);
   const bounds=await field.boundingBox(),panel=await page.getByRole('dialog').boundingBox(),dock=await page.locator('.floating-nav-host').boundingBox();
-  assert.ok(bounds.y>=panel.y+50&&bounds.y+bounds.height<=dock.y-16,'Only the form scrolls to reveal the editor above the dock');
+  assert.ok(bounds.y>=panel.y+50&&bounds.y+bounds.height<=470-12,'Only the form scrolls to reveal the editor above the keyboard');
   assert.equal(await field.evaluate(el=>el.style.transform),'','The editor returns to its normal position after focus');
-  assert.equal(470-dock.y-dock.height,8,'All panels use the same keyboard-to-dock gap');
+  assert.equal(dock.y,restingDockY,'Every panel keeps the dock at the screen bottom behind the keyboard');
   for(const selector of ['.floating-viewport','.floating-nav-host','.card-panel-backdrop'])assert.equal(await page.locator(selector).evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
  };
  const tapField=async field=>{
@@ -63,7 +64,7 @@ try{
  await visible(itemName);assert.deepEqual(await page.locator('.floating-nav-host').boundingBox(),originalDock);assert.deepEqual(await page.getByRole('dialog').boundingBox(),originalPanel);
  await itemName.press('Enter');assert.equal(await entryList.locator('.shopping-row').count(),2,'Empty Enter does not save or close');
  await itemName.fill('トマト');await itemName.evaluate(el=>{el.form.requestSubmit();el.form.requestSubmit();});
- await page.waitForFunction(()=>document.querySelector('#shopping-form input').value==='');assert.equal(await entryList.locator('.shopping-row').count(),3,'Concurrent submits save exactly once');
+ await page.waitForFunction(()=>document.querySelector('#shopping-form input').value==='');await entryList.locator('.shopping-row').nth(2).waitFor();assert.equal(await entryList.locator('.shopping-row').count(),3,'Concurrent submits save exactly once');
  // A local save failure retains the form values and focus for retry.
  await page.evaluate(()=>{const put=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(value,...args){if(value.kind==='shopping'){IDBObjectStore.prototype.put=put;throw new Error('テスト：保存できませんでした');}return put.call(this,value,...args);};});
  await itemName.fill('パン 1袋');await itemName.press('Enter');await page.getByRole('alert').waitFor();

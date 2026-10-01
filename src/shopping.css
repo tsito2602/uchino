@@ -1,4 +1,12 @@
 .shopping-entry { overflow: hidden; }
+.context-two-actions { gap: 8px; }
+.context-two-actions .context-primary,.context-two-actions .context-secondary { flex: 1; min-width: 0; }
+.context-two-actions .context-primary button,.context-two-actions .context-secondary button { padding: 0 10px; gap: 6px; font-size: 12px; line-height: 1.4; }
+.context-two-actions button svg { flex: none; width: 18px; }
+.context-two-actions button span { max-width: 7em; text-wrap: balance; }
+.dock-month.shopping-undo button { position: relative; width: 100%; border-radius: 999px; overflow: hidden; isolation: isolate; font-size: 12px; }
+.shopping-undo-fill { position: absolute; inset: 0; transform: scaleX(0); transform-origin: left center; background: color-mix(in srgb,var(--ink) 18%,transparent); pointer-events: none; }
+.shopping-undo-label { position: relative; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .shopping-list { overflow-anchor: none; }
 .shopping-list:empty { border-top: 0; }
 .shopping-row { gap: 8px; padding: 0; }
@@ -26,8 +34,6 @@
 .shopping-finish-counts { display: flex; gap: 20px; padding: 18px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .shopping-finish-counts span { display: flex; flex: 1; flex-direction: column; gap: 6px; color: var(--muted); font-size: 12px; }
 .shopping-finish-counts b { font-size: 24px; font-weight: 550; color: var(--ink); }
-.shopping-finish-all { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); color: var(--danger); font-size: 13px; }
-.uchino-toast .shopping-undo { flex: none; padding: 3px 4px; color: var(--ink); font-size: 12px; text-decoration: underline; }
 @media(max-width:350px) {
   .dock-month.shopping-finish button { font-size: 11px; gap: 0; padding: 0 2px; }
   .dock-month.shopping-finish button > svg { display: none; }

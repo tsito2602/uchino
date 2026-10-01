@@ -18,9 +18,9 @@ try{
  const panel=page.getByRole('dialog'),input=page.getByLabel('買うもの',{exact:true}),items=panel.locator('.shopping-row');
  assert.equal(await panel.locator('input').count(),1);assert.equal(await input.evaluate(el=>document.activeElement===el),false,'Opening does not focus the field');
  assert.equal(await page.getByRole('button',{name:'追加',exact:true}).count(),0,'No unfocused Add button');
- const fullPanel=await panel.boundingBox();
+ const fullPanel=await panel.boundingBox(),restingDock=await page.locator('.floating-nav-host').boundingBox();
  await input.tap();await keyboard(470);await input.fill('牛乳 1本');await page.getByRole('button',{name:'追加',exact:true}).waitFor();
- const dockBefore=await page.locator('.floating-nav-host').boundingBox();assert.equal(470-dockBefore.y-dockBefore.height,8);
+ const dockBefore=await page.locator('.floating-nav-host').boundingBox();assert.deepEqual(dockBefore,restingDock,'The keyboard leaves the dock at the screen bottom');
  await page.evaluate(()=>{const list=document.querySelector('.shopping-entry-panel .shopping-list');window.shoppingArrivals=[];new MutationObserver(records=>{for(const record of records)for(const node of record.addedNodes)if(node instanceof HTMLElement&&node.matches('.shopping-entry'))window.shoppingArrivals.push({height:node.style.height,opacity:node.style.opacity});}).observe(list,{childList:true});});
  await input.press('Enter');await page.waitForFunction(()=>document.querySelector('#shopping-form input').value==='');await items.first().waitFor();
  assert.equal(await items.first().locator('strong').innerText(),'牛乳 1本');assert.equal(await input.evaluate(el=>document.activeElement===el),true);
@@ -50,9 +50,14 @@ try{
  const names=await mainItems.locator('strong').allTextContents();await page.getByRole('checkbox',{name:'卵 1パックを購入済みにする',exact:true}).click();
  await page.getByRole('checkbox',{name:'卵 1パックを未購入に戻す',exact:true}).waitFor();assert.deepEqual(await mainItems.locator('strong').allTextContents(),names,'Checking never reorders items');
  await finish.click();await page.getByRole('button',{name:'未購入を残して終了',exact:true}).waitFor();
+ const carry=page.getByRole('navigation',{name:'操作'}).getByRole('button',{name:'未購入を残して終了',exact:true}),clearAll=page.getByRole('navigation',{name:'操作'}).getByRole('button',{name:'すべて消して終了',exact:true});
+ assert.equal(await panel.getByRole('button',{name:'すべて消して終了',exact:true}).count(),0);
+ for(const width of [320,390]){await page.setViewportSize({width,height:844});const left=await carry.boundingBox(),right=await clearAll.boundingBox();assert.ok(right.x>=left.x+left.width);assert.equal(await clearAll.evaluate(el=>el.scrollWidth<=el.clientWidth),true);await page.screenshot({path:`test-results/shopping-finish-${width}.png`,animations:'disabled'});}
  await page.screenshot({path:'test-results/shopping-finish-dark.png',animations:'disabled'});
  await page.getByRole('button',{name:'未購入を残して終了',exact:true}).click();await panel.waitFor({state:'detached'});
  assert.deepEqual(await mainItems.locator('strong').allTextContents(),['牛乳 1本']);
+ assert.equal(await page.locator('.uchino-toast').getByRole('button',{name:'元に戻す',exact:true}).count(),0);
+ await page.locator('.floating-nav-host').getByRole('button',{name:'元に戻す',exact:true}).waitFor();assert.equal(await finish.count(),0);
  await page.getByRole('button',{name:'元に戻す',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('main .shopping-row').length===2);
  assert.equal(await page.getByRole('checkbox',{name:'卵 1パックを未購入に戻す',exact:true}).getAttribute('aria-checked'),'true');
  await finish.click();
@@ -65,7 +70,15 @@ try{
  // Finishing a fully purchased list is one action; undo restores it.
  await page.getByRole('button',{name:'元に戻す',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('main .shopping-row').length===2);
  await page.getByRole('checkbox',{name:'牛乳 1本を購入済みにする',exact:true}).click();await page.getByRole('checkbox',{name:'牛乳 1本を未購入に戻す',exact:true}).waitFor();
+ await page.emulateMedia({reducedMotion:'no-preference'});
  await finish.click();await page.waitForFunction(()=>document.querySelectorAll('main .shopping-row').length===0);assert.equal(await panel.count(),0);
+ const undo=page.locator('.shopping-undo button'),fill=page.locator('.shopping-undo-fill');await undo.waitFor();
+ const progress=()=>fill.evaluate(el=>new DOMMatrix(getComputedStyle(el).transform).a);const initialProgress=await progress();
+ await page.waitForTimeout(1200);assert.ok(await progress()>initialProgress,'Undo background fills as its deadline approaches');
+ await page.screenshot({path:'test-results/shopping-undo-progress.png'});
+ await page.getByRole('button',{name:'レシピ',exact:true}).click();await page.getByRole('button',{name:'買い物',exact:true}).click();
+ assert.ok(await progress()>initialProgress,'Returning to shopping preserves elapsed time');
+ await undo.waitFor({state:'detached',timeout:8000});assert.equal(await page.getByRole('status').filter({hasText:'買い物を終了しました'}).count(),0,'Toast and Undo expire together');
  await page.locator('.dock-add').click();await input.fill('パン 1袋');await input.press('Enter');await page.waitForFunction(()=>document.querySelector('#shopping-form input').value==='');
  assert.deepEqual(await items.locator('strong').allTextContents(),['パン 1袋']);
  await page.evaluate(()=>document.activeElement.blur());await page.getByRole('button',{name:'戻る',exact:true}).click();await panel.waitFor({state:'detached'});

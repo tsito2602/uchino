@@ -2,8 +2,8 @@ import {useLayoutEffect,useRef,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {panelEditor,revealPanelField} from './panel-focus';
 
-// Panels keep the full layout viewport. Only the dock follows the space above
-// the keyboard; the focused field is revealed inside the unchanged panel.
+// Panels and the dock keep the full layout viewport. Only the panel's scroll
+// space adapts to reveal the focused field above the keyboard.
 export function FloatingViewport({children}:{children:ReactNode}){
   const root=useRef<HTMLDivElement>(null);
   useLayoutEffect(()=>{
@@ -15,7 +15,7 @@ export function FloatingViewport({children}:{children:ReactNode}){
       const changed=Math.abs(height-lastHeight)>1||Math.abs(layoutHeight-lastLayoutHeight)>1;
       if(changed){
         node.style.height=`${layoutHeight}px`;
-        node.style.setProperty('--dock-keyboard-inset',`${Math.max(0,layoutHeight-height)}px`);
+        node.style.setProperty('--panel-keyboard-inset',`${Math.max(0,layoutHeight-height)}px`);
         lastHeight=height;lastLayoutHeight=layoutHeight;
       }
       node.dataset.keyboard=String(layoutHeight-height>=120);
