@@ -2,11 +2,11 @@ import {useEffect,useRef,type Dispatch,type SetStateAction} from 'react';
 import {scaleQuantity,type Recipe} from './domain';
 
 type Props={recipe:Recipe;servings:number;checked:string[];onChange:Dispatch<SetStateAction<string[]>>;disabled?:boolean};
-type Gesture={id:number;touch:boolean;x:number;y:number;startX:number;startY:number;last:number;select:boolean;active:boolean};
+type Gesture={id:number;touch:boolean;x:number;y:number;startX:number;startY:number;last:number;active:boolean};
 
 export function IngredientList({recipe,servings,checked,onChange,disabled=false}:Props){
   const root=useRef<HTMLDivElement>(null);
-  const latest=useRef({checked,onChange,disabled});latest.current={checked,onChange,disabled};
+  const latest=useRef({onChange,disabled});latest.current={onChange,disabled};
   useEffect(()=>{
     const element=root.current;if(!element)return;
     const list:HTMLDivElement=element;
@@ -16,12 +16,14 @@ export function IngredientList({recipe,servings,checked,onChange,disabled=false}
       return row&&list.contains(row)?Number(row.dataset.ingredientIndex):-1;
     };
     function paint(index:number){
-      if(!gesture||index<0)return;
-      const from=Math.min(gesture.last,index),to=Math.max(gesture.last,index),select=gesture.select;
+      if(!gesture||index<0||index===gesture.last)return;
+      // Toggle only newly entered rows, including rows re-entered on a return sweep.
+      const first=gesture.last<0?index:gesture.last+(index>gesture.last?1:-1);
+      const from=Math.min(first,index),to=Math.max(first,index);
       gesture.last=index;
       latest.current.onChange(current=>{
         const selected=new Set(current);
-        for(let i=from;i<=to;i++)select?selected.add(String(i)):selected.delete(String(i));
+        for(let i=from;i<=to;i++)selected.has(String(i))?selected.delete(String(i)):selected.add(String(i));
         return [...selected];
       });
     }
@@ -55,10 +57,10 @@ export function IngredientList({recipe,servings,checked,onChange,disabled=false}
       if(gesture||latest.current.disabled)return;
       const index=indexOf(target);if(index<0)return;
       suppressUntil=0;
-      gesture={id,touch,x,y,startX:x,startY:y,last:index,select:!latest.current.checked.includes(String(index)),active:false};
+      gesture={id,touch,x,y,startX:x,startY:y,last:-1,active:false};
       timer=window.setTimeout(()=>{
         if(!gesture||latest.current.disabled)return;
-        gesture.active=true;list.dataset.selecting='true';paint(gesture.last);
+        gesture.active=true;list.dataset.selecting='true';paint(index);
         lastFrame=performance.now();frame=requestAnimationFrame(autoScroll);
       },320);
     }
