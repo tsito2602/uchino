@@ -41,7 +41,7 @@ export class DockContent extends Component<Props> {
     this.outgoing = copy;
     node.parentElement!.appendChild(copy);
     this.exit = copy.animate(
-      [{ opacity: copy.style.opacity || "1" }, { opacity: 0 }],
+      [{ opacity: copy.style.opacity || "1", filter: "blur(0px)" }, { opacity: 0, filter: "blur(4px)" }],
       {
         duration: 140,
         easing: "ease-out",
@@ -52,8 +52,10 @@ export class DockContent extends Component<Props> {
       () => copy.remove(),
       () => copy.remove(),
     );
-    node.inert = true;
-    this.entrance = node.animate([{ opacity: 0 }, { opacity: 1 }], {
+    // Browse tabs retain their positions: keep rapid taps and keyboard
+    // navigation usable while their accompanying labels crossfade.
+    node.inert = this.props.mode !== 'browse' || previous.mode !== 'browse';
+    this.entrance = node.animate([{ opacity: 0, filter: "blur(4px)" }, { opacity: 1, filter: "blur(0px)" }], {
       delay: 180,
       duration: 240,
       easing: "cubic-bezier(0.22, 1, 0.36, 1)",

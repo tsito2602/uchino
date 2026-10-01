@@ -23,6 +23,7 @@ html{scrollbar-gutter:stable}body{min-width:320px}button,input,textarea,select{f
 @media(max-width:380px){.recipe-symbol{width:52px;height:66px}.recipe-open{gap:12px}.card-panel-scroll{padding:22px 16px}.ingredient-edit,.ingredient-column-labels{grid-template-columns:minmax(0,1fr) 51px 48px 28px;gap:5px}.appearance-control button{gap:5px;font-size:11px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}.spin{animation:none}}
 
+.fuse-add-veil{-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .fuse-add-options{right:var(--add-right,16px);bottom:var(--add-bottom,8px)}
 
 /* Shared uchiwake selection motion, including a pointer-held tab preview. */

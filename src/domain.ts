@@ -28,7 +28,7 @@ export type RecordData = Recipe|ShoppingItem;
 export function newRecipe():Recipe { return {id:crypto.randomUUID(),title:'',category:'主菜',servings:2,minutes:null,ingredients:[{name:'',quantity:'',unit:''}],steps:[''],memo:'',sourceUrl:'',favorite:false,createdAt:new Date().toISOString(),photo:''}; }
 export function quantityNumber(value:string):number|null {
   const normalized=value.trim().replace(/[０-９．／]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xfee0));
-  const fraction=normalized.match(/^(?:(\d+)\s+)?(\d+)\/(\d+)$/);
+  const fraction=normalized.match(/^(?:(\d+)(?:\s+|と))?(\d+)\/(\d+)$/);
   if(fraction){const denominator=Number(fraction[3]);return denominator?Number(fraction[1]||0)+Number(fraction[2])/denominator:null;}
   return /^\d+(?:\.\d+)?$/.test(normalized)?Number(normalized):null;
 }
@@ -36,14 +36,22 @@ export function scaleQuantity(value:string,base:number,servings:number):string {
   const number=quantityNumber(value);
   if(number===null||!Number.isFinite(base)||base<=0||!Number.isFinite(servings)||servings<=0)return value;
   const result=number*servings/base;
-  for(const denominator of [2,3,4,8]){
+  for(let denominator=1;denominator<=100;denominator++){
     const numerator=Math.round(result*denominator);
-    if(Math.abs(result-numerator/denominator)<0.00001&&numerator%denominator){
-      const whole=Math.floor(numerator/denominator);return `${whole?`${whole} `:''}${numerator%denominator}/${denominator}`;
+    if(Math.abs(result-numerator/denominator)<0.00001){
+      const whole=Math.floor(numerator/denominator),remainder=numerator%denominator;
+      return remainder?`${whole?`${whole}と`:''}${remainder}/${denominator}`:String(whole);
     }
   }
-  return String(Number(result.toFixed(2)));
+  const rounded=Number(result.toFixed(2));
+  return rounded===result?String(rounded):scaleQuantity(String(rounded),1,1);
 }
+export const isSpoonUnit=(unit:string)=>/^(?:大さじ|小さじ)$/.test(unit.trim());
+export function formatQuantity(quantity:string,unit:string):string {
+  const value=scaleQuantity(quantity,1,1);
+  return isSpoonUnit(unit)?`${unit.trim()}${value}`:[value,unit].filter(Boolean).join(' ');
+}
+
 const text=(v:unknown,max:number)=>typeof v==='string'&&v.length<=max?v.trim():null;
 export function validateRecord(kind:Kind,value:unknown):RecordData|null {
   if(!value||typeof value!=='object'||Array.isArray(value))return null;

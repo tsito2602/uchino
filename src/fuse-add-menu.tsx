@@ -24,8 +24,9 @@ export function FuseAddMenu({options,closing,onClose,onSelect,onExited}:{options
       const veil=node.querySelector<HTMLElement>('.fuse-add-veil')!;
       animations.current=[veil.animate([{opacity:0},{opacity:1}],timing)];
       const main=layers.find(layer=>layer.matches('main.shell'));
-      // Blur the page itself, keeping the dock surround fully transparent.
-      if(main)animations.current.push(animatePanelBackground(main));
+      // The transparent veil blurs both the page and dock together. Only
+      // recede the page here so its photograph does not get blurred twice.
+      if(main)animations.current.push(animatePanelBackground(main,false));
       const anchor=buttons.at(-1)?.getBoundingClientRect();
       buttons.forEach((button,index)=>{
         const bounds=button.getBoundingClientRect();
