@@ -31,7 +31,7 @@ html{scrollbar-gutter:stable}body{min-width:320px}button,input,textarea,select{f
 .dock-month.recipe-tools button{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;border-radius:999px;font-size:13px}
 .recipe-tools button[data-active] span{font-size:12px}
 @media(max-width:350px){.dock-month.recipe-tools button[data-active]{gap:4px}.recipe-tools button[data-active] svg{width:18px}.recipe-tools button[data-active] span{font-size:11px}}
-.recipe-tools button[data-active]{color:var(--brand)}
+.recipe-tools button[data-active],.context-filter-results button{background:#171717e6;color:#fff}
 .card-panel{max-height:100%;scroll-padding:68px 0 16px}
 .recipe-filters{display:flex;flex-direction:column;gap:24px}
 .recipe-filters .recipe-search input{border:0;border-radius:0;padding:0;background:transparent;min-height:44px}
