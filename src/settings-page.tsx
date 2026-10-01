@@ -1,9 +1,11 @@
-import {Download,Info,LogOut,RefreshCw,Smartphone,UserRound} from 'lucide-react';
+import {Database,Download,Info,LogOut,RefreshCw,Smartphone,Sparkles,UserRound} from 'lucide-react';
+import type {CSSProperties} from 'react';
+import type {DataMode} from './data-mode';
 import {Brand,type Session} from './auth';
 import {AppearanceSettings} from './appearance-settings';
 
-type Props={session:Session;pending:number;updateReady:boolean;onSync:()=>void;onExport:()=>void;onUpdate:()=>void;onLogout:()=>void};
-export function SettingsPage({session,pending,updateReady,onSync,onExport,onUpdate,onLogout}:Props){
+type Props={session:Session;pending:number;updateReady:boolean;dataMode:DataMode;changingData:boolean;onDataMode:(mode:DataMode)=>void;onSync:()=>void;onExport:()=>void;onUpdate:()=>void;onLogout:()=>void};
+export function SettingsPage({session,pending,updateReady,dataMode,changingData,onDataMode,onSync,onExport,onUpdate,onLogout}:Props){
   return <div className="settings-page">
     <section className="section settings-section">
       <h2 className="section-heading">{session.local?<Smartphone size={20}/>:<UserRound size={20}/>}アカウント・保存先</h2>
@@ -16,8 +18,17 @@ export function SettingsPage({session,pending,updateReady,onSync,onExport,onUpda
     </section>
     <AppearanceSettings/>
     <section className="section settings-section">
+      <h2 className="section-heading"><Database size={20} aria-hidden="true"/>表示するデータ</h2>
+      <div className="appearance-control data-mode-control" role="group" aria-label="表示するデータ" style={{'--appearance-index':dataMode==='demo'?1:0} as CSSProperties}>
+        <span className="appearance-selection" aria-hidden="true"/>
+        <button type="button" aria-pressed={dataMode==='real'} disabled={changingData} onClick={()=>onDataMode('real')}><Database size={20} aria-hidden="true"/>実データ</button>
+        <button type="button" aria-pressed={dataMode==='demo'} disabled={changingData} onClick={()=>onDataMode('demo')}><Sparkles size={20} aria-hidden="true"/>デモデータ</button>
+      </div>
+      <p className="subtle">{dataMode==='demo'?'写真付きのサンプルで試せます。デモでの編集や買い物メモは実データと別に、この端末に保存します。':'自分で保存したレシピと買い物メモを表示します。デモと切り替えても、それぞれのデータは残ります。'}</p>
+    </section>
+    <section className="section settings-section">
       <h2 className="section-heading"><Download size={20}/>データ</h2>
-      <button className="settings-add-card" onClick={onExport}><Download size={18}/>データを書き出す</button>
+      <button className="settings-add-card" onClick={onExport}><Download size={18}/>{dataMode==='demo'?'デモデータを書き出す':'データを書き出す'}</button>
     </section>
     <section className="section settings-section app-update-settings">
       <h2 className="section-heading"><Info size={20}/>アプリ</h2>

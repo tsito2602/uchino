@@ -12,6 +12,7 @@ try {
  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
  await page.addInitScript(()=>{const vv=new EventTarget();Object.assign(vv,{height:innerHeight,offsetTop:0,scale:1});window.testViewport=vv;Object.defineProperty(window,'visualViewport',{value:vv});});
  await page.goto('http://127.0.0.1:8787');await page.getByRole('button',{name:'この端末で使う',exact:true}).click();
+ await page.getByRole('button',{name:'サンプルを見てみる',exact:true}).click();await page.locator('.recipe-row').nth(2).waitFor();
  const openImport=async()=>{await page.locator('.dock-add').click();await page.getByRole('menuitem',{name:'URLから取り込む',exact:true}).click();await page.getByRole('dialog').waitFor();};
  await openImport();await page.getByRole('button',{name:'デモで試す',exact:true}).click();
  await page.screenshot({path:'test-results/import-setup.png'});
@@ -31,7 +32,7 @@ try {
  await page.emulateMedia({reducedMotion:'reduce'});
  const began=Date.now();await page.getByRole('button',{name:'デモで読み取る',exact:true}).click();
  await page.getByRole('heading',{name:'取り込み内容を確認',exact:true}).waitFor();assert.ok(Date.now()-began<4000,'Reduced motion skips demo timing');
- assert.equal(await page.locator('.recipe-row').count(),0,'No automatic save');
+ assert.equal(await page.locator('.recipe-row').count(),3,'No automatic save');
  assert.equal(await page.getByRole('button',{name:'サンプルとして保存',exact:true}).isDisabled(),true);
  assert.equal(await page.locator('.import-issue').count(),2);
  await page.locator('html').evaluate(el=>el.setAttribute('data-brand-theme','dark'));
@@ -41,14 +42,14 @@ try {
  await page.getByRole('button',{name:'分量6を編集',exact:true}).click();await page.getByRole('textbox',{name:'分量6',exact:true}).fill('10');
  await page.evaluate(()=>{window.testViewport.height=470;window.testViewport.dispatchEvent(new Event('resize'));});await page.waitForTimeout(120);
  const panelAfter=await page.getByRole('dialog').boundingBox(),dock=await page.locator('.floating-nav-host').boundingBox();
- assert.equal(panelAfter.height,panelBefore.height,'Review keeps the full panel when keyboard opens');assert.equal(470-dock.y-dock.height,8,'Review uses common dock gap');
+ assert.equal(panelAfter.height,panelBefore.height,'Review keeps the full panel when keyboard opens');assert.equal(844-dock.y-dock.height,8,'Review keeps the dock at the screen bottom when the keyboard opens');
  const focused=await page.getByRole('textbox',{name:'分量6',exact:true}).boundingBox();assert.ok(focused.y+focused.height<dock.y,'Focused field stays visible');
  await page.screenshot({path:'test-results/import-review-keyboard.png'});
  await page.evaluate(()=>{document.activeElement.blur();window.testViewport.height=844;window.testViewport.dispatchEvent(new Event('resize'));});
  await page.getByRole('textbox',{name:'単位6',exact:true}).fill('g');
  await page.getByRole('checkbox',{name:'人数を確認した',exact:true}).check();await page.getByRole('checkbox',{name:'分量6を確認した',exact:true}).check();
  await page.getByRole('button',{name:'サンプルとして保存',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});
- assert.equal(await page.locator('.recipe-row').count(),1);await page.locator('.recipe-open').click();assert.match(await page.locator('.ingredient-list').innerText(),/10 g/);
+ assert.equal(await page.locator('.recipe-row').count(),4);await page.locator('.recipe-open').first().click();assert.match(await page.locator('.ingredient-list').innerText(),/10 g/);
  await page.getByRole('button',{name:'戻る',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});
  // Production configuration removes the demo affordance.
  await page.route('**/api/config',route=>route.fulfill({json:{ai:false,demoImport:false}}));await page.reload();await openImport();
