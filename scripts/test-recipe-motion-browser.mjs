@@ -31,16 +31,16 @@ try{
  await plus.click();await plus.click();await minus.click();await page.waitForFunction(()=>[...document.querySelectorAll('.quantity-ticker')].every(el=>el.dataset.settled==='true'));assert.equal(await quantities.first().innerText(),'400','Rapid changes settle on the latest quantity');
  await page.emulateMedia({reducedMotion:'reduce'});await minus.click();assert.equal(await page.locator('.quantity-ticker').first().getAttribute('data-settled'),'true');assert.equal(await quantities.first().innerText(),'300');await page.emulateMedia({reducedMotion:'no-preference'});
  await nav.getByRole('button',{name:'戻る',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});await page.waitForTimeout(650);
- // Switching browse tabs used to keep one identity and snap its labels.
+ // Switching tabs must not fade the persistent three-icon navigation.
  await page.getByRole('button',{name:'設定',exact:true}).evaluate(button=>button.click());await page.waitForTimeout(40);
- const transition=await page.locator('.thumb-dock-content:not([data-outgoing])').evaluate(el=>{const animation=el.getAnimations()[0];if(!animation)return null;animation.pause();animation.currentTime=260;return {opacity:Number(getComputedStyle(el).opacity),filter:getComputedStyle(el).filter};});
- assert.ok(transition&&transition.opacity>0&&transition.opacity<1&&transition.filter!=='none','Dock content crossfades during its morph');
- await page.evaluate(()=>document.getAnimations().forEach(animation=>{if(animation.playState==='paused')animation.play();}));await page.waitForTimeout(650);
+ const transition=await page.locator('.thumb-dock-content:not([data-outgoing])').evaluate(el=>({animations:el.getAnimations().length,opacity:getComputedStyle(el).opacity,filter:getComputedStyle(el).filter}));
+ assert.equal(transition.animations,0);assert.equal(transition.opacity,'1');assert.equal(transition.filter,'none','Browse tabs remain sharp throughout the morph');
+ await page.waitForTimeout(650);
  await page.getByRole('button',{name:'レシピ',exact:true}).click();await page.waitForTimeout(650);await page.getByRole('button',{name:'レシピの検索・絞り込み',exact:true}).click();await page.waitForTimeout(650);assert.equal(await page.locator('.filter-categories button>svg').count(),7);await nav.getByRole('button',{name:'戻る',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});await page.waitForTimeout(650);
  await page.getByRole('button',{name:'レシピを追加',exact:true}).click();await page.getByRole('menu').waitFor();await page.waitForTimeout(420);
  assert.equal(await page.locator('.fuse-add-veil').evaluate(el=>getComputedStyle(el).backdropFilter),'blur(6px)');
  assert.equal(await page.locator('.floating-nav-host').evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.x+30,r.y+28)?.className;}),'fuse-add-veil','The blur veil covers the dock too');
  await page.screenshot({path:'test-results/add-menu-blurred-dock.png'});await page.keyboard.press('Escape');await page.getByRole('menu').waitFor({state:'detached'});assert.equal(await page.locator('.floating-nav-host').evaluate(el=>el.inert),false);
  await page.emulateMedia({reducedMotion:'reduce'});await page.getByRole('button',{name:'レシピを追加',exact:true}).click();assert.equal(await page.locator('.fuse-add-veil').evaluate(el=>getComputedStyle(el).backdropFilter),'blur(6px)');await page.keyboard.press('Escape');await page.getByRole('menu').waitFor({state:'detached'});
- assert.deepEqual(errors,[]);console.log('PASS: recipe title/category, synchronized photo reveal, animated fractions/rapid changes/reduced motion, dock crossfade and whole-background menu blur.');
+ assert.deepEqual(errors,[]);console.log('PASS: recipe title/category, synchronized photo reveal, animated fractions/rapid changes/reduced motion, stable browse tabs and whole-background menu blur.');
 }catch(error){failed=true;console.error(error);for(const context of browser.contexts())for(const page of context.pages())await page.screenshot({path:'test-results/recipe-motion-failure.png'}).catch(()=>{});}finally{await browser.close();process.exit(failed?1:0);}

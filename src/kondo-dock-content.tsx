@@ -22,6 +22,11 @@ export class DockContent extends Component<Props> {
     copy.dataset.outgoing = "true";
     copy.inert = true;
     copy.setAttribute("aria-hidden", "true");
+    if (previous.mode === 'browse' && this.props.mode === 'browse') {
+      // The three tabs and add button are persistent controls, not outgoing labels.
+      for (const stable of copy.querySelectorAll<HTMLElement>('.safari-dock, .dock-add'))
+        stable.style.visibility = 'hidden';
+    }
     for (const element of [copy, ...copy.querySelectorAll("*")]) {
       for (const attribute of ["id", "name", "form", "href", "autofocus"])
         element.removeAttribute(attribute);
@@ -52,10 +57,11 @@ export class DockContent extends Component<Props> {
       () => copy.remove(),
       () => copy.remove(),
     );
-    // Browse tabs retain their positions: keep rapid taps and keyboard
-    // navigation usable while their accompanying labels crossfade.
-    node.inert = this.props.mode !== 'browse' || previous.mode !== 'browse';
-    this.entrance = node.animate([{ opacity: 0, filter: "blur(4px)" }, { opacity: 1, filter: "blur(0px)" }], {
+    const browsing = this.props.mode === 'browse' && previous.mode === 'browse';
+    node.inert = !browsing;
+    // Scope browse transitions to the changing right-hand action only.
+    const incoming = browsing ? node.querySelector<HTMLElement>('.dock-month') : node;
+    this.entrance = incoming?.animate([{ opacity: 0, filter: "blur(4px)" }, { opacity: 1, filter: "blur(0px)" }], {
       delay: 180,
       duration: 240,
       easing: "cubic-bezier(0.22, 1, 0.36, 1)",
@@ -63,7 +69,7 @@ export class DockContent extends Component<Props> {
     });
     this.recovery = setTimeout(() => this.clear(), 580);
     const entrance = this.entrance;
-    void entrance.finished.then(
+    void entrance?.finished.then(
       () => {
         if (this.entrance === entrance) node.inert = false;
       },

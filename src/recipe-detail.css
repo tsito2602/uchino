@@ -13,3 +13,9 @@
 .ingredient-list[data-selecting]{cursor:crosshair}
 .ingredient-selection-hint{line-height:1.7;margin-top:16px}
 @media(prefers-reduced-motion:reduce){.ingredient-row,.ingredient-row:before{transition:none}}
+
+.context-action-icon{display:grid;place-items:center;animation:action-icon-appear 240ms ease-out}
+.context-count-value{display:block;animation:selection-count-pop 420ms cubic-bezier(.22,1,.36,1)}
+@keyframes selection-count-pop{0%{opacity:0;transform:translateY(5px) scale(.65)}45%{opacity:1;transform:translateY(-2px) scale(1.2)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes action-icon-appear{from{opacity:0;transform:scale(.8);filter:blur(3px)}to{opacity:1;transform:scale(1);filter:blur(0)}}
+@media(prefers-reduced-motion:reduce){.context-action-icon,.context-count-value{animation:none}}

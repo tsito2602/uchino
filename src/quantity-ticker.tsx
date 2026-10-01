@@ -18,6 +18,23 @@ export function QuantityTicker({value}:{value:string}){
   const root=useRef<HTMLSpanElement>(null),previous=useRef<string|null>(null),positions=useRef(new Map<string,number>());
   const characters=glyphs(value);
   useLayoutEffect(()=>{
+    const node=root.current!,text=node.querySelector<HTMLElement>('.quantity-ticker-static')!;
+    const from=node.getBoundingClientRect().width,to=text.getBoundingClientRect().width;
+    const initialized=!!node.style.width;
+    node.style.width=`${to}px`;
+    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
+    if(!initialized||reduced.matches||Math.abs(from-to)<.1)return;
+    // Animate the actual layout width so spoon labels and adjacent units move
+    // with the number, including interrupted integer ↔ mixed-fraction changes.
+    const animation=node.animate([{width:`${from}px`},{width:`${to}px`}],{duration:DURATION,easing:'cubic-bezier(.22,1,.36,1)'});
+    const finish=()=>animation.finish();
+    reduced.addEventListener('change',finish);
+    return()=>{
+      node.style.width=`${node.getBoundingClientRect().width}px`;
+      animation.cancel();reduced.removeEventListener('change',finish);
+    };
+  },[value]);
+  useLayoutEffect(()=>{
     const node=root.current!;
     const before=previous.current;previous.current=value;node.dataset.settled='true';
     const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');

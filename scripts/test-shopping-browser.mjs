@@ -14,7 +14,7 @@ try{
  const finish=page.getByRole('button',{name:'この買い物を終了する',exact:true});
  assert.equal(await finish.count(),0);
  const navWidths=new Map();for(const width of [320,360,390]){await page.setViewportSize({width,height:844});navWidths.set(width,(await page.getByRole('navigation',{name:'メインメニュー'}).boundingBox()).width);}
- await page.locator('.dock-add').click();await page.getByRole('dialog').waitFor();await page.waitForTimeout(650);
+ await page.locator('.thumb-dock-content:not([data-outgoing]) .dock-add').click();await page.getByRole('dialog').waitFor();await page.waitForTimeout(650);
  const panel=page.getByRole('dialog'),input=page.getByLabel('買うもの',{exact:true}),items=panel.locator('.shopping-row');
  assert.equal(await panel.locator('input').count(),1);assert.equal(await input.evaluate(el=>document.activeElement===el),false,'Opening does not focus the field');
  assert.equal(await page.getByRole('button',{name:'追加',exact:true}).count(),0,'No unfocused Add button');
@@ -39,7 +39,7 @@ try{
  await finish.waitFor();
  for(const width of [320,360,390]){
   await page.setViewportSize({width,height:844});await page.waitForTimeout(100);
-  const nav=await page.getByRole('navigation',{name:'メインメニュー'}).boundingBox(),end=await finish.boundingBox(),add=await page.locator('.dock-add').boundingBox();
+  const nav=await page.getByRole('navigation',{name:'メインメニュー'}).boundingBox(),end=await finish.boundingBox(),add=await page.locator('.thumb-dock-content:not([data-outgoing]) .dock-add').boundingBox();
   assert.ok(nav.x+nav.width<=end.x&&end.x+end.width<=add.x,'Finish sits between the three tabs and plus');assert.ok(add.x+add.width<=width);
   assert.equal(await finish.evaluate(el=>el.scrollWidth<=el.clientWidth),true,'Finish label fits the capsule');
   assert.ok(Math.abs(nav.width-navWidths.get(width))<1,'Adding Finish keeps the existing compact nav width');
@@ -67,20 +67,20 @@ try{
  await page.getByRole('button',{name:'すべて削除',exact:true}).click();await page.getByRole('alert').filter({hasText:'一括保存に失敗'}).waitFor();
  const persisted=await page.evaluate(()=>new Promise((resolve,reject)=>{const open=indexedDB.open('uchino',1);open.onerror=()=>reject(open.error);open.onsuccess=()=>{const db=open.result,request=db.transaction('records').objectStore('records').getAll();request.onsuccess=()=>{resolve(request.result.filter(row=>row.kind==='shopping'&&!row.deleted).length);db.close();};};}));
  assert.equal(persisted,2,'A failed finish never partially clears the list');
- await page.getByRole('button',{name:'すべて削除',exact:true}).click();await panel.waitFor({state:'detached'});assert.equal(await mainItems.count(),0);assert.equal(await finish.count(),0);
+ await page.getByRole('button',{name:'すべて削除',exact:true}).click();await panel.waitFor({state:'detached'});await page.waitForFunction(()=>document.querySelectorAll('main .shopping-row').length===0);assert.equal(await mainItems.count(),0);assert.equal(await finish.count(),0);
  // Finishing a fully purchased list is one action; undo restores it.
  await page.getByRole('button',{name:'元に戻す',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('main .shopping-row').length===2);
  await page.getByRole('checkbox',{name:'牛乳 1本を購入済みにする',exact:true}).click();await page.getByRole('checkbox',{name:'牛乳 1本を未購入に戻す',exact:true}).waitFor();
  await page.emulateMedia({reducedMotion:'no-preference'});
  await finish.click();await page.waitForFunction(()=>document.querySelectorAll('main .shopping-row').length===0);assert.equal(await panel.count(),0);
- const undo=page.locator('.shopping-undo button'),fill=page.locator('.shopping-undo-fill');await undo.waitFor();
+ const undo=page.locator('.thumb-dock-content:not([data-outgoing]) .shopping-undo button'),fill=page.locator('.thumb-dock-content:not([data-outgoing]) .shopping-undo-fill');await undo.waitFor();
  const progress=()=>fill.evaluate(el=>new DOMMatrix(getComputedStyle(el).transform).a);const initialProgress=await progress();
  await page.waitForTimeout(1200);assert.ok(await progress()>initialProgress,'Undo background fills as its deadline approaches');
  await page.screenshot({path:'test-results/shopping-undo-progress.png'});
  await page.getByRole('button',{name:'レシピ',exact:true}).click();await page.getByRole('button',{name:'買い物',exact:true}).click();
  assert.ok(await progress()>initialProgress,'Returning to shopping preserves elapsed time');
  await undo.waitFor({state:'detached',timeout:8000});assert.equal(await page.getByRole('status').filter({hasText:'買い物を終了しました'}).count(),0,'Toast and Undo expire together');
- await page.locator('.dock-add').click();await input.fill('パン 1袋');await input.press('Enter');await page.waitForFunction(()=>document.querySelector('#shopping-form input').value==='');
+ await page.locator('.thumb-dock-content:not([data-outgoing]) .dock-add').click();await input.fill('パン 1袋');await input.press('Enter');await page.waitForFunction(()=>document.querySelector('#shopping-form input').value==='');
  assert.deepEqual(await items.locator('strong').allTextContents(),['パン 1袋']);
  await page.evaluate(()=>document.activeElement.blur());await page.getByRole('button',{name:'戻る',exact:true}).click();await panel.waitFor({state:'detached'});
  await page.reload();await page.getByRole('button',{name:'買い物',exact:true}).click();assert.deepEqual(await mainItems.locator('strong').allTextContents(),['パン 1袋'],'The next list persists without a history screen');

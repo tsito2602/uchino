@@ -19,7 +19,7 @@ try{
  for(const theme of ['light','dark']){
   await page.locator('html').evaluate((el,theme)=>{el.dataset.brandTheme=theme;el.style.colorScheme=theme;},theme);
   for(const locator of [checkbox,page.locator('.recipe-steps li>span').first()]){const style=await glass(locator);assert.ok(style.blur.includes('blur(10px)'));assert.ok(style.background.includes('/ 0.52')||style.background.includes(', 0.52'),style.background);assert.equal(style.filter,'none','Text and check marks stay sharp');}
-  if(theme==='dark')await page.screenshot({path:'test-results/header-favorite-dark.png'});
+  if(theme==='dark')await page.waitForTimeout(650);if(theme==='dark')await page.screenshot({path:'test-results/header-favorite-dark.png'});
  }
  await page.locator('html').evaluate(el=>{el.dataset.brandTheme='light';el.style.colorScheme='light';});await nav.getByRole('button',{name:'編集',exact:true}).click();await page.getByLabel('レシピ名',{exact:true}).waitFor();await page.waitForTimeout(650);
  for(const locator of [page.getByLabel('レシピ名',{exact:true}),page.getByRole('combobox',{name:/^カテゴリ/}),page.getByLabel('分量1',{exact:true}),page.getByLabel('手順1',{exact:true}),page.locator('.step-edit>span').first()]){const style=await glass(locator);assert.ok(style.blur.includes('blur(10px)'));assert.equal(style.filter,'none');}
