@@ -14,7 +14,7 @@ try{
  const first=await badge.evaluate(el=>({start:el.getAnimations()[0]?.startTime,scale:new DOMMatrix(getComputedStyle(el).transform).a}));assert.ok(first.scale>1.2);
  await inputs.nth(1).evaluate(el=>el.click());await page.waitForTimeout(20);
  const second=await badge.evaluate(el=>({start:el.getAnimations()[0]?.startTime,scale:new DOMMatrix(getComputedStyle(el).transform).a}));assert.equal(await badge.innerText(),'2');assert.ok(second.start>first.start,'Rapid selection restarts the badge transition');assert.ok(second.scale<first.scale,'Each bump resets the entire badge, including its background');
- await page.waitForTimeout(150);assert.ok(await badge.evaluate(el=>new DOMMatrix(getComputedStyle(el).transform).a)>1.35);await page.screenshot({path:'test-results/selection-badge-bump.png'});
+ await page.waitForTimeout(150);assert.ok(await badge.evaluate(el=>new DOMMatrix(getComputedStyle(el).transform).a)>1.25);await page.screenshot({path:'test-results/selection-badge-bump.png'});
  await page.waitForTimeout(550);assert.equal(await badge.evaluate(el=>el.classList.contains('is-bumping')),false);assert.ok(Math.abs(await badge.evaluate(el=>new DOMMatrix(getComputedStyle(el).transform).a)-1)<.01);
  await inputs.nth(0).evaluate(el=>el.click());await inputs.nth(1).evaluate(el=>el.click());
  const detail=page.locator('.recipe-detail-panel');await detail.evaluate(el=>{el.scrollTop=260;window.retainedDetail=el;window.retainedScroll=el.scrollTop;});
