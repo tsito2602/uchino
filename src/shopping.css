@@ -1,9 +1,9 @@
 .shopping-entry { overflow: hidden; }
 .context-two-actions { gap: 8px; }
 .context-two-actions .context-primary,.context-two-actions .context-secondary { flex: 1; min-width: 0; }
-.context-two-actions .context-primary button,.context-two-actions .context-secondary button { padding: 0 10px; gap: 6px; font-size: 12px; line-height: 1.4; }
-.context-two-actions button svg { flex: none; width: 18px; }
-.context-two-actions button span { max-width: 7em; text-wrap: balance; }
+.context-two-actions .context-primary button,.context-two-actions .context-secondary button { padding: 0 6px; gap: 4px; font-size: 12px; line-height: 1.4; }
+.context-two-actions button svg { flex: none; width: 16px; }
+.context-two-actions button span { white-space: nowrap; }
 .dock-month.shopping-undo button { position: relative; width: 100%; border-radius: 999px; overflow: hidden; isolation: isolate; font-size: 12px; }
 .shopping-undo-fill { position: absolute; inset: 0; transform: scaleX(0); transform-origin: left center; background: color-mix(in srgb,var(--ink) 18%,transparent); pointer-events: none; }
 .shopping-undo-label { position: relative; display: flex; align-items: center; justify-content: center; gap: 6px; }
