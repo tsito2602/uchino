@@ -6,6 +6,7 @@
 .card-panel .recipe-filters .recipe-search input{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none}
 .card-panel :is(.mode-options button.selected,.category-tabs button[aria-pressed=true],.import-mode button[aria-pressed=true]){background:var(--control-selected);border-color:color-mix(in srgb,var(--ink) 34%,transparent);color:var(--ink)}
 .card-panel select option{background:var(--paper);color:var(--ink)}
+.recipe-form .field-pair .field :is(input,select){height:50px;min-height:50px;padding-block:0;line-height:normal}
 .card-panel .step-edit>span{display:grid;place-items:center;width:25px;height:25px;flex:none;margin-top:10px;padding:0;border-radius:50%}
 .card-panel .recipe-steps>li>span{border:1px solid var(--control-line)}
 .card-panel :is(.glass-checkbox input:checked,.shopping-row.done .shopping-check){background:var(--control-selected);border-color:color-mix(in srgb,var(--ink) 42%,transparent);color:var(--ink)}
