@@ -1,0 +1,16 @@
+.context-recipe{gap:8px}
+.context-recipe .context-servings{display:grid;grid-template-columns:44px minmax(42px,1fr) 44px;align-items:center;flex:1;min-width:0;max-width:190px;margin-inline:auto}
+.context-servings>span{display:flex;justify-content:center;align-items:baseline;gap:3px;font-size:15px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:none}
+.context-servings small{font-size:11px;font-weight:500}
+.context-servings button{width:44px;min-height:44px}
+.context-servings button:disabled{opacity:.3}
+.context-recipe .context-primary.context-compact{margin-left:0}
+.context-action-count{position:absolute;top:4px;right:4px;display:grid;place-items:center;min-width:19px;height:19px;padding:0 4px;border-radius:999px;background:var(--brand);color:var(--on-brand);font-size:10px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1}
+.ingredient-list{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:pan-y pinch-zoom}
+.ingredient-row{position:relative;isolation:isolate;min-height:54px;transition:color .15s}
+.ingredient-row:before{content:'';position:absolute;inset:3px -9px;border-radius:12px;background:color-mix(in srgb,var(--ink) 7%,transparent);opacity:0;z-index:-1;transition:opacity .16s}
+.ingredient-row[data-checked]:before{opacity:1}
+.ingredient-row:has(input:focus-visible){outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+.ingredient-list[data-selecting]{cursor:crosshair}
+.ingredient-selection-hint{line-height:1.7;margin-top:16px}
+@media(prefers-reduced-motion:reduce){.ingredient-row,.ingredient-row:before{transition:none}}

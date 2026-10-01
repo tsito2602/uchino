@@ -8,6 +8,7 @@ import './theme.css';
 import './login.css';
 import './uchino.css';
 import './recipe-photo.css';
+import './recipe-detail.css';
 import './settings.css';
 import './studio-action.css';
 import './import-effects.css';
