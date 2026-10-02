@@ -5,6 +5,7 @@ import type {ImportEvent} from '../src/import-model';
 import {authRoutes,sessionUser,type AuthBindings,type AuthUser} from './auth';
 import {validateRecord,type Kind} from '../src/domain';
 import {importUrl,importAI,aiConfigured,type ImportBindings} from './import';
+import {importFailurePayload} from './import-errors';
 import {embeddedAssets} from './generated-assets';
 type Bindings=AuthBindings&ImportBindings&{APP_ENV?:string};
 const app=new Hono<{Bindings:Bindings;Variables:{user:AuthUser}}>();
@@ -56,10 +57,10 @@ app.post('/api/import',async c=>{
       const controller=new AbortController();output.onAbort(()=>controller.abort());
       const send=(event:ImportEvent)=>output.writeln(JSON.stringify(event));
       try{await send({type:'phase',phase:'reading'});const result=await execute(AbortSignal.any([c.req.raw.signal,controller.signal]),phase=>{void send({type:'phase',phase});});await send({type:'result',result});}
-      catch(error){if(!controller.signal.aborted)await send({type:'error',error:error instanceof Error?error.message:'読み取れませんでした。'});}
+      catch(error){if(!controller.signal.aborted)await send({type:'error',...importFailurePayload(error)});}
     });
   }
-  try{return c.json(await execute(c.req.raw.signal));}catch(error){return c.json({error:error instanceof Error?error.message:'読み取れませんでした。'},422);}
+  try{return c.json(await execute(c.req.raw.signal));}catch(error){return c.json(importFailurePayload(error),422);}
 });
 app.all('/api/*',c=>c.json({error:'見つかりません。'},404));
 app.get('*',c=>{

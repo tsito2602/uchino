@@ -181,6 +181,9 @@
 .import-review-confirm input:focus-visible + .import-confirm-check { outline: 2px solid #171717; outline-offset: 4px; }
 .import-review-confirm input:disabled ~ span { opacity: .45; }
 .import-review-demo { margin-top: 14px; color: var(--muted); font-size: 11px; text-align: center; }
+.import-error-details { margin-top: 12px; color: var(--muted); font-size: 12px; }
+.import-error-details summary { cursor: pointer; padding: 8px 0; }
+.import-error-details pre { margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
 /* The processing action is a status, not another animated Studio wash. */
 .import-processing-label { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .import-processing-label canvas { flex: 0 0 20px; }

@@ -5,6 +5,7 @@ import type {DockContext} from './dock';
 import {validateRecord,type Recipe} from './domain';
 import {fieldAfterRemoval,type ImportResult,type ImportSource} from './import-model';
 import {readImport,importPause} from './import-client';
+import {ImportFailure,type ImportDiagnostics} from './import-errors';
 import {ImportReview} from './import-review';
 import {ImportPhaseStatus,ImportProcessing,type ImportProgress} from './import-progress';
 
@@ -13,6 +14,8 @@ type Props={active:boolean;mode:Mode;ai:boolean;allowDemo:boolean;local:boolean;
 export function useRecipeImport(props:Props) {
   const [mode,setMode]=useState<Mode>(props.mode),[demo,setDemo]=useState(false),[value,setValue]=useState(''),[image,setImage]=useState(''),[imageName,setImageName]=useState('');
   const [error,setError]=useState(''),[progress,setProgress]=useState<ImportProgress|null>(null),[result,setResult]=useState<ImportResult|null>(null),[source,setSource]=useState<ImportSource|null>(null),[acknowledged,setAcknowledged]=useState<string[]>([]),[saving,setSaving]=useState(false),[photoBusy,setPhotoBusy]=useState(false);
+  const [diagnostics,setDiagnostics]=useState<ImportDiagnostics|null>(null);
+  useEffect(()=>{if(!error)setDiagnostics(null);},[error]);
   const request=useRef<AbortController|null>(null),fileRead=useRef<FileReader|null>(null);
   useEffect(()=>{
     request.current?.abort();request.current=null;fileRead.current?.abort();
@@ -32,7 +35,7 @@ export function useRecipeImport(props:Props) {
     if(!demo&&props.local){setError('取り込みにはGoogleログインが必要です。');return;}
     const controller=new AbortController();request.current=controller;const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(75000)]);
     const original:ImportSource={kind:mode,name:mode==='image'?imageName:mode==='url'?'レシピのURL':'貼り付けた本文',...(mode==='image'?{image}:mode==='url'?{url:value}:{text:value})};
-    (document.activeElement as HTMLElement|null)?.blur();setError('');setResult(null);setAcknowledged([]);
+    (document.activeElement as HTMLElement|null)?.blur();setError('');setDiagnostics(null);setResult(null);setAcknowledged([]);
     setProgress({phase:'reading',started:Date.now(),demo,ingredients:[],total:null});
     try{
       const imported=await readImport(mode==='url'?{url:value}:mode==='image'?{image}:{text:value},demo,signal,phase=>{if(request.current===controller)setProgress(current=>current?{...current,phase}:current);});
@@ -49,7 +52,7 @@ export function useRecipeImport(props:Props) {
       }
       signal.throwIfAborted();if(request.current!==controller)return;
       setSource(imported.source||original);setResult(imported);setProgress(null);
-    }catch(cause){if(request.current===controller){setProgress(null);if(!controller.signal.aborted)setError(signal.aborted?'時間がかかっています。もう一度お試しください。':cause instanceof Error?cause.message:'読み取れませんでした。もう一度お試しください。');}}
+    }catch(cause){if(request.current===controller){setProgress(null);if(!controller.signal.aborted){setError(signal.aborted?'時間がかかっています。もう一度お試しください。':cause instanceof Error?cause.message:'読み取れませんでした。もう一度お試しください。');setDiagnostics(cause instanceof ImportFailure?cause.diagnostics??null:null);}}}
     finally{if(request.current===controller)request.current=null;}
   }
   function removeItem(kind:'ingredients'|'steps',index:number){
@@ -79,6 +82,7 @@ export function useRecipeImport(props:Props) {
         {props.local?<p className="subtle">取り込みにはGoogleログインが必要です。手入力はこの端末でも使えます。</p>:mode!=='url'&&!props.ai?<p className="subtle">AI取り込みは準備中です。URLか手入力で追加できます。</p>:<p className="subtle">{mode==='url'?'対応サイトのレシピを取り込みます。読めない場合は本文か画像をお試しください。':'読み取り結果は、保存前に確認・修正できます。'}</p>}
       </>}
       {error&&<p className="form-error" role="alert">{error}</p>}
+      {error&&diagnostics&&<details className="import-error-details"><summary>エラーの詳細</summary><pre>{JSON.stringify(diagnostics,null,2)}</pre></details>}
       <button className="import-manual" onClick={props.onManual}><Pencil size={15}/>手入力で追加する</button>
     </div>}
   </Panel>:null;

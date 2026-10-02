@@ -81,3 +81,18 @@ test('live import streams real phases, preserves uncertainty, and rejects invali
  const failed=await request('/api/import',{method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json',Accept:'application/x-ndjson',Cookie:auth},body:JSON.stringify({text:'test'})});
  assert.equal((await failed.text()).trim().split('\n').map(JSON.parse).at(-1).type,'error');
 });
+
+test('AI failure diagnostics reach the client and logs without upstream text or saved data',async t=>{
+ const secret='private recipe and provider credentials',logs=[];
+ t.mock.method(console,'error',value=>logs.push(value));
+ const before=database.prepare('SELECT count(*) AS count FROM user_data').get().count;
+ const bindings={...env,DB,AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:'uchino',AI:{async run(){return Response.json({errors:[{code:2005,message:secret}]},{status:400});}}};
+ for(const accept of ['application/x-ndjson','application/json']){
+  const result=await request('/api/import',{method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json',Accept:accept,Cookie:auth},body:JSON.stringify({text:secret})},bindings);
+  const text=await result.text();assert.ok(!text.includes(secret));
+  const failure=accept==='application/x-ndjson'?text.trim().split('\n').map(JSON.parse).at(-1):JSON.parse(text);
+  assert.deepEqual(failure.diagnostics,{code:'invalid_request',stage:'response',httpStatus:400,providerCode:'2005'});
+ }
+ assert.equal(logs.length,2);assert.ok(logs.every(line=>JSON.parse(line).event==='recipe_import_failed'&&!line.includes(secret)));
+ assert.equal(database.prepare('SELECT count(*) AS count FROM user_data').get().count,before);
+});

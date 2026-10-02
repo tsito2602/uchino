@@ -1,10 +1,11 @@
 import type {Recipe} from './domain';
+import type {ImportDiagnostics} from './import-errors';
 
 export type ImportPhase='reading'|'sorting'|'checking';
 export type ImportSource={kind:'url'|'image'|'text';name:string;text?:string;url?:string;image?:string};
 export type ImportIssue={field:string;reason:string};
 export type ImportResult={recipe:Recipe;issues:ImportIssue[];source?:ImportSource;demo?:boolean};
-export type ImportEvent={type:'phase';phase:ImportPhase}|{type:'result';result:ImportResult}|{type:'error';error:string};
+export type ImportEvent={type:'phase';phase:ImportPhase}|{type:'result';result:ImportResult}|{type:'error';error:string;diagnostics?:ImportDiagnostics};
 
 export function issueLabel(field:string) {
   const labels:Record<string,string>={title:'レシピ名',category:'カテゴリ',servings:'人数',minutes:'調理時間',memo:'メモ'};

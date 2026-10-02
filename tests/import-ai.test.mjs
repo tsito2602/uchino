@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 
-const built=await build({entryPoints:['worker/import.ts'],bundle:true,write:false,format:'esm',platform:'node'});
-const {importAI,importUrl}=await import('data:text/javascript;base64,'+Buffer.from(built.outputFiles[0].text).toString('base64'));
+const built=await build({stdin:{contents:"export * from './worker/import';export {readImport} from './src/import-client';",resolveDir:process.cwd()},bundle:true,write:false,format:'esm',platform:'node'});
+const {importAI,importUrl,readImport}=await import('data:text/javascript;base64,'+Buffer.from(built.outputFiles[0].text).toString('base64'));
 const recipe={title:'卵焼き',category:'主菜',servings:2,minutes:10,ingredients:[{name:'卵',quantity:'2',unit:'個'},{name:'砂糖',quantity:'1/2',unit:'大さじ'}],steps:['材料を混ぜる。','焼く。'],memo:'',issues:[]};
 const response=value=>({status:'completed',output:[{type:'reasoning',content:[]},{type:'message',content:[{type:'output_text',text:JSON.stringify(value)}]}]});
 const env=run=>({AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:'uchino',AI:{run}});
@@ -33,7 +33,7 @@ test('blank, wrongly typed, and oversized inputs never call AI',async()=>{
 test('incomplete, malformed, and non-recipe outputs cannot become saved recipes',async()=>{
  for(const output of [{status:'incomplete'},null,{success:false,result:response(recipe)},{status:'completed',output:null},response({error:'not a recipe'}),response({...recipe,steps:[]}),response({...recipe,servings:'2'})])await assert.rejects(importAI(env(async()=>output),{text:'卵焼き'}));
  await assert.rejects(importAI(env(async()=>new Response('provider credentials',{status:401})),{text:'卵焼き'}),/接続設定/);
- await assert.rejects(importAI(env(async()=>new Response('provider credits',{status:429})),{text:'卵焼き'}),/利用枠/);
+ await assert.rejects(importAI(env(async()=>new Response('provider credits',{status:429})),{text:'卵焼き'}),/混み合って/);
 });
 
 test('cancelling a pending AI binding immediately stops waiting and prevents late phases',async()=>{
@@ -43,11 +43,47 @@ test('cancelling a pending AI binding immediately stops waiting and prevents lat
  finish(response(recipe));await Promise.resolve();assert.deepEqual(phases,[]);
 });
 test('cancelling while reading an AI response body also stops waiting',async()=>{
- const controller=new AbortController();let entered;
+ const controller=new AbortController();let entered,cancelled=false;
  const reading=new Promise(resolve=>{entered=resolve;});
- const raw=new Response();raw.json=()=>{entered();return new Promise(()=>{});};
+ const raw=new Response(new ReadableStream({pull(){entered();return new Promise(()=>{});},cancel(){cancelled=true;}},{highWaterMark:0}));
  const operation=importAI(env(async()=>raw),{text:'卵焼き'},{signal:controller.signal});
- await reading;controller.abort();await assert.rejects(operation,{name:'AbortError'});
+ await reading;controller.abort();await assert.rejects(operation,{name:'AbortError'});assert.equal(cancelled,true);
+});
+
+test('JSON byte streams and charset Responses preserve split Japanese text',async()=>{
+ const bytes=new TextEncoder().encode(JSON.stringify({success:true,result:response(recipe)}));
+ for(const wrap of [body=>body,body=>new Response(body,{headers:{'Content-Type':'application/json; charset=utf-8'}})]){
+  let offset=0;
+  const body=new ReadableStream({pull(c){if(offset===bytes.length)c.close();else c.enqueue(bytes.subarray(offset,++offset));}});
+  const result=await importAI(env(async()=>wrap(body)),{text:'卵焼き'});assert.equal(result.recipe.title,'卵焼き');assert.deepEqual(result.recipe.ingredients,recipe.ingredients);
+ }
+});
+
+test('provider rejection, quota, malformed responses and thrown errors retain safe diagnostics',async()=>{
+ const secret='private upstream input and credentials';
+ const cases=[
+  [()=>Response.json({success:false,errors:[{code:2005,message:secret}]},{status:400}),'invalid_request','response',400,'2005'],
+  [()=>Response.json({error:{code:'insufficient_quota',message:secret}},{status:429}),'quota','response',429,'insufficient_quota'],
+  [()=>Response.json({error:{code:'model_not_found',message:secret}},{status:404}),'configuration','response',404,'model_not_found'],
+  [()=>({success:false,errors:[{code:secret,message:secret}]}),'upstream','response',null,'unrecognized'],
+  [()=>new Response(secret),'invalid_response','decode',200,'absent'],
+  [()=>({status:'completed',output:null}),'invalid_response','output',null,'absent'],
+  [()=>{throw Object.assign(new Error(secret),{status:403,code:'permission_denied'});},'authentication','request',403,'permission_denied'],
+ ];
+ for(const [run,code,stage,httpStatus,providerCode] of cases){
+  await assert.rejects(importAI(env(async()=>run()),{text:secret}),error=>{
+   assert.deepEqual(error.diagnostics,{code,stage,httpStatus,providerCode});assert.ok(!JSON.stringify(error).includes(secret));assert.ok(!error.message.includes(secret));return true;
+  });
+ }
+});
+
+test('the browser receives failure details through both streamed and JSON errors',async t=>{
+ const diagnostics={code:'invalid_request',stage:'response',httpStatus:400,providerCode:'2005'};
+ let streaming=true;
+ t.mock.method(globalThis,'fetch',async()=>streaming?new Response(JSON.stringify({type:'phase',phase:'reading'})+'\n'+JSON.stringify({type:'error',error:'AIへのリクエストが拒否されました。',diagnostics})+'\n'):Response.json({error:'AIへのリクエストが拒否されました。',diagnostics},{status:422}));
+ for(const value of [true,false]){
+  streaming=value;await assert.rejects(readImport({text:'卵焼き'},false,new AbortController().signal,()=>{}),error=>{assert.deepEqual(error.diagnostics,diagnostics);return true;});
+ }
 });
 
 test('URL import organizes original JSON-LD quantities with AI and keeps the source',async()=>{

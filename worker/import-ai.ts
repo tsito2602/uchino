@@ -1,5 +1,6 @@
 import {newRecipe,validateRecord,type Recipe} from '../src/domain';
 import {importIssues,type ImportResult,type ImportPhase} from '../src/import-model';
+import {aiFailure,upstreamFailure} from './import-errors';
 
 export type ImportOptions={signal?:AbortSignal;onPhase?:(phase:ImportPhase)=>void};
 export type ImportBindings={AI?:{run:(model:string,input:Record<string,unknown>,options?:Record<string,unknown>)=>Promise<unknown>};AI_IMPORT_PROVIDER?:string;AI_GATEWAY_ID?:string};
@@ -14,12 +15,6 @@ const instruction=`提供された資料から、一つのレシピをJSONに整
 カテゴリは料理の内容から判断し、判断できない場合はその他として要確認にしてください。issuesには曖昧な項目や仮設定と具体的な理由だけを記載してください。fieldはtitle/category/servings/minutes/memo/ingredients.0.quantity/steps.0など実在するフィールドを使ってください。
 材料または手順が読めない、複数の別レシピで対象を特定できない、レシピではない場合は {error:"読み取れませんでした"} を返してください。`;
 
-function connectionError(status?:number):Error {
-  if(status===401||status===403)return new Error('AIに接続できませんでした。取り込みの接続設定を確認してください。');
-  if(status===402||status===429)return new Error('AIの利用枠に達しています。時間をおいて再試行してください。');
-  return new Error('AI取り込みに失敗しました。時間をおいて再試行してください。');
-}
-
 async function abortable<T>(operation:Promise<T>,signal:AbortSignal):Promise<T> {
   signal.throwIfAborted();
   let abort:()=>void=()=>{};
@@ -27,27 +22,46 @@ async function abortable<T>(operation:Promise<T>,signal:AbortSignal):Promise<T> 
   try{return await Promise.race([operation,cancelled]);}finally{signal.removeEventListener('abort',abort);}
 }
 
-function outputText(raw:unknown):string {
+async function bindingJson(raw:Response|ReadableStream<Uint8Array>,signal:AbortSignal):Promise<unknown> {
+  signal.throwIfAborted();
+  const body=raw instanceof Response?raw.body:raw;
+  if(!body)throw new SyntaxError('Empty AI response');
+  const reader=body.getReader(),decoder=new TextDecoder();let text='',done=false;
+  const cancel=()=>{void reader.cancel().catch(()=>{});};
+  signal.addEventListener('abort',cancel,{once:true});
+  try{
+    while(!done){
+      const chunk=await abortable(reader.read(),signal);signal.throwIfAborted();done=chunk.done;
+      text+=done?decoder.decode():decoder.decode(chunk.value,{stream:true});
+    }
+    return JSON.parse(text);
+  }finally{
+    signal.removeEventListener('abort',cancel);if(!done)cancel();reader.releaseLock();
+  }
+}
+
+function outputText(raw:unknown,status?:number):string {
   let value=raw;
   for(let depth=0;depth<3;depth++){
-    if(!value||typeof value!=='object'||Array.isArray(value))throw connectionError();
+    if(!value||typeof value!=='object'||Array.isArray(value))throw aiFailure('invalid_response','output',status);
     const envelope=value as Record<string,unknown>;
-    if(envelope.success===false||envelope.error)throw connectionError();
+    if(envelope.success===false||envelope.error||Array.isArray(envelope.errors)&&envelope.errors.length)throw upstreamFailure('response',status,envelope);
     if(envelope.status!==undefined)break;
     if(envelope.result&&typeof envelope.result==='object'){value=envelope.result;continue;}
     break;
   }
-  if(!value||typeof value!=='object'||Array.isArray(value))throw connectionError();
+  if(!value||typeof value!=='object'||Array.isArray(value))throw aiFailure('invalid_response','output',status);
   const response=value as Record<string,unknown>;
-  if(response.status==='incomplete')throw new Error('読み取りが途中で終わりました。画像を分けるか、本文を短くしてお試しください。');
-  if(response.status!=='completed')throw connectionError();
+  if(response.status==='incomplete')throw aiFailure('incomplete','output',status);
+  if(response.status!=='completed')throw aiFailure('invalid_response','output',status);
   if(typeof response.output_text==='string'&&response.output_text.trim())return response.output_text;
-  if(!Array.isArray(response.output))throw connectionError();
+  if(!Array.isArray(response.output))throw aiFailure('invalid_response','output',status);
   const text=response.output.flatMap(item=>{
     if(!item||typeof item!=='object'||!Array.isArray(item.content)||item.type&&item.type!=='message')return [];
     return item.content.flatMap((part:unknown)=>{
       if(!part||typeof part!=='object')return [];
       const content=part as Record<string,unknown>;
+      if(content.type==='refusal')throw aiFailure('refusal','output',status);
       return content.type==='output_text'&&typeof content.text==='string'?[content.text]:[];
     });
   }).join('');
@@ -70,16 +84,20 @@ export async function importAI(env:ImportBindings,input:{text?:string;image?:str
       instructions:instruction,input:[{role:'user',content}],text:{format:{type:'json_object'}},reasoning:{effort:'low'},store:false,stream:false,max_output_tokens:6000,
     },{gateway:{id:env.AI_GATEWAY_ID!.trim(),skipCache:true,collectLog:false},returnRawResponse:true,signal}),signal);
   }catch(error){
-    signal.throwIfAborted();
-    const status=error&&typeof error==='object'&&'status' in error?Number(error.status):undefined;
-    throw connectionError(status);
+    options.signal?.throwIfAborted();if(signal.aborted)throw aiFailure('timeout','request');
+    throw upstreamFailure('request',undefined,error);
   }
   signal.throwIfAborted();
-  if(raw instanceof Response){
-    if(!raw.ok)throw connectionError(raw.status);
-    try{raw=await abortable(raw.json(),signal);}catch{signal.throwIfAborted();throw connectionError();}
+  const status=raw instanceof Response?raw.status:undefined;
+  if(raw instanceof Response||raw instanceof ReadableStream){
+    const failed=raw instanceof Response&&!raw.ok;
+    try{raw=await bindingJson(raw,signal);}catch{
+      options.signal?.throwIfAborted();if(signal.aborted)throw aiFailure('timeout','response',status);
+      throw failed?upstreamFailure('response',status):aiFailure('invalid_response','decode',status);
+    }
+    if(failed)throw upstreamFailure('response',status,raw);
   }
-  const output=outputText(raw).trim().replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/,'$1');
+  const output=outputText(raw,status).trim().replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/,'$1');
   options.onPhase?.('sorting');
   let value:Record<string,unknown>;
   try{value=JSON.parse(output);}catch{throw new Error('読み取り結果を整理できませんでした。もう一度お試しください。');}
