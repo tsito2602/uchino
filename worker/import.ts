@@ -4,8 +4,7 @@ export {importAI,aiConfigured,type ImportBindings} from './import-ai';
 import {importRecipePhoto,recipeImageCandidates} from './import-photo';
 import {normalizeImportedIngredient} from '../src/ingredient-import';
 import {newRecipe,validateRecord,type Recipe} from '../src/domain';
-export const recipeHosts=['cookpad.com','www.kurashiru.com','delishkitchen.tv','www.orangepage.net','park.ajinomoto.co.jp','www.kikkoman.co.jp','www.kewpie.co.jp','www.sirogohan.com','www.kyounoryouri.jp'];
-function permitted(value:string){const url=new URL(value);if(url.protocol!=='https:'||url.username||url.password||url.port||!recipeHosts.includes(url.hostname))throw new Error('このサイトからの直接取り込みにはまだ対応していません。レシピ本文を貼り付けるか、画像を選択してください。');return url;}
+import {publicWebUrl} from './public-web-url';
 export function parseRecipeSchema(html:string,sourceUrl:string,evidence?:{text?:string;image?:unknown}):Recipe|null {
   const scripts=[...html.matchAll(/<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
   const walk=(value:unknown):Record<string,unknown>|null=>{if(!value||typeof value!=='object')return null;if(Array.isArray(value)){for(const item of value){const result=walk(item);if(result)return result;}return null;}const o=value as Record<string,unknown>;if(o['@type']==='Recipe'||Array.isArray(o['@type'])&&o['@type'].includes('Recipe'))return o;return walk(o['@graph']);};
@@ -31,10 +30,10 @@ export function recipePageText(html:string):string {
     }).replace(/[\t ]+/g,' ').replace(/ *\n */g,'\n').replace(/\n{3,}/g,'\n\n').trim();
 }
 export async function importUrl(value:string,options:ImportOptions={},env:ImportBindings={}):Promise<ImportResult>{
-  let url=permitted(value);
+  let url=publicWebUrl(value);
   for(let redirects=0;redirects<4;redirects++){
     const response=await fetch(url,{redirect:'manual',signal:AbortSignal.any([AbortSignal.timeout(12000),...(options.signal?[options.signal]:[])]),headers:{Accept:'text/html','User-Agent':'uchino recipe importer'}});
-    if(response.status>=300&&response.status<400){const location=response.headers.get('Location');if(!location)break;url=permitted(new URL(location,url).href);continue;}
+    if(response.status>=300&&response.status<400){const location=response.headers.get('Location');await response.body?.cancel();if(!location)break;url=publicWebUrl(location,url);continue;}
     if(!response.ok)throw new Error('ページを取得できませんでした。レシピ本文か画像から取り込んでください。');
     if(!response.headers.get('content-type')?.includes('text/html'))throw new Error('レシピのページURLを入力してください。');
     const reader=response.body?.getReader();if(!reader)break;const decoder=new TextDecoder();let html='',size=0;

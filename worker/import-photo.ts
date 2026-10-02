@@ -1,16 +1,6 @@
 import {imageMime,MAX_IMPORT_PHOTO_BYTES} from '../src/import-photo';
-
-const cdns:Record<string,string[]>={
-  'cookpad.com':['img.cpcdn.com'],
-  'www.kurashiru.com':['video.kurashiru.com','video2.kurashiru.com'],
-  'delishkitchen.tv':['video.delishkitchen.tv','image.delishkitchen.tv'],
-};
+import {publicWebUrl} from './public-web-url';
 const warning='料理の写真を取得できませんでした。内容は取り込めています。必要なら写真を追加してください。';
-function allowed(value:string,source:URL):URL {
-  const url=new URL(value,source);
-  if(url.protocol!=='https:'||url.username||url.password||url.port||![source.hostname,...(cdns[source.hostname]||[])].includes(url.hostname))throw new Error('Unsupported photo host');
-  return url;
-}
 function candidates(value:unknown):string[] {
   if(typeof value==='string')return [value];
   if(Array.isArray(value))return value.slice(0,4).flatMap(item=>typeof item==='string'?[item]:item&&typeof item==='object'?candidatesObject(item):[]);
@@ -35,12 +25,12 @@ export async function importRecipePhoto(urls:string[],source:URL,parent?:AbortSi
   const signal=AbortSignal.any([AbortSignal.timeout(8000),...(parent?[parent]:[])]);
   for(const candidate of urls){
     try{
-      signal.throwIfAborted();let url=allowed(candidate,source);
+      signal.throwIfAborted();let url=publicWebUrl(candidate,source);
       for(let redirects=0;redirects<3;redirects++){
         const response=await fetch(url,{redirect:'manual',signal,headers:{Accept:'image/jpeg,image/png,image/webp','User-Agent':'uchino recipe importer'}});
         if(response.status>=300&&response.status<400){
           const location=response.headers.get('Location');await response.body?.cancel();
-          if(!location)break;url=allowed(new URL(location,url).href,source);continue;
+          if(!location)break;url=publicWebUrl(location,url);continue;
         }
         const type=response.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
         if(!response.ok||!['image/jpeg','image/png','image/webp'].includes(type||'')||Number(response.headers.get('content-length'))>MAX_IMPORT_PHOTO_BYTES){await response.body?.cancel();break;}

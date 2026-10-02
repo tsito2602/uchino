@@ -23,10 +23,10 @@ test('a URL import carries the source photo as bounded transient image data',asy
  assert.equal(result.recipe.ingredients[0].group,'A');assert.equal(importedPhotoBlob(result.photo).type,'image/jpeg');assert.equal(result.warnings,undefined);
 });
 
-test('private, unrelated, credentialed and redirected image URLs are never fetched',async t=>{
+test('private, credentialed and redirected image URLs are never fetched',async t=>{
  const requests=[];
  t.mock.method(globalThis,'fetch',async url=>{requests.push(String(url));return new Response(null,{status:302,headers:{Location:'https://127.0.0.1/private'}});});
- for(const candidate of ['https://127.0.0.1/','http://www.kikkoman.co.jp/a.jpg','https://www.kikkoman.co.jp.evil.test/a.jpg','https://user:pass@www.kikkoman.co.jp/a.jpg','https://www.kikkoman.co.jp:999/a.jpg']){
+ for(const candidate of ['https://127.0.0.1/','file:///a.jpg','https://www.kikkoman.co.jp.evil.test/a.jpg','https://user:pass@www.kikkoman.co.jp/a.jpg','https://www.kikkoman.co.jp:999/a.jpg']){
   const result=await importRecipePhoto([candidate],source);assert.equal(result.photo,undefined);assert.ok(result.warnings.length);
  }
  assert.equal(requests.length,0);
@@ -59,4 +59,11 @@ test('streamed imports accept larger source photos and reject unsafe photo repre
  const result=await readImport({url:source.href},false,new AbortController().signal,()=>{});
  assert.equal(importedPhotoBlob(result.photo).size,900000);assert.equal(result.recipe.ingredients[0].group,'A');
  for(const value of ['https://127.0.0.1/a.jpg','data:image/svg+xml;base64,PHN2Zy8+','data:image/jpeg;base64,PGh0bWwvPg=='])assert.throws(()=>importedPhotoBlob(value));
+});
+
+test('images and image redirects can use any public CDN without registration',async t=>{
+ const requests=[];
+ t.mock.method(globalThis,'fetch',async(url,options)=>{assert.equal(options.redirect,'manual');requests.push(String(url));return String(url).endsWith('redirect.jpg')?new Response(null,{status:302,headers:{Location:'https://images.example.org/dish.jpg'}}):image();});
+ const result=await importRecipePhoto(['https://asset.oceans-nadia.com/redirect.jpg'],new URL('https://oceans-nadia.com/user/22780/recipe/186141'));
+ assert.equal(importedPhotoBlob(result.photo).type,'image/jpeg');assert.deepEqual(requests,['https://asset.oceans-nadia.com/redirect.jpg','https://images.example.org/dish.jpg']);
 });
