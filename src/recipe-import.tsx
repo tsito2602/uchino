@@ -34,7 +34,7 @@ export function useRecipeImport(props:Props) {
     if(request.current||saving)return;
     if(demo&&!props.allowDemo)return;
     if(!demo&&props.local){setError('取り込みにはGoogleログインが必要です。');return;}
-    const controller=new AbortController();request.current=controller;const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(120000)]);
+    const controller=new AbortController();request.current=controller;const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(mode==='url'?360000:120000)]);
     const original:ImportSource={kind:mode,name:mode==='image'?imageName:mode==='url'?'レシピのURL':'貼り付けた本文',...(mode==='image'?{image}:mode==='url'?{url:value}:{text:value})};
     (document.activeElement as HTMLElement|null)?.blur();setError('');setDiagnostics(null);setResult(null);setAcknowledged([]);
     setProgress({phase:'reading',started:Date.now(),demo,ingredients:[],total:null});
@@ -81,7 +81,7 @@ export function useRecipeImport(props:Props) {
         <div className="mode-options">{([{value:'url',label:'URL'},{value:'image',label:'画像'},{value:'text',label:'本文'}] as const).map(item=><button key={item.value} aria-pressed={mode===item.value} className={mode===item.value?'selected':''} onClick={()=>{setMode(item.value);setValue('');setError('');}}>{item.label}</button>)}</div>
         {mode==='url'?<label className="field">レシピのURL<input type="url" maxLength={2048} placeholder="https://" value={value} onChange={event=>setValue(event.target.value)}/></label>:mode==='text'?<label className="field">レシピの本文<textarea rows={10} maxLength={30000} placeholder="材料・分量・作り方を貼り付け" value={value} onChange={event=>setValue(event.target.value)}/></label>:<label className="import-upload"><ImagePlus size={30}/><strong>{imageName||'画像を選択'}</strong><small>PNG・JPEG・WebP / 6MBまで</small><input aria-label="レシピ画像を選択" type="file" accept="image/png,image/jpeg,image/webp" onChange={event=>void selectImage(event)}/></label>}
         {image&&mode==='image'&&<img className="import-preview" src={image} alt="選択したレシピ画像"/>}
-        {props.local?<p className="subtle">取り込みにはGoogleログインが必要です。手入力はこの端末でも使えます。</p>:mode!=='url'&&!props.ai?<p className="subtle">AI取り込みは準備中です。URLか手入力で追加できます。</p>:<p className="subtle">{mode==='url'?'レシピページのURLから取り込みます。読めない場合は本文か画像をお試しください。':'読み取り結果は、保存前に確認・修正できます。'}</p>}
+        {props.local?<p className="subtle">取り込みにはGoogleログインが必要です。手入力はこの端末でも使えます。</p>:mode!=='url'&&!props.ai?<p className="subtle">AI取り込みは準備中です。URLか手入力で追加できます。</p>:<p className="subtle">{mode==='url'?'レシピページやYouTubeの公開動画から取り込みます。動画は概要欄・音声・映像を読み取るため、数分かかることがあります。':'読み取り結果は、保存前に確認・修正できます。'}</p>}
       </>}
       {error&&<p className="form-error" role="alert">{error}</p>}
       {error&&diagnostics&&<details className="import-error-details"><summary>エラーの詳細</summary><pre>{JSON.stringify(diagnostics,null,2)}</pre></details>}

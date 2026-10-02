@@ -1,0 +1,96 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {build} from 'esbuild';
+import {videoId,videoUrl,description,videoRecipe,playerHtml,geminiResponse} from './youtube-fixture.mjs';
+import {photoFixture} from './photo-fixture.mjs';
+const built=await build({stdin:{contents:"export * from './worker/import';export * from './worker/import-youtube';export * from './worker/youtube-metadata';export * from './src/youtube';export * from './src/domain';",resolveDir:process.cwd()},bundle:true,write:false,format:'esm',platform:'node'});
+const {importUrl,importYouTube,youtubeMetadata,youtubeVideo,youtubeStepUrl,geminiOutput,validateRecord,removeRecipeStep}=await import('data:text/javascript;base64,'+Buffer.from(built.outputFiles[0].text).toString('base64'));
+const env=run=>({AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:'uchino',AI:{run}});
+function source(t,html=playerHtml()){
+ const requests=[];
+ t.mock.method(globalThis,'fetch',async(url,options)=>{
+  requests.push(String(url));assert.equal(options.redirect,'manual');
+  if(String(url)===videoUrl)return new Response(html,{headers:{'content-type':'text/html'}});
+  if(String(url)===`https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`)return new Response(null,{status:404});
+  if(String(url)===`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`)return new Response(Buffer.from(photoFixture().split(',')[1],'base64'),{headers:{'content-type':'image/jpeg'}});
+  throw new Error('Unexpected URL');
+ });
+ return requests;
+}
+
+test('YouTube watch, shared, mobile, Shorts and embed links normalize without tracking or start offsets',()=>{
+ for(const url of [videoUrl+'&t=20&list=xyz',`https://youtu.be/${videoId}?si=tracking`,`https://m.youtube.com/watch?v=${videoId}`,`https://www.youtube.com/shorts/${videoId}`,`http://youtube.com/live/${videoId}`,`https://www.youtube-nocookie.com/embed/${videoId}`])assert.deepEqual(youtubeVideo(url),{id:videoId,url:videoUrl});
+ for(const url of ['https://youtube.com.evil.test/watch?v=abcdefghijk','https://youtube.com@evil.test/watch?v=abcdefghijk','https://user:pass@youtube.com/watch?v=abcdefghijk','https://youtube.com:444/watch?v=abcdefghijk','https://youtube.com/playlist?list=abcdefghijk','https://youtube.com/@chef','https://youtu.be/short','javascript:alert(1)'])assert.equal(youtubeVideo(url),null,url);
+ assert.equal(youtubeStepUrl(videoUrl,0),videoUrl+'&t=0s');assert.equal(youtubeStepUrl(videoUrl,65),videoUrl+'&t=65s');assert.equal(youtubeStepUrl(videoUrl,-1),null);assert.equal(youtubeStepUrl('https://elsewhere.test/',65),null);
+});
+
+test('metadata reads only the requested video and safely handles braces and escaped quotes in descriptions',()=>{
+ const text='材料 {A}\n卵 "2個"\n工程の説明';assert.deepEqual(youtubeMetadata(playerHtml(text),videoId),{title:'卵焼きの作り方',description:text,seconds:180});
+ assert.equal(youtubeMetadata(playerHtml(text,'differentID'),videoId),null);
+ assert.equal(youtubeMetadata(playerHtml().slice(0,80),videoId),null);
+ assert.equal(youtubeMetadata('<html>Consent or blocked</html>',videoId),null);
+});
+
+test('description plus actual video use Gemini through the existing Gateway; unknown amounts need review',async t=>{
+ const requests=source(t),phases=[];let calls=0;
+ const result=await importUrl(`https://youtu.be/${videoId}?si=abc`,{onPhase:p=>phases.push(p)},env(async(model,input,options)=>{
+  calls++;assert.equal(model,'google/gemini-3.8-flash');assert.deepEqual(input.contents[0].parts[0],{fileData:{fileUri:videoUrl}});
+  assert.match(input.contents[0].parts[1].text,/卵 2個/);assert.match(input.systemInstruction.parts[0].text,/推定しない/);
+  assert.equal(input.generationConfig.responseMimeType,'application/json');assert.ok(input.generationConfig.responseJsonSchema);
+  assert.deepEqual(options.gateway,{id:'uchino',skipCache:true,collectLog:false});assert.equal(options.returnRawResponse,true);assert.ok(options.signal instanceof AbortSignal);
+  return Response.json({success:true,result:geminiResponse()});
+ }));
+ assert.equal(calls,1);assert.deepEqual(phases,['video','sorting','checking']);assert.equal(result.source.kind,'video');assert.equal(result.source.text,description);assert.equal(result.source.url,videoUrl);
+ assert.equal(result.recipe.sourceUrl,videoUrl);assert.deepEqual(result.recipe.stepVideoSeconds,[12,65]);assert.equal(result.recipe.ingredients[2].name,'醤油');assert.equal(result.recipe.ingredients[2].group,'A');
+ assert.equal(result.recipe.ingredients[3].quantity,'');assert.equal(result.recipe.ingredients[3].unit,'');assert.ok(result.issues.some(issue=>issue.field==='ingredients.3.quantity'));
+ assert.ok(result.photo.startsWith('data:image/jpeg;base64,'));assert.equal(requests.length,3);assert.ok(validateRecord('recipe',result.recipe));
+});
+
+test('complete, ingredient-only and empty descriptions all retain their original evidence',async t=>{
+ for(const text of [description+'\n混ぜて焼く。',description,'']){
+  await t.test(text?'description exists':'empty description',async t=>{
+   source(t,playerHtml(text));let calls=0;
+   const result=await importYouTube(videoUrl,env(async(_model,input)=>{calls++;assert.ok(input.contents[0].parts[0].fileData);assert.ok(input.contents[0].parts[1].text.includes(text||'記載なし'));return geminiResponse();}));
+   assert.equal(calls,1);assert.deepEqual(result.recipe.steps,videoRecipe.steps);assert.equal(result.source.text,text||undefined);
+  });
+ }
+});
+
+test('an unavailable page does not block supported direct-video input and never follows consent redirects',async t=>{
+ t.mock.method(globalThis,'fetch',async url=>String(url)===videoUrl?new Response(null,{status:302,headers:{location:'https://consent.youtube.com/'}}):new Response(null,{status:404}));
+ const result=await importYouTube(videoUrl,env(async(_model,input)=>{assert.match(input.contents[0].parts[1].text,/概要欄は取得できません/);return geminiResponse();}));
+ assert.deepEqual(result.recipe.steps,videoRecipe.steps);assert.equal(result.source.text,undefined);assert.ok(result.warnings.length);
+});
+
+test('invented weights from visual counts are removed and invalid timestamps never become links',async t=>{
+ source(t);
+ const value={...videoRecipe,ingredients:[{name:'油',quantity:'20',unit:'ml',quantitySource:'count'}],steps:['混ぜる','焼く','盛る'],stepVideoSeconds:[0,-1,9999]};
+ const result=await importYouTube(videoUrl,env(async()=>geminiResponse(value)));
+ assert.equal(result.recipe.ingredients[0].quantity,'');assert.deepEqual(result.recipe.stepVideoSeconds,[0,null,null]);
+ const removed=removeRecipeStep(result.recipe,0);assert.deepEqual(removed.stepVideoSeconds,[null,null]);assert.ok(validateRecord('recipe',removed));
+ assert.equal(validateRecord('recipe',{...result.recipe,stepVideoSeconds:[0]}),null);assert.equal(validateRecord('recipe',{...result.recipe,stepVideoSeconds:[0,'65',null]}),null);
+});
+
+test('native Gemini results exclude thought parts and reject truncation, refusals and malformed output',()=>{
+ assert.deepEqual(geminiOutput(geminiResponse()),{recipe:videoRecipe,error:null});
+ for(const [value,code] of [[{candidates:[{finishReason:'MAX_TOKENS'}]},'incomplete'],[{promptFeedback:{blockReason:'SAFETY'}},'refusal'],[{candidates:[{finishReason:'SAFETY'}]},'refusal'],[{candidates:[{finishReason:'STOP',content:{parts:[{thought:true,text:'private'}]}}]},'invalid_response'],[null,'invalid_response'],[{candidates:[]},'invalid_response']])assert.throws(()=>geminiOutput(value),error=>error.diagnostics.code===code&&!error.message.includes('private'));
+});
+
+test('provider errors and non-recipes do not retry or expose private error text',async t=>{
+ source(t);
+ for(const [raw,code] of [[Response.json({error:{code:429,message:'private text'}},{status:429}),'rate_limit'],[Response.json({errors:[{code:7003,message:'private text'}]},{status:400}),'invalid_request'],[geminiResponse(null),'extraction_failed']]){
+  let calls=0;await assert.rejects(importYouTube(videoUrl,env(async()=>{calls++;return raw;})),error=>error.diagnostics.code===code&&!error.message.includes('private'));assert.equal(calls,1);
+ }
+});
+
+test('cancelled video inference stops without downloading images or yielding a recipe',async t=>{
+ const requests=source(t),controller=new AbortController();
+ await assert.rejects(importYouTube(videoUrl,env(async(_model,_input,options)=>{assert.ok(options.signal);controller.abort();return new Promise(()=>{});}),{signal:controller.signal}),{name:'AbortError'});
+ assert.equal(requests.length,1);
+});
+
+test('YouTube channel/playlist URLs and missing configuration fail before any outbound request',async t=>{
+ let calls=0;t.mock.method(globalThis,'fetch',async()=>{calls++;throw new Error('Unexpected fetch');});
+ await assert.rejects(importUrl('https://www.youtube.com/@chef',{},env(async()=>{throw new Error('Unexpected AI');})),/動画URL/);
+ await assert.rejects(importYouTube(videoUrl,{}),/接続設定/);assert.equal(calls,0);
+});

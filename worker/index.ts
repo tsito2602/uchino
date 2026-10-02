@@ -1,7 +1,7 @@
 import {Hono} from 'hono';
 import {stream} from 'hono/streaming';
 import {demoImport} from './import-demo';
-import type {ImportEvent} from '../src/import-model';
+import type {ImportEvent,ImportPhase} from '../src/import-model';
 import {authRoutes,sessionUser,type AuthBindings,type AuthUser} from './auth';
 import {validateRecord,type Kind} from '../src/domain';
 import {importUrl,importAI,aiConfigured,type ImportBindings} from './import';
@@ -50,14 +50,17 @@ app.post('/api/import',async c=>{
   if(!await sessionUser(c))return c.json({error:'取り込みにはGoogleログインが必要です。'},401);
   let input;try{input=await body(c.req.raw,8_100_000);}catch{return c.json({error:'ファイルが大きすぎるか、読み取れませんでした。'},400);}
   if(!input||typeof input!=='object'||Array.isArray(input)||input.url!==undefined&&(typeof input.url!=='string'||!input.url.trim()||input.url.length>2048||input.text!==undefined||input.image!==undefined))return c.json({error:'レシピのURL・本文・画像のいずれかを指定してください。'},400);
-  const execute=(signal:AbortSignal,onPhase?:(phase:'reading'|'sorting'|'checking')=>void)=>input.url!==undefined?importUrl(input.url.trim(),{signal,onPhase},c.env):importAI(c.env,input,{signal,onPhase});
+  const execute=(signal:AbortSignal,onPhase?:(phase:ImportPhase)=>void)=>input.url!==undefined?importUrl(input.url.trim(),{signal,onPhase},c.env):importAI(c.env,input,{signal,onPhase});
   if(c.req.header('Accept')==='application/x-ndjson'){
     c.header('Content-Type','application/x-ndjson; charset=utf-8');
     return stream(c,async output=>{
       const controller=new AbortController();output.onAbort(()=>controller.abort());
       const send=(event:ImportEvent)=>output.writeln(JSON.stringify(event));
+      // Video analysis can take minutes. Blank NDJSON lines keep the stream alive.
+      const heartbeat=setInterval(()=>{void output.writeln('').catch(()=>controller.abort());},15000);
       try{await send({type:'phase',phase:'reading'});const result=await execute(AbortSignal.any([c.req.raw.signal,controller.signal]),phase=>{void send({type:'phase',phase});});await send({type:'result',result});}
       catch(error){if(!controller.signal.aborted)await send({type:'error',...importFailurePayload(error)});}
+      finally{clearInterval(heartbeat);}
     });
   }
   try{return c.json(await execute(c.req.raw.signal));}catch(error){return c.json(importFailurePayload(error),422);}

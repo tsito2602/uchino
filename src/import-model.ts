@@ -1,8 +1,8 @@
 import type {Recipe} from './domain';
 import type {ImportDiagnostics} from './import-errors';
 
-export type ImportPhase='reading'|'sorting'|'checking';
-export type ImportSource={kind:'url'|'image'|'text';name:string;text?:string;url?:string;image?:string};
+export type ImportPhase='reading'|'video'|'sorting'|'checking';
+export type ImportSource={kind:'url'|'image'|'text'|'video';name:string;text?:string;url?:string;image?:string};
 export type ImportIssue={field:string;reason:string};
 export type ImportResult={recipe:Recipe;issues:ImportIssue[];source?:ImportSource;demo?:boolean;photo?:string;stepPhotos?:{index:number;photo:string}[];stepSources?:(number|null)[];warnings?:string[]};
 export type ImportEvent={type:'phase';phase:ImportPhase}|{type:'result';result:ImportResult}|{type:'error';error:string;diagnostics?:ImportDiagnostics};

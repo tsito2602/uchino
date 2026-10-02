@@ -55,7 +55,7 @@ uchiwakeと同じ接続方式・モデルを使い、Cloudflare AI Gatewayはuch
 | AI_IMPORT_PROVIDER | `cloudflare` |
 | AI_GATEWAY_ID | `uchino` |
 
-モデルはコード内で `openai/gpt-6-luna` に固定し、推論設定はuchiwakeと同じ `reasoning.effort: low` を使用します。`AI_RECIPE_MODEL` の追加設定は不要です。`store:false`、Gatewayのキャッシュ・ログ収集無効もuchiwakeに合わせています。
+通常のURL・画像・本文の取り込みはコード内で `openai/gpt-6-luna` に固定し、推論設定はuchiwakeと同じ `reasoning.effort: low` を使用します。`AI_RECIPE_MODEL` の追加設定は不要です。`store:false`、Gatewayのキャッシュ・ログ収集無効もuchiwakeに合わせています。YouTube動画は後述のGemini経路を使用します。
 
 画像・本文の取り込みはResponses APIでレシピを抽出します。URL取り込みは対応サイトのJSON-LDを優先して読み、その情報をAIで材料名・分量・単位に整理します。JSON-LDがないページは表示本文から抽出します。元URLと抽出元の情報は確認画面に保持します。AI未設定時もJSON-LDの取り込みは使えますが、材料の分量は確認・分離が必要です。取得できないページでは本文や画像を案内します。
 
@@ -68,6 +68,10 @@ AIへの入力はuchiwakeと同じ `text.format.type: json_schema`・`strict: tr
 AI接続に失敗した場合は、取り込み画面の「エラーの詳細」で失敗工程・HTTPステータス・プロバイダーのエラーコードを確認できます。同じ診断情報をWorkerログの `recipe_import_failed` に記録します。元の本文・画像・AIサービスのエラーメッセージは診断に含めません。AIバインディングの返答はJSONオブジェクト、Response、JSONのReadableStreamに対応します。
 
 ## 公開後の確認
+
+YouTubeの取り込みには`google/gemini-3.8-flash`を使用します。Cloudflareのモデルカタログに記載されたネイティブ`contents`形式を`env.AI.run()`へ渡し、既存のAIバインディングと`AI_GATEWAY_ID=uchino`、Unified Billingを共用します。通常のURL・画像・本文は引き続きLunaを使います。YouTube Data APIキーやGemini APIキー、追加のGatewayは不要です。Geminiの動画URL対応は公開動画のみのプレビュー機能です。
+
+検証には`npm run check`と`scripts/test-import-youtube-browser.mjs`を使用します。テストはGeminiと公開ページ取得をモックし、呼び出し形式・概要欄あり／なし・不明分量・キャンセル・時刻リンク・確認から保存と再読み込みまでを確認します。実接続の確認には、認証済みの公開アプリでYouTubeの料理動画URLを読み込んでください。
 
 1. `/api/health` が `{ok:true, app:"uchino", environment:"staging"}` を返す。
 2. ログイン画面→この端末で使う→レシピ追加→再読み込みで保持される。

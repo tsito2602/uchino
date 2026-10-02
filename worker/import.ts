@@ -6,6 +6,8 @@ import {normalizeImportedIngredient} from '../src/ingredient-import';
 import {newRecipe,validateRecord,type Recipe} from '../src/domain';
 import {schemaSteps,pageSteps,importStepPhotos,type SourceStep} from './import-steps';
 import {publicWebUrl} from './public-web-url';
+import {isYouTubeHost} from '../src/youtube';
+import {importYouTube} from './import-youtube';
 export function parseRecipeSchema(html:string,sourceUrl:string,evidence?:{text?:string;image?:unknown;steps?:SourceStep[]}):Recipe|null {
   const scripts=[...html.matchAll(/<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
   const walk=(value:unknown):Record<string,unknown>|null=>{if(!value||typeof value!=='object')return null;if(Array.isArray(value)){for(const item of value){const result=walk(item);if(result)return result;}return null;}const o=value as Record<string,unknown>;if(o['@type']==='Recipe'||Array.isArray(o['@type'])&&o['@type'].includes('Recipe'))return o;return walk(o['@graph']);};
@@ -32,6 +34,7 @@ export function recipePageText(html:string):string {
 export async function importUrl(value:string,options:ImportOptions={},env:ImportBindings={}):Promise<ImportResult>{
   let url=publicWebUrl(value);
   for(let redirects=0;redirects<4;redirects++){
+    if(isYouTubeHost(url))return importYouTube(url.href,env,options);
     const response=await fetch(url,{redirect:'manual',signal:AbortSignal.any([AbortSignal.timeout(12000),...(options.signal?[options.signal]:[])]),headers:{Accept:'text/html','User-Agent':'uchino recipe importer'}});
     if(response.status>=300&&response.status<400){const location=response.headers.get('Location');await response.body?.cancel();if(!location)break;url=publicWebUrl(location,url);continue;}
     if(!response.ok)throw new Error('ページを取得できませんでした。レシピ本文か画像から取り込んでください。');

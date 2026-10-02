@@ -2,9 +2,10 @@ import {useRef,useState} from 'react';
 import {BookOpen,ListOrdered,NotebookPen,Plus,Trash2,Utensils} from 'lucide-react';
 import {categories,recipePhoto,removeRecipeStep,MAX_STEP_PHOTO_BYTES,STEP_PHOTOS_BUDGET,type Recipe} from './domain';
 import {RecipePhotoPicker} from './recipe-photo-picker';
+import {RecipeVideoLink} from './recipe-video-link';
 export function RecipeEditor({value,onChange,onSubmit,error,onRemoveItem,onPhotoBusyChange}:{value:Recipe;onChange:(recipe:Recipe)=>void;onSubmit:()=>void;error:string;onPhotoBusyChange?:(busy:boolean)=>void;onRemoveItem?:(kind:'ingredients'|'steps',index:number)=>void}){
   const busyPhotos=useRef(new Set<string>()),[photoBusy,setPhotoBusy]=useState(false);
-  const update=(change:Partial<Recipe>)=>onChange({...value,...change});
+  const update=(change:Partial<Recipe>)=>onChange({...value,...change,...(change.sourceUrl!==undefined&&change.sourceUrl!==value.sourceUrl?{stepVideoSeconds:undefined}:{})});
   const busy=(key:string,active:boolean)=>{if(active)busyPhotos.current.add(key);else busyPhotos.current.delete(key);const next=busyPhotos.current.size>0;setPhotoBusy(next);onPhotoBusyChange?.(next);};
   const updateIngredient=(index:number,change:Partial<Recipe['ingredients'][number]>)=>update({ingredients:value.ingredients.map((item,i)=>i===index?{...item,...change}:item)});
   const photoBudget=(index:number)=>Math.min(MAX_STEP_PHOTO_BYTES,STEP_PHOTOS_BUDGET-(value.stepPhotos||[]).reduce((sum,photo,i)=>sum+(i===index||!photo.startsWith('data:')?0:Math.ceil((photo.split(',')[1]?.length||0)*3/4)),0));
@@ -28,10 +29,11 @@ export function RecipeEditor({value,onChange,onSubmit,error,onRemoveItem,onPhoto
         </div>)}</div>
       </section>
       <section className="recipe-editor-section" aria-labelledby="editor-steps-title">
-        <div className="editor-heading"><h3 id="editor-steps-title"><ListOrdered size={18}/>作り方 <small>{value.steps.length}手順</small></h3><button className="text-action" type="button" aria-label="手順を追加" disabled={value.steps.length>=100} onClick={()=>update({steps:[...value.steps,''],...(value.stepPhotos?{stepPhotos:[...value.stepPhotos,'']}:{})})}><Plus size={16}/>追加</button></div>
+        <div className="editor-heading"><h3 id="editor-steps-title"><ListOrdered size={18}/>作り方 <small>{value.steps.length}手順</small></h3><button className="text-action" type="button" aria-label="手順を追加" disabled={value.steps.length>=100} onClick={()=>update({steps:[...value.steps,''],...(value.stepPhotos?{stepPhotos:[...value.stepPhotos,'']}:{}),...(value.stepVideoSeconds?{stepVideoSeconds:[...value.stepVideoSeconds,null]}:{})})}><Plus size={16}/>追加</button></div>
         <div className="editor-items">{value.steps.map((step,index)=><div className="editor-step-card" key={index}>
           <div className="editor-item-heading"><span className="editor-step-number">{index+1}</span><span className="editor-item-title">手順 {index+1}</span><button type="button" className="row-icon" disabled={value.steps.length<=1} aria-label={`手順${index+1}を削除`} onClick={()=>onRemoveItem?onRemoveItem('steps',index):onChange(removeRecipeStep(value,index))}><Trash2 size={16}/></button></div>
           <label className="field"><span className="visually-hidden">手順{index+1}</span><textarea data-import-field={`steps.${index}`} aria-label={`手順${index+1}`} required maxLength={5000} value={step} rows={4} placeholder="作り方を入力" onChange={e=>update({steps:value.steps.map((v,n)=>n===index?e.target.value:v)})}/></label>
+          <RecipeVideoLink url={value.sourceUrl} seconds={value.stepVideoSeconds?.[index]} step={index+1}/>
           <RecipePhotoPicker compact label={`手順${index+1}の写真`} photo={value.stepPhotos?.[index]||''} maxBytes={photoBudget(index)} onChange={photo=>update({stepPhotos:value.steps.map((_,i)=>i===index?photo:value.stepPhotos?.[i]||'')})} onBusyChange={active=>busy(`step-${index}`,active)}/>
         </div>)}</div>
       </section>

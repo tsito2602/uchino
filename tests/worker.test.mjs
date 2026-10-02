@@ -6,6 +6,7 @@ import {SignJWT} from 'jose';
 import app from '../dist/worker.mjs';
 import {newRecipe} from '../src/domain.ts';
 import {photoFixture} from './photo-fixture.mjs';
+import {videoUrl,playerHtml,geminiResponse} from './youtube-fixture.mjs';
 const env={APP_ENV:'staging',GOOGLE_CLIENT_ID:'test',GOOGLE_CLIENT_SECRET:'test',SESSION_SECRET:'test-key-more-than-thirty-two-characters',ALLOWED_EMAILS:'a@example.test,b@example.test'};
 async function cookie(id='user-a',email='a@example.test'){
  const value=await new SignJWT({sub:id,email,name:id,purpose:'session'}).setProtectedHeader({alg:'HS256'}).setIssuer('uchino').setAudience('https://example.test').setIssuedAt().setExpirationTime('1h').sign(new TextEncoder().encode(env.SESSION_SECRET));
@@ -137,4 +138,21 @@ test('numbered step photos survive sync and can be removed independently of the 
  const saved=(await (await request('/api/data',{headers:{Cookie:auth}})).json()).records.find(row=>row.id===data.id).data;
  assert.equal(saved.photo,data.photo);assert.deepEqual(saved.stepPhotos,['','',data.stepPhotos[2]]);
  assert.equal((await put({...data,stepPhotos:[data.stepPhotos[2]]},2,'step-photo-mismatch')).status,400);
+});
+
+test('authenticated YouTube NDJSON import preserves phases and timestamps, and saves only on explicit sync',async t=>{
+ t.mock.method(globalThis,'fetch',async url=>String(url)===videoUrl?new Response(playerHtml(),{headers:{'content-type':'text/html'}}):new Response(null,{status:404}));
+ let calls=0;
+ const bindings={...env,DB,AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:'uchino',AI:{run:async model=>{calls++;assert.equal(model,'google/gemini-3.8-flash');return Response.json(geminiResponse());}}};
+ const options={method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json',Accept:'application/x-ndjson'},body:JSON.stringify({url:videoUrl})};
+ assert.equal((await request('/api/import',options,bindings)).status,401);assert.equal(calls,0);
+ const before=database.prepare('SELECT count(*) AS count FROM user_data').get().count;
+ const response=await request('/api/import',{...options,headers:{...options.headers,Cookie:auth}},bindings);
+ assert.equal(response.status,200);const events=(await response.text()).trim().split('\n').filter(Boolean).map(line=>JSON.parse(line));
+ assert.deepEqual(events.filter(event=>event.type==='phase').map(event=>event.phase),['reading','video','sorting','checking']);
+ const result=events.at(-1).result;assert.equal(result.source.kind,'video');assert.equal(result.recipe.ingredients[3].quantity,'');assert.deepEqual(result.recipe.stepVideoSeconds,[12,65]);
+ assert.equal(database.prepare('SELECT count(*) AS count FROM user_data').get().count,before);
+ assert.equal((await put(result.recipe,0,'youtube-save')).status,200);
+ const records=(await (await request('/api/data',{headers:{Cookie:auth}})).json()).records;
+ assert.deepEqual(records.find(row=>row.id===result.recipe.id).data.stepVideoSeconds,[12,65]);
 });

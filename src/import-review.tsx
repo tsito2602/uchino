@@ -9,8 +9,8 @@ import type {Recipe} from './domain';
 export function ImportOriginal({source}:{source:ImportSource}) {
   const [open,setOpen]=useState(false),id=useId(),reduced=useReducedMotion();
   return <section className="import-original-files" aria-label="取り込み元">
-    <button type="button" className="import-source-toggle" aria-expanded={open} aria-controls={id} onClick={()=>setOpen(!open)}><FileText size={17}/><span>元の{source.kind==='image'?'画像':'レシピ'}：{source.name}</span><ChevronDown size={16}/></button>
-    <div id={id} inert={!open}><AnimatePresence initial={false}>{open&&<motion.div className="import-source-expander" initial={{height:0,opacity:0}} animate={{height:'auto',opacity:1}} exit={{height:0,opacity:0}} transition={{duration:reduced?0:.24,ease:[.22,1,.36,1]}}><div className="import-source import-source-content">{source.image&&<img src={source.image} alt={source.name||'取り込み元の画像'}/>} {source.text&&<pre>{source.text}</pre>}{source.url&&<a href={source.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={14}/> 元のページを開く</a>}</div></motion.div>}</AnimatePresence></div>
+    <button type="button" className="import-source-toggle" aria-expanded={open} aria-controls={id} onClick={()=>setOpen(!open)}><FileText size={17}/><span>元の{source.kind==='image'?'画像':source.kind==='video'?'動画':'レシピ'}：{source.name}</span><ChevronDown size={16}/></button>
+    <div id={id} inert={!open}><AnimatePresence initial={false}>{open&&<motion.div className="import-source-expander" initial={{height:0,opacity:0}} animate={{height:'auto',opacity:1}} exit={{height:0,opacity:0}} transition={{duration:reduced?0:.24,ease:[.22,1,.36,1]}}><div className="import-source import-source-content">{source.image&&<img src={source.image} alt={source.name||'取り込み元の画像'}/>} {source.text&&<pre>{source.text}</pre>}{source.url&&<a href={source.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={14}/> {source.kind==='video'?'元の動画を開く':'元のページを開く'}</a>}</div></motion.div>}</AnimatePresence></div>
   </section>;
 }
 
