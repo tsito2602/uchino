@@ -18,7 +18,7 @@ try{
  await page.route('**/api/config',route=>route.fulfill({json:{ai:true,demoImport:false}}));
  const recipe={id:'import-content',title:'ささみのしそチーズ焼き',category:'主菜',servings:2,minutes:15,ingredients:[{name:'鶏ささ身',quantity:'4',unit:'本'},{name:'醤油',quantity:'1と1/2',unit:'大さじ',group:'A'},{name:'みりん',quantity:'1と1/2',unit:'大さじ',group:'A'},{name:'酒',quantity:'1と1/2',unit:'大さじ',group:'B'}],steps:['Aを混ぜる。','しばらく休ませる。','Bを加えて焼く。','盛りつける。'],memo:'',sourceUrl:'https://www.kikkoman.co.jp/homecook/test',favorite:false,createdAt:new Date().toISOString(),photo:''};
  const photoPath=process.env.RECIPE_PHOTO_FIXTURE||'public/recipe-photos/chicken.webp';
- const photo='data:image/'+(photoPath.endsWith('.jpg')?'jpeg':'webp')+';base64,'+(await readFile(photoPath)).toString('base64');
+ const photo='data:image/'+(/\.jpe?g$/i.test(photoPath)?'jpeg':'webp')+';base64,'+(await readFile(photoPath)).toString('base64');
  const stepOne='data:image/webp;base64,'+(await readFile('public/recipe-photos/ginger.webp')).toString('base64');
  const stepThree='data:image/webp;base64,'+(await readFile('public/recipe-photos/salad.webp')).toString('base64');
  await page.route('**/api/import',route=>route.fulfill({contentType:'application/x-ndjson',body:JSON.stringify({type:'result',result:{recipe,photo,stepPhotos:[{index:0,photo:stepOne},{index:2,photo:stepThree},{index:3,photo}],issues:[]}})+'\n'}));
@@ -41,8 +41,13 @@ try{
  await page.getByRole('button',{name:'手順2を削除',exact:true}).click();assert.equal(await cards.count(),3);assert.deepEqual(await cards.locator('img').evaluateAll(images=>images.map(i=>i.src)),importedStepPhotos);
  await page.getByRole('button',{name:'確認して保存',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});
  await page.waitForFunction(()=>document.querySelectorAll('.recipe-row').length===1);
- await page.reload();await page.locator('.recipe-open').first().click();await page.locator('.ingredient-group').first().waitFor();
- await checkWholePhoto(page.locator('.recipe-hero img'));await page.locator('.recipe-hero').scrollIntoViewIfNeeded();await page.screenshot({path:'test-results/recipe-photo-uncropped.png',animations:'disabled'});
+ await page.reload();await page.locator('.recipe-open').first().waitFor();
+ const cardPhoto=await page.locator('.recipe-open').first().evaluate(el=>{const img=el.querySelector('img'),card=el.getBoundingClientRect(),photo=img.getBoundingClientRect();return {width:card.width,height:card.height,photoWidth:photo.width,photoHeight:photo.height,fit:getComputedStyle(img).objectFit};});
+ assert.equal(cardPhoto.fit,'cover');assert.ok(Math.abs(cardPhoto.width-cardPhoto.photoWidth)<1&&Math.abs(cardPhoto.height-cardPhoto.photoHeight)<1,'List image fills the entire card');
+ await page.locator('.recipe-open').first().click();await page.locator('.ingredient-group').first().waitFor();
+ const detailPhoto=await page.locator('.recipe-hero img').evaluate(async img=>{await img.decode();const box=img.getBoundingClientRect();return {width:box.width,height:box.height,fit:getComputedStyle(img).objectFit,naturalRatio:img.naturalWidth/img.naturalHeight};});
+ assert.equal(detailPhoto.fit,'cover');assert.ok(Math.abs(detailPhoto.width-detailPhoto.height)<1,'Detail image is square');assert.ok(Math.abs(detailPhoto.naturalRatio-sourceRatio)<.01,'Display crop preserves the stored photo');
+ await page.locator('.recipe-hero').scrollIntoViewIfNeeded();await page.screenshot({path:'test-results/recipe-photo-square.png',animations:'disabled'});
  assert.deepEqual(await page.locator('.ingredient-group').allTextContents(),['A','仕上げ']);assert.equal(await page.locator('.recipe-hero img').getAttribute('src'),savedPhoto);
  assert.deepEqual(await page.locator('.recipe-step-photo').evaluateAll(images=>images.map(i=>i.src)),importedStepPhotos);
  await page.getByRole('button',{name:'編集',exact:true}).click();await page.getByRole('heading',{name:'レシピを編集',exact:true}).waitFor();
