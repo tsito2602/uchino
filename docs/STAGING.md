@@ -46,14 +46,14 @@ Cloudflareのuchino-stagingに次を設定します。秘密値はソース・�
 
 ## AI取り込み
 
-ユーザーの指定により、uchiwakeと同じCloudflare AI Gateway `uchiwake` とモデル `openai/gpt-6-luna` を使います。接続設定はuchiwake main `37c7e8d9bd5651409c421c7b79639b176ff8a66d` の `wrangler.staging.jsonc`・`docs/AI_IMPORT.md` を確認して揃えました。
+uchiwakeと同じ接続方式・モデルを使い、Cloudflare AI Gatewayはuchino専用の `uchino` に接続します。モデルと推論設定はuchiwake main `37c7e8d9bd5651409c421c7b79639b176ff8a66d` の `wrangler.staging.jsonc`・`docs/AI_IMPORT.md` を確認して揃えました。
 
 `wrangler.staging.jsonc` にAIバインディングと次の変数を設定済みです。デプロイで反映します。Cloudflareのuchino-staging → Settings → Variables and Secretsでも同じ値を確認できます。どちらも通常のテキスト変数です。
 
 | 変数 | 内容 |
 | --- | --- |
 | AI_IMPORT_PROVIDER | `cloudflare` |
-| AI_GATEWAY_ID | `uchiwake` |
+| AI_GATEWAY_ID | `uchino` |
 
 モデルはコード内で `openai/gpt-6-luna` に固定し、推論設定はuchiwakeと同じ `reasoning.effort: low` を使用します。`AI_RECIPE_MODEL` の追加設定は不要です。`store:false`、Gatewayのキャッシュ・ログ収集無効もuchiwakeに合わせています。
 
@@ -61,7 +61,7 @@ Cloudflareのuchino-stagingに次を設定します。秘密値はソース・�
 
 AIへの入力はJSON出力を指定し、元資料にない材料・分量・手順の創作を避けるよう指示します。読み取り後は必ず内容を確認して保存します。中断・読み取り途中・形式不正の結果は保存候補にしません。Jev分類は未接続です。
 
-uchiwakeと同じCloudflareアカウントのWorkerにデプロイしてください。AI Gateway `uchiwake` の既存の課金・プロバイダー設定を共用します。uchino専用Gatewayの作成やWorkerへの `OPENAI_API_KEY` の追加は不要です。設定名が揃っていても、モデルの実通信成功までは保証しません。
+作成済みのAI Gateway `uchino` と同じCloudflareアカウントのWorkerにデプロイしてください。Unified Billingのクレジット残高はアカウント単位で共用し、Gatewayの設定・利用状況はuchiwakeと分けて管理します。Unified Billingで利用するため、Workerへの `OPENAI_API_KEY` の追加は不要です。Gateway側のモデル利用設定と残高を確認してください。設定名が揃っていても、モデルの実通信成功までは保証しません。
 
 設定後は許可Googleアカウントで実データ側を開き、本文・画像・対応サイトのURLを各1件取り込んで、材料名・分量・単位と元資料を照合してください。最後に確認して保存し、再読み込み後にもレシピが残ることを確認します。デモ取り込みはAIに接続しないため、この確認の代わりにはなりません。
 

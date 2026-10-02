@@ -14,6 +14,6 @@
       "migrations_dir": "migrations"
     }
   ],
-  "vars": { "APP_ENV": "staging", "AI_IMPORT_PROVIDER": "cloudflare", "AI_GATEWAY_ID": "uchiwake" },
+  "vars": { "APP_ENV": "staging", "AI_IMPORT_PROVIDER": "cloudflare", "AI_GATEWAY_ID": "uchino" },
   "observability": { "enabled": true }
 }
