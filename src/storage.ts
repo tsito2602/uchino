@@ -1,6 +1,7 @@
 import {useEffect,useState} from 'react';
 import {validateRecord,recipePhoto,type Kind,type RecordData,type Recipe} from './domain';
 import {samples} from './samples';
+import {syncFailure} from './sync-error';
 import {demoScope,isLegacyDemoRecipe,localOnlyScope} from './data-mode';
 export type Row = {key:string;kind:Kind;id:string;data:RecordData;revision:number;deleted:boolean;pending:boolean;editId:string};
 type RemoteRow=Omit<Row,'key'|'pending'|'editId'>;
@@ -65,21 +66,20 @@ export async function saveRecords(scope:string,kind:Kind,records:RecordData[],de
 }
 const syncing=new Map<string,Promise<void>>();
 export function synchronize(scope:string):Promise<void>{
-  if(localOnlyScope(scope)||!navigator.onLine)return Promise.resolve();
+  if(localOnlyScope(scope))return Promise.resolve();
+  if(!navigator.onLine)return Promise.reject(new Error('オフラインです。通信が戻ると、端末に保存したデータを同期します。'));
   const currentSync=syncing.get(scope);if(currentSync)return currentSync;
   const operation=(async()=>{
     await prepareData(scope);
     const local=await rows(scope);
     for(const row of local.filter(r=>r.pending)){
       const response=await fetch(`/api/data/${row.kind}/${row.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:row.data,deleted:row.deleted,revision:row.revision,editId:row.editId}),signal:AbortSignal.timeout(15000)});
-      if(response.status===401)throw new Error('再ログインすると、端末に保存した変更を同期できます。');
-      if(response.status===409)throw new Error('他の端末で変更されています。設定から未同期データを書き出して保管してください。');
-      if(!response.ok)throw new Error('端末に保存済みです。通信が戻ったら同期します。');
+      if(!response.ok)throw await syncFailure(response);
       const remote=await response.json() as {revision:number};
       await exclusive(async()=>{const current=(await rows(scope)).find(r=>r.key===row.key);if(current)await write({...current,revision:remote.revision,pending:current.editId!==row.editId});});
     }
     const response=await fetch('/api/data',{cache:'no-store',signal:AbortSignal.timeout(15000)});
-    if(!response.ok)throw new Error('保存済みのデータを表示しています。同期を再試行してください。');
+    if(!response.ok)throw await syncFailure(response);
     const result=await response.json() as {records:RemoteRow[]};
     await exclusive(async()=>{const current=await rows(scope);for(const remote of result.records){const k=key(scope,remote.kind,remote.id);if(!current.find(r=>r.key===k)?.pending&&validateRecord(remote.kind,remote.data))await write({...remote,key:k,pending:false,editId:crypto.randomUUID()});}await separateLegacyDemos(scope);});
   })().finally(()=>{syncing.delete(scope);});syncing.set(scope,operation);return operation;
@@ -88,7 +88,7 @@ export function useRecords(scope:string,autoSync=true){
   const [data,setData]=useState<Row[]>([]),[ready,setReady]=useState(false),[error,setError]=useState('');
   useEffect(()=>{let active=true;const load=()=>{void prepareData(scope).then(()=>rows(scope)).then(v=>{if(active){setData(v);setReady(true);}}).catch(e=>{if(active)setError(String(e.message));});};load();window.addEventListener(eventName,load);return()=>{active=false;window.removeEventListener(eventName,load);};},[scope]);
   useEffect(()=>{if(!autoSync)return;let active=true;const sync=()=>{void synchronize(scope).then(()=>{if(active)setError('');}).catch(e=>{if(active)setError(e.message);});};sync();window.addEventListener('online',sync);const timer=setInterval(sync,30000);return()=>{active=false;clearInterval(timer);window.removeEventListener('online',sync);};},[scope,autoSync]);
-  async function save(kind:Kind,record:RecordData,deleted=false){await saveRecord(scope,kind,record,deleted);void synchronize(scope).catch(e=>setError(e.message));}
-  async function saveMany(kind:Kind,records:RecordData[],deleted=false){await saveRecords(scope,kind,records,deleted);void synchronize(scope).catch(e=>setError(e.message));}
+  async function save(kind:Kind,record:RecordData,deleted=false){await saveRecord(scope,kind,record,deleted);void synchronize(scope).then(()=>setError('')).catch(e=>setError(e.message));}
+  async function saveMany(kind:Kind,records:RecordData[],deleted=false){await saveRecords(scope,kind,records,deleted);void synchronize(scope).then(()=>setError('')).catch(e=>setError(e.message));}
   return {rows:data.filter(r=>!r.deleted),allRows:data,ready,error,setError,save,saveMany,pending:data.filter(r=>r.pending).length};
 }

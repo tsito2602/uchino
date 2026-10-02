@@ -134,7 +134,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab}:{session:Se
       {tab==='shopping'&&<>{shoppingList()}{!shopping.length&&<div className="empty-state"><ShoppingBasket size={40} strokeWidth={1.2}/><h2>買うものをまとめよう</h2><p>レシピの材料からも追加できます。</p><button className="primary" onClick={()=>open({kind:'shopping'})}><Plus size={18}/>買うものを追加</button></div>}</>}
       {tab==='settings'&&formError&&<p className="form-error" role="alert">{formError}</p>}
       {tab==='settings'&&<SettingsPage session={session} pending={pending} updateReady={updateReady} dataMode={dataMode} changingData={busy} onDataMode={mode=>void selectDataMode(mode)}
-        onSync={()=>void synchronize(realScope).then(()=>setNotice('同期しました')).catch(e=>store.setError(e.message))}
+        onSync={()=>void synchronize(realScope).then(()=>{store.setError('');setNotice('同期しました');}).catch(e=>store.setError(e.message))}
         onExport={()=>void exportData()}
         onUpdate={()=>void canLeave().then(allowed=>allowed?(updateReady?applyUpdate():checkUpdate()).then(found=>{setUpdateReady(!!found);setNotice(found?'更新があります。もう一度押すと更新します。':'最新版です');}):undefined).catch(()=>setNotice('更新を確認できませんでした'))}
         onLogout={()=>void canLeave().then(allowed=>allowed?session.logout():undefined).catch(e=>store.setError(e.message))}/>}

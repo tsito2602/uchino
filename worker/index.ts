@@ -7,6 +7,7 @@ import {validateRecord,type Kind} from '../src/domain';
 import {importUrl,importAI,aiConfigured,type ImportBindings} from './import';
 import {importFailurePayload} from './import-errors';
 import {embeddedAssets} from './generated-assets';
+import {ensureDataSchema} from './data-schema';
 type Bindings=AuthBindings&ImportBindings&{APP_ENV?:string};
 const app=new Hono<{Bindings:Bindings;Variables:{user:AuthUser}}>();
 app.use('*',async(c,next)=>{
@@ -23,8 +24,7 @@ app.onError((_error,c)=>c.json({error:'処理できませんでした。時間�
 app.get('/api/health',c=>c.json({ok:true,app:'uchino',environment:c.env.APP_ENV??'local',version:'0.1.0'}));
 app.get('/api/config',c=>c.json({ai:aiConfigured(c.env),demoImport:c.env.APP_ENV==='staging'}));
 app.route('/api/auth',authRoutes);
-app.use('/api/data/*',async(c,next)=>{const user=await sessionUser(c);if(!user)return c.json({error:'ログインしてください。'},401);c.set('user',user);if(!c.env.DB)return c.json({error:'同期の準備中です。'},503);await next();});
-app.use('/api/data',async(c,next)=>{const user=await sessionUser(c);if(!user)return c.json({error:'ログインしてください。'},401);c.set('user',user);if(!c.env.DB)return c.json({error:'同期の準備中です。'},503);await next();});
+app.use('/api/data/*',async(c,next)=>{const user=await sessionUser(c);if(!user)return c.json({error:'ログインしてください。'},401);c.set('user',user);if(!c.env.DB)return c.json({error:'クラウドの保存先が設定されていません。',code:'storage_unconfigured'},503);try{await ensureDataSchema(c.env.DB);}catch{console.error(JSON.stringify({event:'data_sync_failed',code:'storage_initialization_failed'}));return c.json({error:'クラウドの保存先に接続できませんでした。',code:'storage_unavailable'},503);}await next();});
 app.get('/api/data',async c=>{
   const result=await c.env.DB!.prepare('SELECT kind,id,data,revision,deleted FROM user_data WHERE user_id = ?').bind(c.get('user').id).all<{kind:Kind;id:string;data:string;revision:number;deleted:number}>();
   return c.json({records:result.results.map(r=>({...r,data:JSON.parse(r.data),deleted:!!r.deleted}))});

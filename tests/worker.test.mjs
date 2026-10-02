@@ -12,7 +12,8 @@ async function cookie(id='user-a',email='a@example.test'){
  return `__Host-uchino_session=${value}`;
 }
 const database=new DatabaseSync(':memory:');database.exec(await readFile('migrations/0001_init.sql','utf8'));
-const DB={prepare(sql){let values=[];const stmt={bind(...args){values=args;return stmt;},async first(){return database.prepare(sql).get(...values)??null;},async all(){return {results:database.prepare(sql).all(...values)};},async run(){return database.prepare(sql).run(...values);}};return stmt;}};
+function d1(database){return {prepare(sql){let values=[];const stmt={bind(...args){values=args;return stmt;},async first(){return database.prepare(sql).get(...values)??null;},async all(){return {results:database.prepare(sql).all(...values)};},async run(){return database.prepare(sql).run(...values);}};return stmt;}};}
+const DB=d1(database);
 const auth=await cookie();
 function request(path,options={},bindings={...env,DB}){return app.fetch(new Request(`https://example.test${path}`,options),bindings);}
 const recipe={...newRecipe(),title:'Test recipe',ingredients:[{name:'卵',quantity:'2',unit:'個'}],steps:['焼く']};
@@ -96,4 +97,33 @@ test('AI failure diagnostics reach the client and logs without upstream text or 
  }
  assert.equal(logs.length,2);assert.ok(logs.every(line=>JSON.parse(line).event==='recipe_import_failed'&&!line.includes(secret)));
  assert.equal(database.prepare('SELECT count(*) AS count FROM user_data').get().count,before);
+});
+
+test('sync initializes a new database without migrations and retains existing user data',async()=>{
+ const fresh=new DatabaseSync(':memory:'),bindings={...env,DB:d1(fresh)};
+ try{
+  assert.equal((await request('/api/data',{},bindings)).status,401);
+  assert.equal(fresh.prepare("SELECT name FROM sqlite_master WHERE name='user_data'").get(),undefined,'Unauthenticated requests do not initialize storage');
+  const first=await request('/api/data',{headers:{Cookie:auth}},bindings);
+  assert.equal(first.status,200);assert.deepEqual(await first.json(),{records:[]});
+  const data={...recipe,id:'fresh-recipe'};
+  const saved=await request(`/api/data/recipe/${data.id}`,{method:'PUT',headers:{Origin:'https://example.test','Content-Type':'application/json',Cookie:auth},body:JSON.stringify({data,revision:0,deleted:false,editId:'fresh-edit'})},bindings);
+  assert.equal(saved.status,200);
+  // A new binding simulates a new Worker isolate initializing the same DB.
+  const result=await (await request('/api/data',{headers:{Cookie:auth}},{...env,DB:d1(fresh)})).json();
+  assert.equal(result.records.length,1);assert.deepEqual(result.records[0].data,data);assert.equal(result.records[0].revision,1);
+ }finally{fresh.close();}
+});
+
+test('storage setup failures remain retryable and missing binding is distinguishable',async t=>{
+ const logs=[];t.mock.method(console,'error',value=>logs.push(value));
+ const fresh=new DatabaseSync(':memory:'),working=d1(fresh);let fails=true;
+ const binding={prepare(sql){if(fails)return {async run(){throw new Error('private database diagnostic');}};return working.prepare(sql);}};
+ try{
+  const failed=await request('/api/data',{headers:{Cookie:auth}},{...env,DB:binding});
+  assert.equal(failed.status,503);assert.equal((await failed.json()).code,'storage_unavailable');
+  fails=false;assert.equal((await request('/api/data',{headers:{Cookie:auth}},{...env,DB:binding})).status,200);
+  const missing=await request('/api/data',{headers:{Cookie:auth}},env);assert.equal(missing.status,503);assert.equal((await missing.json()).code,'storage_unconfigured');
+  assert.ok(logs.length);assert.ok(!logs.join('').includes('private database diagnostic'));
+ }finally{fresh.close();}
 });
