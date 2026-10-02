@@ -6,6 +6,8 @@ import {validateRecord,type Recipe} from './domain';
 import {fieldAfterRemoval,type ImportResult,type ImportSource} from './import-model';
 import {readImport,importPause} from './import-client';
 import {ImportFailure,type ImportDiagnostics} from './import-errors';
+import {prepareRecipePhoto} from './recipe-photo';
+import {importedPhotoBlob} from './import-photo';
 import {ImportReview} from './import-review';
 import {ImportPhaseStatus,ImportProcessing,type ImportProgress} from './import-progress';
 
@@ -39,6 +41,14 @@ export function useRecipeImport(props:Props) {
     setProgress({phase:'reading',started:Date.now(),demo,ingredients:[],total:null});
     try{
       const imported=await readImport(mode==='url'?{url:value}:mode==='image'?{image}:{text:value},demo,signal,phase=>{if(request.current===controller)setProgress(current=>current?{...current,phase}:current);});
+      if(imported.photo){
+        try{
+          const blob=importedPhotoBlob(imported.photo);
+          const photo=await prepareRecipePhoto(new File([blob],'recipe-photo',{type:blob.type}));
+          signal.throwIfAborted();imported.recipe={...imported.recipe,photo};
+        }catch{signal.throwIfAborted();imported.warnings=[...(imported.warnings||[]),'料理の写真を準備できませんでした。必要なら写真を追加してください。'];}
+        delete imported.photo;
+      }
       if(demo){
         const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if(!reduced)await importPause(2000,signal);

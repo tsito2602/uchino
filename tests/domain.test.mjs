@@ -22,3 +22,8 @@ test('records reject missing ingredients, invalid quantities and executable URLs
   const recipe={...newRecipe(),title:'レシピ',ingredients:[{name:'卵',quantity:'1',unit:'個'}],steps:['焼く']};
   assert.ok(validateRecord('recipe',recipe));assert.equal(validateRecord('recipe',{...recipe,sourceUrl:'javascript:alert(1)'}),null);assert.equal(validateRecord('recipe',{...recipe,servings:0}),null);assert.equal(validateRecord('recipe',{...recipe,ingredients:[]}),null);assert.equal(validateRecord('recipe',{...recipe,steps:['']}),null);
 });
+test('ingredient groups survive validation and older recipes remain compatible',()=>{
+ const recipe={...newRecipe(),title:'たれ焼き',ingredients:[{name:'醤油',quantity:'1',unit:'大さじ',group:' A '},{name:'醤油',quantity:'2',unit:'小さじ',group:'B'},{name:'肉',quantity:'200',unit:'g'}],steps:['Aを混ぜる']};
+ const saved=validateRecord('recipe',recipe);assert.equal(saved.ingredients[0].group,'A');assert.equal(saved.ingredients[1].group,'B');assert.equal(saved.ingredients[2].group,undefined);assert.equal(saved.ingredients.length,3);
+ for(const group of [null,17,'x'.repeat(51)])assert.equal(validateRecord('recipe',{...recipe,ingredients:[{...recipe.ingredients[0],group}]}),null);
+});

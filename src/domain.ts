@@ -1,6 +1,6 @@
 export const categories = ['すべて','主菜','副菜','汁物','主食','おやつ','その他'] as const;
 export type Category = Exclude<typeof categories[number], 'すべて'>;
-export type Ingredient = {name:string;quantity:string;unit:string};
+export type Ingredient = {name:string;quantity:string;unit:string;group?:string};
 export type Recipe = {id:string;title:string;category:Category;servings:number;minutes:number|null;ingredients:Ingredient[];steps:string[];memo:string;sourceUrl:string;favorite:boolean;createdAt:string;photo?:string};
 export const MAX_PHOTO_BYTES=256_000;
 export const MAX_PHOTO_URL_LENGTH=23+4*Math.ceil(MAX_PHOTO_BYTES/3);
@@ -69,7 +69,7 @@ export function validateRecord(kind:Kind,value:unknown):RecordData|null {
   if(sourceUrl){try{const u=new URL(sourceUrl);if(!['https:','http:'].includes(u.protocol)||u.username||u.password)return null;}catch{return null;}}
   if(!Array.isArray(v.ingredients)||v.ingredients.length>100||!v.ingredients.length||!Array.isArray(v.steps)||!v.steps.length||v.steps.length>100)return null;
   const ingredients:Ingredient[]=[];
-  for(const i of v.ingredients){if(!i||typeof i!=='object')return null;const name=text(i.name,200),quantity=text(i.quantity,100),unit=text(i.unit,50);if(!name||quantity===null||unit===null)return null;ingredients.push({name,quantity,unit});}
+  for(const i of v.ingredients){if(!i||typeof i!=='object')return null;const name=text(i.name,200),quantity=text(i.quantity,100),unit=text(i.unit,50),group=i.group===undefined?'':text(i.group,50);if(!name||quantity===null||unit===null||group===null)return null;ingredients.push({name,quantity,unit,...(group?{group}:{})});}
   const steps=v.steps.map(s=>text(s,5000));if(steps.some(s=>!s))return null;
   const record={id,title,category:v.category as Category,servings:Number(v.servings),minutes:v.minutes as number|null,ingredients,steps:steps as string[],memo,sourceUrl,favorite:v.favorite,createdAt,...(v.photo===undefined?{}:{photo:v.photo as string})};
   return new TextEncoder().encode(JSON.stringify(record)).length<=1_800_000?record:null;

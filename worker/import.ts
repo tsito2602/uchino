@@ -1,10 +1,12 @@
 import {importIssues,type ImportResult} from '../src/import-model';
 import {importAI,aiConfigured,type ImportOptions,type ImportBindings} from './import-ai';
 export {importAI,aiConfigured,type ImportBindings} from './import-ai';
+import {importRecipePhoto,recipeImageCandidates} from './import-photo';
+import {normalizeImportedIngredient} from '../src/ingredient-import';
 import {newRecipe,validateRecord,type Recipe} from '../src/domain';
 export const recipeHosts=['cookpad.com','www.kurashiru.com','delishkitchen.tv','www.orangepage.net','park.ajinomoto.co.jp','www.kikkoman.co.jp','www.kewpie.co.jp','www.sirogohan.com','www.kyounoryouri.jp'];
 function permitted(value:string){const url=new URL(value);if(url.protocol!=='https:'||url.username||url.password||url.port||!recipeHosts.includes(url.hostname))throw new Error('このサイトからの直接取り込みにはまだ対応していません。レシピ本文を貼り付けるか、画像を選択してください。');return url;}
-export function parseRecipeSchema(html:string,sourceUrl:string,evidence?:{text?:string}):Recipe|null {
+export function parseRecipeSchema(html:string,sourceUrl:string,evidence?:{text?:string;image?:unknown}):Recipe|null {
   const scripts=[...html.matchAll(/<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
   const walk=(value:unknown):Record<string,unknown>|null=>{if(!value||typeof value!=='object')return null;if(Array.isArray(value)){for(const item of value){const result=walk(item);if(result)return result;}return null;}const o=value as Record<string,unknown>;if(o['@type']==='Recipe'||Array.isArray(o['@type'])&&o['@type'].includes('Recipe'))return o;return walk(o['@graph']);};
   for(const script of scripts){let item:Record<string,unknown>|null;try{item=walk(JSON.parse(script[1]));}catch{continue;}if(!item||typeof item.name!=='string'||!Array.isArray(item.recipeIngredient))continue;
@@ -12,10 +14,10 @@ export function parseRecipeSchema(html:string,sourceUrl:string,evidence?:{text?:
     const yieldValue=Array.isArray(item.recipeYield)?String(item.recipeYield[0]):String(item.recipeYield??'');
     const servings=yieldValue.match(/(?:^|\s)(\d+)\s*(?:人|serving|$)/i);r.servings=servings?Math.min(100,Math.max(1,Number(servings[1]))):2;
     const time=String(item.totalTime??'').match(/^PT(?:(\d+)H)?(?:(\d+)M)?$/);r.minutes=time?(Number(time[1]||0)*60+Number(time[2]||0))||null:null;
-    r.ingredients=item.recipeIngredient.filter((v):v is string=>typeof v==='string').map(name=>({name,quantity:'',unit:''}));
+    r.ingredients=item.recipeIngredient.filter((v):v is string=>typeof v==='string').map(name=>normalizeImportedIngredient({name,quantity:'',unit:''}));
     const steps=(value:unknown):string[]=>{if(typeof value==='string')return value.split(/\n+/).map(v=>v.trim()).filter(Boolean);if(Array.isArray(value))return value.flatMap(steps);if(value&&typeof value==='object'){const o=value as Record<string,unknown>;return o.itemListElement?steps(o.itemListElement):typeof o.text==='string'?[o.text]:[];}return [];};
     r.steps=steps(item.recipeInstructions);r.memo=servings?'':'人数が取得できなかったため、2人分を仮設定しています。元のレシピを確認してください。';
-    const valid=validateRecord('recipe',r);if(valid){if(evidence)evidence.text=[item.name,`人数：${yieldValue||'記載なし'}`,`調理時間：${String(item.totalTime??'記載なし')}`,'材料',...item.recipeIngredient,'作り方',...r.steps].join('\n');return valid as Recipe;}
+    const valid=validateRecord('recipe',r);if(valid){if(evidence){evidence.image=item.image;evidence.text=[item.name,`人数：${yieldValue||'記載なし'}`,`調理時間：${String(item.totalTime??'記載なし')}`,'材料',...item.recipeIngredient,'作り方',...r.steps].join('\n');}return valid as Recipe;}
   }return null;
 }
 export function recipePageText(html:string):string {
@@ -38,14 +40,16 @@ export async function importUrl(value:string,options:ImportOptions={},env:Import
     const reader=response.body?.getReader();if(!reader)break;const decoder=new TextDecoder();let html='',size=0;
     try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>2_000_000){await reader.cancel();throw new Error('ページが大きすぎます。本文か画像から取り込んでください。');}html+=decoder.decode(value,{stream:true});}html+=decoder.decode();}finally{reader.releaseLock();}
     options.onPhase?.('sorting');
-    const evidence:{text?:string}={},recipe=parseRecipeSchema(html,url.href,evidence);
+    const evidence:{text?:string;image?:unknown}={},recipe=parseRecipeSchema(html,url.href,evidence);
+    const photos=recipeImageCandidates(html,evidence.image);
     if(aiConfigured(env)){
-      const text=evidence.text||recipePageText(html);
+      const visible=recipePageText(html);
+      const text=evidence.text?(evidence.text+'\n元ページの本文（材料のグループ等の補足）\n'+visible).slice(0,30000):visible;
       if(!text||text.length>30000)throw new Error('ページの本文を読み取れませんでした。レシピの部分を貼り付けるか、画像を選んでください。');
-      const imported=await importAI(env,{text},{...options,onPhase:phase=>{if(phase!=='sorting')options.onPhase?.(phase);}});
-      return {...imported,recipe:{...imported.recipe,sourceUrl:url.href},source:{kind:'url',name:recipe?'元ページのレシピ情報':'元ページの本文',url:url.href,text}};
+      const [imported,photo]=await Promise.all([importAI(env,{text},{...options,onPhase:phase=>{if(phase!=='sorting')options.onPhase?.(phase);}}),importRecipePhoto(photos,url,options.signal)]);
+      return {...imported,...photo,recipe:{...imported.recipe,sourceUrl:url.href},source:{kind:'url',name:recipe?'元ページのレシピ情報':'元ページの本文',url:url.href,text}};
     }
-    options.onPhase?.('checking');if(recipe)return {recipe,issues:importIssues(recipe,[]),source:{kind:'url',name:'元ページのレシピ情報',url:url.href,text:evidence.text}};
+    options.onPhase?.('checking');if(recipe)return {...await importRecipePhoto(photos,url,options.signal),recipe,issues:importIssues(recipe,[]),source:{kind:'url',name:'元ページのレシピ情報',url:url.href,text:evidence.text}};
     throw new Error('レシピ情報を読み取れませんでした。本文か画像から取り込んでください。');
   }throw new Error('ページの移動先を確認できませんでした。本文か画像から取り込んでください。');
 }

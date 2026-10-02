@@ -42,10 +42,11 @@ test('malformed import bodies are rejected before extraction',async()=>{
  const config=await (await request('/api/config',{}, {...env,AI:{run(){}},AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:' '})).json();assert.equal(config.ai,false);
 });
 test('photo records sync, remain private, reject oversized images and allow removal',async()=>{
- const data={...recipe,id:'photo-recipe',photo:photoFixture(120000)};
+ const data={...recipe,id:'photo-recipe',photo:photoFixture(120000),ingredients:[{name:'醤油',quantity:'1',unit:'大さじ',group:'A'}]};
  assert.equal((await put(data,0,'photo-create')).status,200,'A photo larger than the old 100KB request limit saves');
  const mine=await (await request('/api/data',{headers:{Cookie:auth}})).json();
  assert.equal(mine.records.find(row=>row.id===data.id).data.photo,data.photo);
+ assert.deepEqual(mine.records.find(row=>row.id===data.id).data.ingredients,data.ingredients);
  const theirs=await (await request('/api/data',{headers:{Cookie:await cookie('user-b','b@example.test')}})).json();
  assert.ok(!theirs.records.some(row=>row.id===data.id));
  assert.equal((await put({...data,photo:photoFixture(260000)},1,'photo-too-large')).status,400);

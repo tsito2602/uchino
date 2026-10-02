@@ -117,3 +117,12 @@ test('a redirect outside permitted recipe sites cannot be sent to AI',async()=>{
  globalThis.fetch=async()=>{fetchCalls++;return new Response(null,{status:302,headers:{Location:'https://127.0.0.1/private'}});};
  try{await assert.rejects(importUrl('https://www.kurashiru.com/recipes/test',{},env(async()=>{aiCalls++;return response(recipe);})));assert.equal(aiCalls,0);assert.equal(fetchCalls,1);}finally{globalThis.fetch=previous;}
 });
+
+test('import separates groups and generic seasonings while preserving recipe distinctions',async()=>{
+ const names=['A キッコーマンいつでも新鮮しぼりたて生しょうゆ','（Ａ）マンジョウ米麹こだわり仕込み本みりん','A マンジョウ国産米こだわり仕込み料理の清酒','A 砂糖','B 薄口醤油','B めんつゆ（3倍濃縮）','みりん風調味料','だし醤油'];
+ const value={...recipe,ingredients:names.map(name=>({name,quantity:'1と1/2',unit:'大さじ'})),steps:['Aを混ぜる。Bで仕上げる。'],issues:[{field:'ingredients.0.group',reason:'所属を確認してください。'}]};
+ const imported=await importAI(env(async()=>response(value)),{text:names.join('\n')});
+ assert.deepEqual(imported.recipe.ingredients.map(i=>i.name),['醤油','みりん','酒','砂糖','薄口醤油','めんつゆ（3倍濃縮）','みりん風調味料','だし醤油']);
+ assert.deepEqual(imported.recipe.ingredients.map(i=>i.group),['A','A','A','A','B','B',undefined,undefined]);
+ assert.equal(imported.recipe.ingredients[0].quantity,'1と1/2');assert.deepEqual(imported.recipe.steps,value.steps);assert.equal(imported.issues[0].field,'ingredients.0.group');
+});

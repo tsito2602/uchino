@@ -1,4 +1,4 @@
-import {useEffect,useRef,type Dispatch,type SetStateAction} from 'react';
+import {Fragment,useEffect,useRef,type Dispatch,type SetStateAction} from 'react';
 import {scaleQuantity,isSpoonUnit,type Recipe} from './domain';
 import {GlassCheckbox} from './glass-checkbox';
 import {QuantityTicker} from './quantity-ticker';
@@ -34,7 +34,7 @@ export function IngredientList({recipe,servings,checked,onChange,disabled=false}
       const bounds=list.getBoundingClientRect();
       if(gesture.x<bounds.left||gesture.x>bounds.right)return;
       if(gesture.y<=bounds.top)paint(0);
-      else if(gesture.y>=bounds.bottom)paint(list.children.length-1);
+      else if(gesture.y>=bounds.bottom)paint(list.querySelectorAll('[data-ingredient-index]').length-1);
       else paint(indexOf(document.elementFromPoint(gesture.x,gesture.y)));
     }
     function stop(){
@@ -112,5 +112,5 @@ export function IngredientList({recipe,servings,checked,onChange,disabled=false}
       window.removeEventListener('blur',stop);document.removeEventListener('keydown',keyDown);
     };
   },[recipe.id]);
-  return <div className="ingredient-list" ref={root} role="group" aria-label="材料を選択">{recipe.ingredients.map((ingredient,index)=><label className="ingredient-row" data-ingredient-index={index} data-checked={checked.includes(String(index))||undefined} key={index}><GlassCheckbox disabled={disabled} checked={checked.includes(String(index))} onChange={event=>{const select=event.target.checked;onChange(current=>select?[...new Set([...current,String(index)])]:current.filter(id=>id!==String(index)));}}/><span>{ingredient.name}</span><strong className="ingredient-quantity">{isSpoonUnit(ingredient.unit)&&<span>{ingredient.unit}</span>}<QuantityTicker value={scaleQuantity(ingredient.quantity,recipe.servings,servings)}/>{ingredient.unit&&!isSpoonUnit(ingredient.unit)&&<span>{ingredient.unit}</span>}</strong></label>)}</div>;
+  return <div className="ingredient-list" ref={root} role="group" aria-label="材料を選択">{recipe.ingredients.map((ingredient,index)=><Fragment key={index}>{ingredient.group!==recipe.ingredients[index-1]?.group&&(ingredient.group||recipe.ingredients[index-1]?.group)&&<h4 className="ingredient-group">{ingredient.group||'その他の材料'}</h4>}<label className="ingredient-row" data-ingredient-index={index} data-checked={checked.includes(String(index))||undefined} key={index}><GlassCheckbox disabled={disabled} checked={checked.includes(String(index))} onChange={event=>{const select=event.target.checked;onChange(current=>select?[...new Set([...current,String(index)])]:current.filter(id=>id!==String(index)));}}/><span>{ingredient.name}</span><strong className="ingredient-quantity">{isSpoonUnit(ingredient.unit)&&<span>{ingredient.unit}</span>}<QuantityTicker value={scaleQuantity(ingredient.quantity,recipe.servings,servings)}/>{ingredient.unit&&!isSpoonUnit(ingredient.unit)&&<span>{ingredient.unit}</span>}</strong></label></Fragment>)}</div>;
 }
