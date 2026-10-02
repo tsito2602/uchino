@@ -13,6 +13,24 @@ test('recipe image metadata accepts strings, arrays, ImageObject and OG fallback
  assert.deepEqual(recipeImageCandidates(html,null),['/fallback.jpg?a=1&b=2']);
 });
 
+test('the visible recipe photo wins over a cropped sharing image without rewriting source URLs',()=>{
+ const html=`<meta property="og:image" content="https://images.example.org/dish.jpg?impolicy=cropwm&amp;w=1200&amp;h=630">
+ <nav><img src="https://images.example.org/dish.jpg?w=100&amp;h=100"></nav>
+ <div class="RecipeMainImage-module__modalImage"><img width="500" height="500" src="https://images.example.org/dish.jpg?impolicy=cropwm&amp;w=500&amp;h=500" srcset="https://images.example.org/dish.jpg?impolicy=cropwm&amp;w=800&amp;h=800 800w, https://images.example.org/dish.jpg?impolicy=cropwm&amp;w=1280&amp;h=1280 1280w, https://images.example.org/dish.jpg?impolicy=cropwm&amp;w=2560&amp;h=2560 2560w"></div>
+ <div class="CookingProcess__image"><img alt="料理の工程1" src="https://images.example.org/step.jpg"></div>`;
+ assert.deepEqual(recipeImageCandidates(html,null,source),[
+  'https://images.example.org/dish.jpg?impolicy=cropwm&w=1280&h=1280',
+  'https://images.example.org/dish.jpg?impolicy=cropwm&w=500&h=500',
+ ]);
+});
+
+test('semantic recipe images are supported while proxy image identities and unrelated pictures stay distinct',()=>{
+ assert.equal(recipeImageCandidates('<article itemtype="https://schema.org/Recipe"><img itemprop="image" src="/original.jpg"></article>',null,source)[0],'/original.jpg');
+ const html='<img src="/image?id=advert&w=800"><img src="/image?id=dish&w=800"><meta property="og:image" content="/image?id=dish&w=1200&h=630">';
+ assert.equal(recipeImageCandidates(html,null,source)[0],'/image?id=dish&w=800');
+ assert.deepEqual(recipeImageCandidates('<img src="/advert.jpg"><img alt="工程1" src="/step.jpg">',null,source),[]);
+});
+
 test('a URL import carries the source photo as bounded transient image data',async t=>{
  const schema={'@type':'Recipe',name:'たれ焼き',recipeYield:'2人分',recipeIngredient:['A 砂糖 小さじ2'],recipeInstructions:['Aを混ぜる。'],image:[{url:'/dish.jpg'}]};
  const requests=[];

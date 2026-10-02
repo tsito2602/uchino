@@ -1,5 +1,6 @@
 import {imageMime,MAX_IMPORT_PHOTO_BYTES} from '../src/import-photo';
 import {publicWebUrl} from './public-web-url';
+import {pageRecipePhotos} from './recipe-page-photo';
 const warning='料理の写真を取得できませんでした。内容は取り込めています。必要なら写真を追加してください。';
 function candidates(value:unknown):string[] {
   if(typeof value==='string')return [value];
@@ -10,7 +11,7 @@ function candidatesObject(value:object):string[]{
   const item=value as Record<string,unknown>;
   return [item.contentUrl,item.url].filter((v):v is string=>typeof v==='string');
 }
-export function recipeImageCandidates(html:string,image:unknown):string[]{
+export function recipeImageCandidates(html:string,image:unknown,source?:URL):string[]{
   const urls=candidates(image);
   for(const tag of html.matchAll(/<meta\b[^>]*>/gi)){
     const attributes=new Map([...tag[0].matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)].map(m=>[m[1].toLowerCase(),m[2]??m[3]]));
@@ -18,7 +19,11 @@ export function recipeImageCandidates(html:string,image:unknown):string[]{
       const content=attributes.get('content');if(content)urls.push(content);
     }
   }
-  return [...new Set(urls.map(v=>v.replace(/&amp;/gi,'&').replace(/&#(\d+);/g,(_,n)=>Number(n)<=0x10ffff?String.fromCodePoint(Number(n)):'').trim()).filter(Boolean))].slice(0,4);
+  const metadata=urls.map(v=>v.replace(/&amp;/gi,'&').replace(/&#(\d+);/g,(_,n)=>Number(n)<=0x10ffff?String.fromCodePoint(Number(n)):'').trim()).filter(Boolean);
+  const visible=pageRecipePhotos(html,metadata,source);
+  // Once the displayed photo is known, do not fall back to a sharing thumbnail
+  // with a different crop if its download fails.
+  return [...new Set(visible.length?visible:metadata)].slice(0,4);
 }
 export async function importRecipePhoto(urls:string[],source:URL,parent?:AbortSignal):Promise<{photo?:string;warnings?:string[]}>{
   if(!urls.length)return {};

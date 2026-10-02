@@ -40,7 +40,7 @@ export async function importUrl(value:string,options:ImportOptions={},env:Import
     try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>2_000_000){await reader.cancel();throw new Error('ページが大きすぎます。本文か画像から取り込んでください。');}html+=decoder.decode(value,{stream:true});}html+=decoder.decode();}finally{reader.releaseLock();}
     options.onPhase?.('sorting');
     const evidence:{text?:string;image?:unknown;steps?:SourceStep[]}={},recipe=parseRecipeSchema(html,url.href,evidence);
-    const photos=recipeImageCandidates(html,evidence.image);
+    const photos=recipeImageCandidates(html,evidence.image,url);
     const sourceSteps=evidence.steps?.some(s=>s.images.length)?evidence.steps:pageSteps(html);
     const imageSteps=sourceSteps.some(s=>s.images.length)?sourceSteps:[];
     if(aiConfigured(env)){

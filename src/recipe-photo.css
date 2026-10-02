@@ -3,7 +3,7 @@
 .recipe-row{isolation:isolate;overflow:hidden;border-radius:22px;background:var(--content-card)}
 .recipe-open{position:relative;display:flex;align-items:flex-end;min-height:0;aspect-ratio:3/4;padding:0;gap:0;border-radius:inherit;color:#fff;overflow:hidden}
 .recipe-photo{position:absolute;inset:0;overflow:hidden;pointer-events:none}
-.recipe-photo img{width:100%;height:100%;display:block;object-fit:cover;object-position:center}
+.recipe-photo img{width:100%;height:100%;display:block;object-fit:contain;object-position:center}
 .recipe-photo-placeholder{position:absolute;inset:0;display:grid;place-items:center;padding-bottom:70px;color:var(--muted);background:radial-gradient(ellipse at 25% 15%,var(--paper),transparent 75%),var(--soft)}
 .recipe-row-copy{position:relative;z-index:1;flex:1;align-self:stretch;display:flex;flex-direction:column;justify-content:flex-end;padding:60px 13px 14px;min-width:0;isolation:isolate}
 .recipe-row-copy:before{content:'';position:absolute;z-index:-1;inset:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,.48) 38%,rgba(0,0,0,.76))}
@@ -30,7 +30,9 @@
 .recipe-hero{position:relative;isolation:isolate;margin:0 0 6px;color:var(--ink)}
 .recipe-detail-panel{--recipe-detail-inset:22px;scroll-padding-top:16px}
 .recipe-detail-panel>.card-panel-scroll{padding-top:0;padding-inline:var(--recipe-detail-inset)}
-.recipe-hero>.recipe-photo{position:relative;aspect-ratio:6/5;overflow:hidden;margin-inline:calc(-1 * var(--recipe-detail-inset,22px))}
+.recipe-hero>.recipe-photo{position:relative;overflow:hidden;margin-inline:calc(-1 * var(--recipe-detail-inset,22px))}
+.recipe-hero>.recipe-photo>img{height:auto}
+.recipe-hero>.recipe-photo:has(.recipe-photo-placeholder){aspect-ratio:6/5}
 .recipe-hero-copy{position:relative;z-index:1;display:flex;align-items:center;gap:18px;flex-wrap:wrap;min-width:0;padding:22px 0 0}
 .recipe-detail-panel>.card-panel-header h2{white-space:normal;overflow-wrap:anywhere;line-height:1.5}
 .recipe-category{display:inline-flex;align-items:center;gap:5px}
@@ -41,10 +43,9 @@
 .recipe-photo-field{display:flex;flex-direction:column;gap:9px;min-width:0}
 .recipe-photo-label{font-size:12px}
 .recipe-photo-select{position:relative;overflow:hidden;isolation:isolate;display:grid;place-items:center;aspect-ratio:2/1;width:100%;padding:0;border:1px dashed var(--line);border-radius:16px;color:var(--muted);background:var(--soft)}
-.recipe-photo-select.has-photo{border:0;aspect-ratio:16/9;color:#fff}
-.recipe-photo-select>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.recipe-photo-select.has-photo{display:block;border:0;aspect-ratio:auto;color:#fff}
+.recipe-photo-select>img{display:block;width:100%;height:auto;object-fit:contain}
 .recipe-photo-select-label{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 17px;border-radius:100px;font-size:13px}
-.has-photo .recipe-photo-select-label{align-self:end;margin:14px;background:#1117;border:1px solid #ffffff30;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.has-photo .recipe-photo-select-label{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1117;border:1px solid #ffffff30;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .recipe-photo-remove{align-self:flex-end;min-height:44px;font-size:12px;gap:6px}
 @media(max-width:380px){.recipe-list{gap:10px}.recipe-row{border-radius:18px}.recipe-row-copy{padding:50px 10px 12px}.recipe-row h2{font-size:14px}.recipe-row p{font-size:10px;gap:7px}.recipe-detail-panel{--recipe-detail-inset:16px}}
-@media(min-width:760px){.recipe-hero>.recipe-photo{aspect-ratio:3/2}}

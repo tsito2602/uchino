@@ -22,9 +22,9 @@
 .editor-step-card .recipe-photo-field.is-compact{gap:2px}
 .recipe-photo-field.is-compact .recipe-photo-select:not(.has-photo){aspect-ratio:auto;min-height:48px;border-radius:10px}
 .recipe-photo-field.is-compact .recipe-photo-select-label{font-size:12px;padding:10px 12px}
-.recipe-photo-field.is-compact .recipe-photo-select.has-photo{aspect-ratio:4/3;border-radius:12px;background:color-mix(in srgb,var(--ink) 5%,var(--paper))}
+.recipe-photo-field.is-compact .recipe-photo-select.has-photo{border-radius:12px;background:color-mix(in srgb,var(--ink) 5%,var(--paper))}
 .recipe-photo-field.is-compact .recipe-photo-select>img{object-fit:contain}
-.recipe-photo-field.is-compact .recipe-photo-select.has-photo .recipe-photo-select-label{margin:10px}
+.recipe-photo-field.is-compact .recipe-photo-select.has-photo .recipe-photo-select-label{bottom:10px}
 .recipe-photo-field.is-compact .recipe-photo-remove{font-size:11px}
 .recipe-form :is(input,textarea,select,button):focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 @media(max-width:380px){.editor-ingredient-card,.editor-step-card{padding:12px;gap:10px}.editor-group-field{max-width:66%}.editor-heading h3{gap:7px}.recipe-form .field-pair{gap:10px}}

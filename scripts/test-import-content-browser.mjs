@@ -17,7 +17,8 @@ try{
  });
  await page.route('**/api/config',route=>route.fulfill({json:{ai:true,demoImport:false}}));
  const recipe={id:'import-content',title:'ささみのしそチーズ焼き',category:'主菜',servings:2,minutes:15,ingredients:[{name:'鶏ささ身',quantity:'4',unit:'本'},{name:'醤油',quantity:'1と1/2',unit:'大さじ',group:'A'},{name:'みりん',quantity:'1と1/2',unit:'大さじ',group:'A'},{name:'酒',quantity:'1と1/2',unit:'大さじ',group:'B'}],steps:['Aを混ぜる。','しばらく休ませる。','Bを加えて焼く。','盛りつける。'],memo:'',sourceUrl:'https://www.kikkoman.co.jp/homecook/test',favorite:false,createdAt:new Date().toISOString(),photo:''};
- const photo='data:image/webp;base64,'+(await readFile('public/recipe-photos/chicken.webp')).toString('base64');
+ const photoPath=process.env.RECIPE_PHOTO_FIXTURE||'public/recipe-photos/chicken.webp';
+ const photo='data:image/'+(photoPath.endsWith('.jpg')?'jpeg':'webp')+';base64,'+(await readFile(photoPath)).toString('base64');
  const stepOne='data:image/webp;base64,'+(await readFile('public/recipe-photos/ginger.webp')).toString('base64');
  const stepThree='data:image/webp;base64,'+(await readFile('public/recipe-photos/salad.webp')).toString('base64');
  await page.route('**/api/import',route=>route.fulfill({contentType:'application/x-ndjson',body:JSON.stringify({type:'result',result:{recipe,photo,stepPhotos:[{index:0,photo:stepOne},{index:2,photo:stepThree},{index:3,photo}],issues:[]}})+'\n'}));
@@ -25,6 +26,9 @@ try{
  await page.getByRole('textbox',{name:'レシピのURL',exact:true}).fill(recipe.sourceUrl);await page.getByRole('button',{name:'読み取る',exact:true}).click();
  await page.getByRole('heading',{name:'取り込み内容を確認',exact:true}).waitFor();
  const preview=page.locator('.recipe-photo-select img').first();await preview.evaluate(img=>img.decode());
+ const sourceRatio=await page.evaluate(src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img.naturalWidth/img.naturalHeight);img.onerror=reject;img.src=src;}),photo);
+ async function checkWholePhoto(locator){const sizes=await locator.evaluate(async img=>{await img.decode();const box=img.getBoundingClientRect();return {width:box.width,height:box.height,naturalWidth:img.naturalWidth,naturalHeight:img.naturalHeight};});assert.ok(Math.abs(sizes.naturalWidth/sizes.naturalHeight-sourceRatio)<.01,'Compression preserves the source aspect ratio');assert.ok(Math.abs(sizes.width/sizes.height-sourceRatio)<.01,'The whole image keeps its aspect ratio on screen');}
+ await checkWholePhoto(preview);
  const savedPhoto=await preview.getAttribute('src');assert.match(savedPhoto,/^data:image\/jpeg;base64,/);assert.ok(Buffer.from(savedPhoto.split(',')[1],'base64').length<=256000);
  const cards=page.locator('.editor-step-card');assert.equal(await cards.count(),4);assert.equal(await cards.nth(1).locator('img').count(),0);
  const importedStepPhotos=[];for(const card of [cards.nth(0),cards.nth(2),cards.nth(3)]){const img=card.locator('img');await img.evaluate(el=>el.decode());const src=await img.getAttribute('src');assert.match(src,/^data:image\/jpeg;base64,/);assert.ok(Buffer.from(src.split(',')[1],'base64').length<=80000);importedStepPhotos.push(src);}
@@ -38,6 +42,7 @@ try{
  await page.getByRole('button',{name:'確認して保存',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});
  await page.waitForFunction(()=>document.querySelectorAll('.recipe-row').length===1);
  await page.reload();await page.locator('.recipe-open').first().click();await page.locator('.ingredient-group').first().waitFor();
+ await checkWholePhoto(page.locator('.recipe-hero img'));await page.locator('.recipe-hero').scrollIntoViewIfNeeded();await page.screenshot({path:'test-results/recipe-photo-uncropped.png',animations:'disabled'});
  assert.deepEqual(await page.locator('.ingredient-group').allTextContents(),['A','仕上げ']);assert.equal(await page.locator('.recipe-hero img').getAttribute('src'),savedPhoto);
  assert.deepEqual(await page.locator('.recipe-step-photo').evaluateAll(images=>images.map(i=>i.src)),importedStepPhotos);
  await page.getByRole('button',{name:'編集',exact:true}).click();await page.getByRole('heading',{name:'レシピを編集',exact:true}).waitFor();
