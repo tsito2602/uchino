@@ -6,7 +6,7 @@ const built=await build({entryPoints:['worker/import.ts'],bundle:true,write:fals
 const {importAI,importUrl}=await import('data:text/javascript;base64,'+Buffer.from(built.outputFiles[0].text).toString('base64'));
 const recipe={title:'卵焼き',category:'主菜',servings:2,minutes:10,ingredients:[{name:'卵',quantity:'2',unit:'個'},{name:'砂糖',quantity:'1/2',unit:'大さじ'}],steps:['材料を混ぜる。','焼く。'],memo:'',issues:[]};
 const response=value=>({status:'completed',output:[{type:'reasoning',content:[]},{type:'message',content:[{type:'output_text',text:JSON.stringify(value)}]}]});
-const env=run=>({AI_GATEWAY_ID:'uchino-test',AI_RECIPE_MODEL:'openai/test',AI:{run}});
+const env=run=>({AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:'uchiwake',AI:{run}});
 
 test('text import accepts a raw Gateway envelope and never accepts model record identity or photos',async()=>{
  const result=await importAI(env(async()=>Response.json({success:true,result:response({...recipe,id:'model-chosen',favorite:true,sourceUrl:'https://elsewhere.test/',photo:'invalid'})})),{text:'卵 2個、砂糖 大さじ1/2。混ぜて焼く。'});
@@ -17,8 +17,8 @@ test('text import accepts a raw Gateway envelope and never accepts model record 
 test('image import sends the uploaded image through the Responses API and preserves fractions',async()=>{
  const image='data:image/png;base64,iVBORw0KGgo=';
  const result=await importAI(env(async(model,input,options)=>{
-  assert.equal(model,'openai/test');assert.deepEqual(input.input[0].content[1],{type:'input_image',image_url:image});
-  assert.deepEqual(input.text,{format:{type:'json_object'}});assert.equal(input.store,false);assert.equal(options.gateway.collectLog,false);
+  assert.equal(model,'openai/gpt-6-luna');assert.deepEqual(input.input[0].content[1],{type:'input_image',image_url:image});
+  assert.deepEqual(input.text,{format:{type:'json_object'}});assert.deepEqual(input.reasoning,{effort:'low'});assert.equal(input.store,false);assert.equal(options.gateway.collectLog,false);assert.equal(options.gateway.id,'uchiwake');
   return response(recipe);
  }),{image});
  assert.equal(result.recipe.ingredients[1].quantity,'1/2');assert.equal(result.recipe.ingredients[1].unit,'大さじ');

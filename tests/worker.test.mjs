@@ -39,7 +39,7 @@ test('malformed import bodies are rejected before extraction',async()=>{
   const response=await request('/api/import',{method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json',Cookie:auth},body:JSON.stringify(input)});
   assert.equal(response.status,400);assert.equal(response.headers.get('cache-control'),'no-store');
  }
- const config=await (await request('/api/config',{}, {...env,AI:{run(){}},AI_GATEWAY_ID:' ',AI_RECIPE_MODEL:'model'})).json();assert.equal(config.ai,false);
+ const config=await (await request('/api/config',{}, {...env,AI:{run(){}},AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:' '})).json();assert.equal(config.ai,false);
 });
 test('photo records sync, remain private, reject oversized images and allow removal',async()=>{
  const data={...recipe,id:'photo-recipe',photo:photoFixture(120000)};
@@ -72,7 +72,7 @@ test('demo import is explicitly staging-only, needs no AI, and writes no data',a
  assert.equal((await request('/api/import/demo',{...options,headers:{...options.headers,Origin:'https://elsewhere.test'}})).status,403);
 });
 test('live import streams real phases, preserves uncertainty, and rejects invalid model fields',async()=>{
- const bindings={...env,AI_GATEWAY_ID:'test',AI_RECIPE_MODEL:'test',AI:{async run(){return {status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify({...recipe,issues:[{field:'servings',reason:'数字がかすれています。'},{field:'ingredients.99.quantity',reason:'does not exist'},{field:'__proto__',reason:'invalid'}]})}]}]};}}};
+ const bindings={...env,AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:'uchiwake',AI:{async run(){return {status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify({...recipe,issues:[{field:'servings',reason:'数字がかすれています。'},{field:'ingredients.99.quantity',reason:'does not exist'},{field:'__proto__',reason:'invalid'}]})}]}]};}}};
  const response=await request('/api/import',{method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json',Accept:'application/x-ndjson',Cookie:auth},body:JSON.stringify({text:'卵 2個 焼く'})},bindings);
  assert.match(response.headers.get('content-type'),/application\/x-ndjson/);
  const events=(await response.text()).trim().split('\n').map(line=>JSON.parse(line));
