@@ -5,7 +5,10 @@ import {normalizeImportedIngredient} from '../src/ingredient-import';
 import {ImportFailure} from '../src/import-errors';
 
 export type ImportOptions={signal?:AbortSignal;onPhase?:(phase:ImportPhase)=>void;sourceSteps?:{text:string}[]};
-export type ImportBindings={AI?:{run:(model:string,input:Record<string,unknown>,options?:Record<string,unknown>)=>Promise<unknown>};AI_IMPORT_PROVIDER?:string;AI_GATEWAY_ID?:string};
+export type ImportBindings={AI?:{
+  run:(model:string,input:Record<string,unknown>,options?:Record<string,unknown>)=>Promise<unknown>;
+  gateway?:(id:string)=>{run:(request:{provider:string;endpoint:string;headers:Record<string,string>;query:Record<string,unknown>},options?:{gateway?:{skipCache:boolean;collectLog:boolean};signal?:AbortSignal})=>Promise<Response>};
+};AI_IMPORT_PROVIDER?:string;AI_GATEWAY_ID?:string};
 export const RECIPE_AI_MODEL='openai/gpt-6-luna';
 export function aiConfigured(env:ImportBindings){return Boolean(env.AI_IMPORT_PROVIDER==='cloudflare'&&env.AI&&env.AI_GATEWAY_ID?.trim());}
 

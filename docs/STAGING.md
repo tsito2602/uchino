@@ -69,7 +69,9 @@ AI接続に失敗した場合は、取り込み画面の「エラーの詳細」
 
 ## 公開後の確認
 
-YouTubeの取り込みには`google/gemini-3.8-flash`を使用します。Cloudflareのモデルカタログに記載されたネイティブ`contents`形式を`env.AI.run()`へ渡し、既存のAIバインディングと`AI_GATEWAY_ID=uchino`、Unified Billingを共用します。通常のURL・画像・本文は引き続きLunaを使います。YouTube Data APIキーやGemini APIキー、追加のGatewayは不要です。Geminiの動画URL対応は公開動画のみのプレビュー機能です。
+YouTubeの取り込みには`gemini-3.8-flash`を使用します。`env.AI.gateway('uchino').run()`で`provider: google-ai-studio`、`endpoint: v1beta/models/gemini-3.8-flash:generateContent`を明示し、`fileData.fileUri`と`responseJsonSchema`をGoogleのネイティブAPIへ渡します。既存のAIバインディングと`AI_GATEWAY_ID=uchino`、Unified Billingを共用し、キャッシュとログ収集を無効にします。通常のURL・画像・本文は引き続き`env.AI.run()`でLunaを使います。YouTube Data APIキーやGemini APIキー、追加のGatewayは不要です。Geminiの動画URL対応は公開動画のみのプレビュー機能です。
+
+動画の`400 / 7003`はCloudflareの汎用エラーで、コードだけでは原因を特定できません。モデル共通の推論経路で拒否された実例を受け、動画のみ上記のプロバイダー指定経路へ変更しています。エラー詳細にはモデル・プロバイダー、Googleの許可済みステータス、出力形式／動画取得／入力項目の分類を追加します。上流のメッセージや動画URL・本文・認証情報は返しません。認証・利用枠・入力拒否を自動再試行しません。
 
 検証には`npm run check`と`scripts/test-import-youtube-browser.mjs`を使用します。テストはGeminiと公開ページ取得をモックし、呼び出し形式・概要欄あり／なし・不明分量・キャンセル・時刻リンク・確認から保存と再読み込みまでを確認します。実接続の確認には、認証済みの公開アプリでYouTubeの料理動画URLを読み込んでください。
 

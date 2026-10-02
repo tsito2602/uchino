@@ -27,6 +27,7 @@ export function aiFailure(code:keyof typeof messages,stage:Stage,status?:unknown
 export function upstreamFailure(stage:Stage,status?:unknown,raw?:unknown):ImportFailure {
   const value=raw&&typeof raw==='object'?raw as Record<string,unknown>:{};
   const error=Array.isArray(value.error)?value.error[0]:value.error;
+  const detail=error&&typeof error==='object'?error as Record<string,unknown>:Array.isArray(value.errors)&&value.errors[0]&&typeof value.errors[0]==='object'?value.errors[0] as Record<string,unknown>:value;
   const code=value.code??(error&&typeof error==='object'?(error as Record<string,unknown>).code:undefined)??(Array.isArray(value.errors)?value.errors[0]?.code:undefined);
   const httpStatus=status??value.status;
   const kind=code==='insufficient_quota'||httpStatus===402?'quota':
@@ -34,7 +35,25 @@ export function upstreamFailure(stage:Stage,status?:unknown,raw?:unknown):Import
     code==='invalid_api_key'||code==='permission_denied'||httpStatus===401||httpStatus===403?'authentication':
     code==='model_not_found'||httpStatus===404?'configuration':
     httpStatus===400||httpStatus===422||['invalid_request_error','unsupported_parameter','unsupported_value','invalid_value'].includes(String(code))?'invalid_request':'upstream';
-  return aiFailure(kind,stage,httpStatus,code);
+  const failure=aiFailure(kind,stage,httpStatus,code);
+  // Map provider text to fixed diagnostic labels. Never expose the original
+  // message, URL, prompt, schema values, or credentials to the browser/logs.
+  if(failure.diagnostics){
+    const providerStatus=detail.status;
+    if(typeof providerStatus==='string'&&['INVALID_ARGUMENT','FAILED_PRECONDITION','NOT_FOUND','PERMISSION_DENIED','UNAUTHENTICATED','RESOURCE_EXHAUSTED','UNAVAILABLE','DEADLINE_EXCEEDED','INTERNAL'].includes(providerStatus))failure.diagnostics.providerStatus=providerStatus;
+    const message=typeof detail.message==='string'?detail.message.slice(0,20000):'';
+    if(kind==='invalid_request'){
+      const fields=['responseJsonSchema','responseSchema','generationConfig','systemInstruction','fileData','fileUri','mimeType','contents'];
+      const compact=message.replace(/_/g,'').toLowerCase();
+      const field=fields.find(name=>compact.includes(name.toLowerCase()));
+      if(field)failure.diagnostics.field=field;
+      if(/response_?json_?schema|response_?schema|json.?schema/i.test(message))failure.diagnostics.reason='schema_rejected';
+      else if(/unsupported.*(?:video|mime)|(?:video|mime).*not supported/i.test(message))failure.diagnostics.reason='unsupported_video';
+      else if(/(?:video|youtube).*(?:not found|unavailable|is private|unreachable|cannot be accessed|not accessible)|(?:failed|unable|cannot|could not)\s+to\s+(?:fetch|download|access|retrieve).*(?:video|youtube)/i.test(message))failure.diagnostics.reason='video_unavailable';
+      else if(field)failure.diagnostics.reason='invalid_payload';
+    }
+  }
+  return failure;
 }
 
 export function importFailurePayload(error:unknown):{error:string;diagnostics?:ImportDiagnostics} {

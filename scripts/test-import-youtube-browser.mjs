@@ -22,9 +22,9 @@ try{
  await page.route('**/api/import',async r=>{
   try{
    const input=r.request().postDataJSON();assert.equal(input.url,`https://youtu.be/${videoId}?si=shared`);
-   const result=await importUrl(input.url,{onPhase:phase=>phases.push(phase)},{AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:'uchino',AI:{run:async(model,payload,options)=>{
-    aiCalls++;assert.equal(model,'google/gemini-3.8-flash');assert.equal(options.gateway.id,'uchino');assert.equal(payload.contents[0].parts[0].fileData.fileUri,videoUrl);return geminiResponse();
-   }}});
+   const result=await importUrl(input.url,{onPhase:phase=>phases.push(phase)},{AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:'uchino',AI:{run:async()=>assert.fail('Unexpected model proxy'),gateway(id){assert.equal(id,'uchino');return {run:async request=>{
+    aiCalls++;assert.equal(request.provider,'google-ai-studio');assert.equal(request.endpoint,'v1beta/models/gemini-3.8-flash:generateContent');assert.equal(request.query.contents[0].parts[0].fileData.fileUri,videoUrl);return Response.json(geminiResponse());
+   }};}}});
    await r.fulfill({contentType:'application/x-ndjson',body:phases.map(phase=>JSON.stringify({type:'phase',phase})).join('\n')+'\n\n'+JSON.stringify({type:'result',result})+'\n'});
   }catch(error){routeError=error;await r.fulfill({status:500,json:{error:'test failed'}});}
  });

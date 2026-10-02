@@ -143,7 +143,7 @@ test('numbered step photos survive sync and can be removed independently of the 
 test('authenticated YouTube NDJSON import preserves phases and timestamps, and saves only on explicit sync',async t=>{
  t.mock.method(globalThis,'fetch',async url=>String(url)===videoUrl?new Response(playerHtml(),{headers:{'content-type':'text/html'}}):new Response(null,{status:404}));
  let calls=0;
- const bindings={...env,DB,AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:'uchino',AI:{run:async model=>{calls++;assert.equal(model,'google/gemini-3.8-flash');return Response.json(geminiResponse());}}};
+ const bindings={...env,DB,AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:'uchino',AI:{run:async()=>assert.fail('Unexpected model proxy'),gateway(id){assert.equal(id,'uchino');return {run:async request=>{calls++;assert.equal(request.provider,'google-ai-studio');assert.equal(request.endpoint,'v1beta/models/gemini-3.8-flash:generateContent');assert.equal(request.query.contents[0].parts[0].fileData.fileUri,videoUrl);return Response.json(geminiResponse());}};}}};
  const options={method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json',Accept:'application/x-ndjson'},body:JSON.stringify({url:videoUrl})};
  assert.equal((await request('/api/import',options,bindings)).status,401);assert.equal(calls,0);
  const before=database.prepare('SELECT count(*) AS count FROM user_data').get().count;

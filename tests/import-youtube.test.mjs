@@ -5,7 +5,15 @@ import {videoId,videoUrl,description,videoRecipe,playerHtml,geminiResponse} from
 import {photoFixture} from './photo-fixture.mjs';
 const built=await build({stdin:{contents:"export * from './worker/import';export * from './worker/import-youtube';export * from './worker/youtube-metadata';export * from './src/youtube';export * from './src/domain';",resolveDir:process.cwd()},bundle:true,write:false,format:'esm',platform:'node'});
 const {importUrl,importYouTube,youtubeMetadata,youtubeVideo,youtubeStepUrl,geminiOutput,validateRecord,removeRecipeStep}=await import('data:text/javascript;base64,'+Buffer.from(built.outputFiles[0].text).toString('base64'));
-const env=run=>({AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:'uchino',AI:{run}});
+const env=respond=>({AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:'uchino',AI:{
+ run:async()=>{assert.fail('YouTube must use the provider-native Generate Content endpoint');},
+ gateway(id){assert.equal(id,'uchino');return {async run(request,options){
+  assert.equal(request.provider,'google-ai-studio');assert.equal(request.endpoint,'v1beta/models/gemini-3.8-flash:generateContent');
+  assert.deepEqual(request.headers,{'Content-Type':'application/json'});assert.deepEqual(options.gateway,{skipCache:true,collectLog:false});
+  assert.ok(options.signal instanceof AbortSignal);
+  const result=await respond(request.query,options);return result instanceof Response?result:Response.json(result);
+ }};},
+}});
 function source(t,html=playerHtml()){
  const requests=[];
  t.mock.method(globalThis,'fetch',async(url,options)=>{
@@ -33,11 +41,10 @@ test('metadata reads only the requested video and safely handles braces and esca
 
 test('description plus actual video use Gemini through the existing Gateway; unknown amounts need review',async t=>{
  const requests=source(t),phases=[];let calls=0;
- const result=await importUrl(`https://youtu.be/${videoId}?si=abc`,{onPhase:p=>phases.push(p)},env(async(model,input,options)=>{
-  calls++;assert.equal(model,'google/gemini-3.8-flash');assert.deepEqual(input.contents[0].parts[0],{fileData:{fileUri:videoUrl}});
+ const result=await importUrl(`https://youtu.be/${videoId}?si=abc`,{onPhase:p=>phases.push(p)},env(async(input)=>{
+  calls++;assert.deepEqual(input.contents[0].parts[0],{fileData:{fileUri:videoUrl}});
   assert.match(input.contents[0].parts[1].text,/卵 2個/);assert.match(input.systemInstruction.parts[0].text,/推定しない/);
   assert.equal(input.generationConfig.responseMimeType,'application/json');assert.ok(input.generationConfig.responseJsonSchema);
-  assert.deepEqual(options.gateway,{id:'uchino',skipCache:true,collectLog:false});assert.equal(options.returnRawResponse,true);assert.ok(options.signal instanceof AbortSignal);
   return Response.json({success:true,result:geminiResponse()});
  }));
  assert.equal(calls,1);assert.deepEqual(phases,['video','sorting','checking']);assert.equal(result.source.kind,'video');assert.equal(result.source.text,description);assert.equal(result.source.url,videoUrl);
@@ -50,7 +57,7 @@ test('complete, ingredient-only and empty descriptions all retain their original
  for(const text of [description+'\n混ぜて焼く。',description,'']){
   await t.test(text?'description exists':'empty description',async t=>{
    source(t,playerHtml(text));let calls=0;
-   const result=await importYouTube(videoUrl,env(async(_model,input)=>{calls++;assert.ok(input.contents[0].parts[0].fileData);assert.ok(input.contents[0].parts[1].text.includes(text||'記載なし'));return geminiResponse();}));
+   const result=await importYouTube(videoUrl,env(async(input)=>{calls++;assert.ok(input.contents[0].parts[0].fileData);assert.ok(input.contents[0].parts[1].text.includes(text||'記載なし'));return geminiResponse();}));
    assert.equal(calls,1);assert.deepEqual(result.recipe.steps,videoRecipe.steps);assert.equal(result.source.text,text||undefined);
   });
  }
@@ -58,7 +65,7 @@ test('complete, ingredient-only and empty descriptions all retain their original
 
 test('an unavailable page does not block supported direct-video input and never follows consent redirects',async t=>{
  t.mock.method(globalThis,'fetch',async url=>String(url)===videoUrl?new Response(null,{status:302,headers:{location:'https://consent.youtube.com/'}}):new Response(null,{status:404}));
- const result=await importYouTube(videoUrl,env(async(_model,input)=>{assert.match(input.contents[0].parts[1].text,/概要欄は取得できません/);return geminiResponse();}));
+ const result=await importYouTube(videoUrl,env(async(input)=>{assert.match(input.contents[0].parts[1].text,/概要欄は取得できません/);return geminiResponse();}));
  assert.deepEqual(result.recipe.steps,videoRecipe.steps);assert.equal(result.source.text,undefined);assert.ok(result.warnings.length);
 });
 
@@ -83,9 +90,31 @@ test('provider errors and non-recipes do not retry or expose private error text'
  }
 });
 
+test('native Google and Gateway rejections identify the failing field without leaking provider text',async t=>{
+ const requests=source(t),secret='private-token-and-recipe';
+ const cases=[
+  [{error:{code:400,status:'INVALID_ARGUMENT',message:`Invalid JSON payload: unknown name response_json_schema in generation_config. ${secret}`}},'schema_rejected','responseJsonSchema','INVALID_ARGUMENT','400'],
+  [{errors:[{code:7003,message:`User Input Error: Required value missing: contents ${secret}`}]},'invalid_payload','contents',undefined,'7003'],
+  [{error:{code:400,status:'INVALID_ARGUMENT',message:`Unable to fetch YouTube video https://youtube.com/watch?v=${secret}`}},'video_unavailable',undefined,'INVALID_ARGUMENT','400'],
+  [{error:{code:400,status:secret,message:`Unsupported video mime type ${secret}`}},'unsupported_video',undefined,undefined,'400'],
+ ];
+ for(const [body,reason,field,providerStatus,providerCode] of cases){
+  let calls=0;
+  await assert.rejects(importYouTube(videoUrl,env(async()=>{calls++;return Response.json(body,{status:400});})),error=>{
+   assert.equal(error.diagnostics.reason,reason);assert.equal(error.diagnostics.field,field);assert.equal(error.diagnostics.providerStatus,providerStatus);assert.equal(error.diagnostics.providerCode,providerCode);
+   assert.equal(error.diagnostics.provider,'google-ai-studio');assert.equal(error.diagnostics.model,'gemini-3.8-flash');
+   assert.ok(!JSON.stringify(error).includes(secret));assert.ok(!error.message.includes(secret));
+   if(reason==='video_unavailable')assert.match(error.message,/動画を取得できません/);
+   return true;
+  });
+  assert.equal(calls,1);
+ }
+ assert.deepEqual(requests,[videoUrl,videoUrl,videoUrl,videoUrl]);
+});
+
 test('cancelled video inference stops without downloading images or yielding a recipe',async t=>{
  const requests=source(t),controller=new AbortController();
- await assert.rejects(importYouTube(videoUrl,env(async(_model,_input,options)=>{assert.ok(options.signal);controller.abort();return new Promise(()=>{});}),{signal:controller.signal}),{name:'AbortError'});
+ await assert.rejects(importYouTube(videoUrl,env(async(_input,options)=>{assert.ok(options.signal);controller.abort();return new Promise(()=>{});}),{signal:controller.signal}),{name:'AbortError'});
  assert.equal(requests.length,1);
 });
 
@@ -93,4 +122,5 @@ test('YouTube channel/playlist URLs and missing configuration fail before any ou
  let calls=0;t.mock.method(globalThis,'fetch',async()=>{calls++;throw new Error('Unexpected fetch');});
  await assert.rejects(importUrl('https://www.youtube.com/@chef',{},env(async()=>{throw new Error('Unexpected AI');})),/動画URL/);
  await assert.rejects(importYouTube(videoUrl,{}),/接続設定/);assert.equal(calls,0);
+ await assert.rejects(importYouTube(videoUrl,{AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:'uchino',AI:{run:async()=>assert.fail('Unexpected proxy call')}}),/接続設定/);assert.equal(calls,0);
 });
