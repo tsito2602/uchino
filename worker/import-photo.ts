@@ -22,7 +22,7 @@ export function recipeImageCandidates(html:string,image:unknown):string[]{
 }
 export async function importRecipePhoto(urls:string[],source:URL,parent?:AbortSignal):Promise<{photo?:string;warnings?:string[]}>{
   if(!urls.length)return {};
-  const signal=AbortSignal.any([AbortSignal.timeout(8000),...(parent?[parent]:[])]);
+  const signal=AbortSignal.any([AbortSignal.timeout(12000),...(parent?[parent]:[])]);
   for(const candidate of urls){
     try{
       signal.throwIfAborted();let url=publicWebUrl(candidate,source);

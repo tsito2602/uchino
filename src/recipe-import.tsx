@@ -2,12 +2,11 @@ import {useEffect,useRef,useState,type ChangeEvent} from 'react';
 import {BookOpen,Check,FileText,ImagePlus,Pencil,Sparkles} from 'lucide-react';
 import {Panel} from './panel';
 import type {DockContext} from './dock';
-import {validateRecord,type Recipe} from './domain';
+import {validateRecord,removeRecipeStep,type Recipe} from './domain';
 import {fieldAfterRemoval,type ImportResult,type ImportSource} from './import-model';
 import {readImport,importPause} from './import-client';
 import {ImportFailure,type ImportDiagnostics} from './import-errors';
-import {prepareRecipePhoto} from './recipe-photo';
-import {importedPhotoBlob} from './import-photo';
+import {prepareImportPhotos} from './prepare-import-photos';
 import {ImportReview} from './import-review';
 import {ImportPhaseStatus,ImportProcessing,type ImportProgress} from './import-progress';
 
@@ -35,20 +34,13 @@ export function useRecipeImport(props:Props) {
     if(request.current||saving)return;
     if(demo&&!props.allowDemo)return;
     if(!demo&&props.local){setError('取り込みにはGoogleログインが必要です。');return;}
-    const controller=new AbortController();request.current=controller;const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(75000)]);
+    const controller=new AbortController();request.current=controller;const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(120000)]);
     const original:ImportSource={kind:mode,name:mode==='image'?imageName:mode==='url'?'レシピのURL':'貼り付けた本文',...(mode==='image'?{image}:mode==='url'?{url:value}:{text:value})};
     (document.activeElement as HTMLElement|null)?.blur();setError('');setDiagnostics(null);setResult(null);setAcknowledged([]);
     setProgress({phase:'reading',started:Date.now(),demo,ingredients:[],total:null});
     try{
       const imported=await readImport(mode==='url'?{url:value}:mode==='image'?{image}:{text:value},demo,signal,phase=>{if(request.current===controller)setProgress(current=>current?{...current,phase}:current);});
-      if(imported.photo){
-        try{
-          const blob=importedPhotoBlob(imported.photo);
-          const photo=await prepareRecipePhoto(new File([blob],'recipe-photo',{type:blob.type}));
-          signal.throwIfAborted();imported.recipe={...imported.recipe,photo};
-        }catch{signal.throwIfAborted();imported.warnings=[...(imported.warnings||[]),'料理の写真を準備できませんでした。必要なら写真を追加してください。'];}
-        delete imported.photo;
-      }
+      await prepareImportPhotos(imported,signal);
       if(demo){
         const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if(!reduced)await importPause(2000,signal);
@@ -67,7 +59,7 @@ export function useRecipeImport(props:Props) {
   }
   function removeItem(kind:'ingredients'|'steps',index:number){
     if(!result||result.recipe[kind].length<=1)return;
-    const recipe=kind==='ingredients'?{...result.recipe,ingredients:result.recipe.ingredients.filter((_,i)=>i!==index)}:{...result.recipe,steps:result.recipe.steps.filter((_,i)=>i!==index)};
+    const recipe=kind==='ingredients'?{...result.recipe,ingredients:result.recipe.ingredients.filter((_,i)=>i!==index)}:removeRecipeStep(result.recipe,index);
     const issues=result.issues.flatMap(issue=>{const field=fieldAfterRemoval(issue.field,kind,index);return field?[{...issue,field}]:[];});
     setResult({...result,recipe,issues});setAcknowledged(acknowledged.flatMap(field=>{const next=fieldAfterRemoval(field,kind,index);return next?[next]:[];}));
   }

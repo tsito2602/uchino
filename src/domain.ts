@@ -1,8 +1,10 @@
 export const categories = ['すべて','主菜','副菜','汁物','主食','おやつ','その他'] as const;
 export type Category = Exclude<typeof categories[number], 'すべて'>;
 export type Ingredient = {name:string;quantity:string;unit:string;group?:string};
-export type Recipe = {id:string;title:string;category:Category;servings:number;minutes:number|null;ingredients:Ingredient[];steps:string[];memo:string;sourceUrl:string;favorite:boolean;createdAt:string;photo?:string};
+export type Recipe = {id:string;title:string;category:Category;servings:number;minutes:number|null;ingredients:Ingredient[];steps:string[];stepPhotos?:string[];memo:string;sourceUrl:string;favorite:boolean;createdAt:string;photo?:string};
 export const MAX_PHOTO_BYTES=256_000;
+export const MAX_STEP_PHOTO_BYTES=80_000;
+export const STEP_PHOTOS_BUDGET=720_000;
 export const MAX_PHOTO_URL_LENGTH=23+4*Math.ceil(MAX_PHOTO_BYTES/3);
 export const demoPhotos={ginger:'/recipe-photos/ginger.webp',salad:'/recipe-photos/salad.webp',soup:'/recipe-photos/soup.webp',chicken:'/recipe-photos/chicken.webp'};
 export function validRecipePhoto(value:unknown):value is string {
@@ -26,6 +28,9 @@ export type ShoppingItem = {id:string;name:string;quantity:string;done:boolean;c
 export type Kind = 'recipe'|'shopping';
 export type RecordData = Recipe|ShoppingItem;
 export function newRecipe():Recipe { return {id:crypto.randomUUID(),title:'',category:'主菜',servings:2,minutes:null,ingredients:[{name:'',quantity:'',unit:''}],steps:[''],memo:'',sourceUrl:'',favorite:false,createdAt:new Date().toISOString(),photo:''}; }
+export function removeRecipeStep(recipe:Recipe,index:number):Recipe {
+  return {...recipe,steps:recipe.steps.filter((_,i)=>i!==index),...(recipe.stepPhotos?{stepPhotos:recipe.stepPhotos.filter((_,i)=>i!==index)}:{})};
+}
 export function quantityNumber(value:string):number|null {
   const normalized=value.trim().replace(/[０-９．／]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xfee0));
   const fraction=normalized.match(/^(?:(\d+)(?:\s+|と))?(\d+)\/(\d+)$/);
@@ -71,6 +76,7 @@ export function validateRecord(kind:Kind,value:unknown):RecordData|null {
   const ingredients:Ingredient[]=[];
   for(const i of v.ingredients){if(!i||typeof i!=='object')return null;const name=text(i.name,200),quantity=text(i.quantity,100),unit=text(i.unit,50),group=i.group===undefined?'':text(i.group,50);if(!name||quantity===null||unit===null||group===null)return null;ingredients.push({name,quantity,unit,...(group?{group}:{})});}
   const steps=v.steps.map(s=>text(s,5000));if(steps.some(s=>!s))return null;
-  const record={id,title,category:v.category as Category,servings:Number(v.servings),minutes:v.minutes as number|null,ingredients,steps:steps as string[],memo,sourceUrl,favorite:v.favorite,createdAt,...(v.photo===undefined?{}:{photo:v.photo as string})};
+  if(v.stepPhotos!==undefined&&(!Array.isArray(v.stepPhotos)||v.stepPhotos.length!==steps.length||v.stepPhotos.some(p=>!validRecipePhoto(p))))return null;
+  const record={id,title,category:v.category as Category,servings:Number(v.servings),minutes:v.minutes as number|null,ingredients,steps:steps as string[],...(v.stepPhotos===undefined?{}:{stepPhotos:v.stepPhotos as string[]}),memo,sourceUrl,favorite:v.favorite,createdAt,...(v.photo===undefined?{}:{photo:v.photo as string})};
   return new TextEncoder().encode(JSON.stringify(record)).length<=1_800_000?record:null;
 }

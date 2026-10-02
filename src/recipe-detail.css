@@ -21,3 +21,6 @@
 @media(prefers-reduced-motion:reduce){.context-action-icon{animation:none}.context-action-count,.context-action-count.is-bumping{transform:none;transition:none}}
 
 .ingredient-group{margin:22px 0 4px;padding:8px 12px;border-radius:8px;background:var(--soft);font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+
+.recipe-step-content{flex:1;min-width:0}
+.recipe-step-photo{display:block;width:100%;max-height:360px;object-fit:contain;object-position:left center;margin-top:14px;border-radius:12px;background:var(--soft)}

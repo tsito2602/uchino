@@ -127,3 +127,14 @@ test('storage setup failures remain retryable and missing binding is distinguish
   assert.ok(logs.length);assert.ok(!logs.join('').includes('private database diagnostic'));
  }finally{fresh.close();}
 });
+
+test('numbered step photos survive sync and can be removed independently of the cover',async()=>{
+ const data={...recipe,id:'step-photo-recipe',photo:photoFixture(120000),steps:['切る','休ませる','焼く'],stepPhotos:[photoFixture(50000),'',photoFixture(60000)]};
+ assert.equal((await put(data,0,'step-photo-create')).status,200);
+ const records=(await (await request('/api/data',{headers:{Cookie:auth}})).json()).records;
+ assert.deepEqual(records.find(row=>row.id===data.id).data.stepPhotos,data.stepPhotos);
+ assert.equal((await put({...data,stepPhotos:['','',data.stepPhotos[2]]},1,'step-photo-remove')).status,200);
+ const saved=(await (await request('/api/data',{headers:{Cookie:auth}})).json()).records.find(row=>row.id===data.id).data;
+ assert.equal(saved.photo,data.photo);assert.deepEqual(saved.stepPhotos,['','',data.stepPhotos[2]]);
+ assert.equal((await put({...data,stepPhotos:[data.stepPhotos[2]]},2,'step-photo-mismatch')).status,400);
+});
