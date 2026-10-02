@@ -17,12 +17,64 @@ test('text import accepts a raw Gateway envelope and never accepts model record 
 test('image import sends the uploaded image through the Responses API and preserves fractions',async()=>{
  const image='data:image/png;base64,iVBORw0KGgo=';
  const result=await importAI(env(async(model,input,options)=>{
-  assert.equal(model,'openai/gpt-6-luna');assert.deepEqual(input.input[0].content[2],{type:'input_image',image_url:image});
+  assert.equal(model,'openai/gpt-6-luna');assert.deepEqual(input.input[0].content[2],{type:'input_image',image_url:image,detail:'high'});
   assert.match(input.input[0].content[0].text,/JSON Schema/);assert.equal(input.text.format.type,'json_schema');assert.equal(input.text.format.strict,true);
   assert.deepEqual(input.reasoning,{effort:'low'});assert.equal(input.store,false);assert.equal(options.gateway.collectLog,false);assert.equal(options.gateway.id,'uchino');
   return response(recipe);
  }),{image});
  assert.equal(result.recipe.ingredients[1].quantity,'1/2');assert.equal(result.recipe.ingredients[1].unit,'大さじ');
+});
+
+test('a cookbook page without a title keeps its readable content and requires title review',async()=>{
+ for(const title of [null,undefined,'','　 ']){
+  let calls=0;
+  const value={...recipe,title,minutes:null,ingredients:[{name:'薄口しょうゆ',quantity:'1',unit:'小さじ',group:'A'},{name:'しょうがのすりおろし',quantity:'1/2',unit:'小さじ',group:'A'},{name:'ねぎの小口切り',quantity:'1/4',unit:'本分',group:''}],issues:[]};
+  const result=await importAI(env(async()=>{calls++;return response(value);}),{image:'data:image/jpeg;base64,/9j/'});
+  assert.equal(calls,1);assert.equal(result.recipe.title,'名称未設定のレシピ');assert.equal(result.recipe.minutes,null);
+  assert.deepEqual(result.recipe.ingredients.map(i=>({...i,group:i.group||''})),value.ingredients);assert.deepEqual(result.recipe.steps,value.steps);
+  assert.deepEqual(result.issues.map(i=>i.field),['title']);assert.match(result.issues[0].reason,/名前を入力/);
+ }
+});
+
+test('image extraction failure is rechecked once with the same complete image and shared deadline',async()=>{
+ const image='data:image/jpeg;base64,/9j/';
+ for(const first of [response({error:'no title'}),response({...recipe,servings:'2'})]){
+  let calls=0,firstSignal;const phases=[];
+  const result=await importAI(env(async(_model,input,options)=>{
+   calls++;assert.equal(input.input[0].content.filter(c=>c.type==='input_image').length,1);
+   assert.deepEqual(input.input[0].content.find(c=>c.type==='input_image'),{type:'input_image',image_url:image,detail:'high'});
+   if(calls===1){firstSignal=options.signal;return first;}
+   assert.equal(options.signal,firstSignal);assert.match(input.input[0].content.at(-1).text,/もう一度/);
+   return response({...recipe,title:null});
+  }),{image},{onPhase:phase=>phases.push(phase)});
+  assert.equal(calls,2);assert.equal(result.issues[0].field,'title');assert.deepEqual(phases,['sorting','reading','sorting','checking']);
+ }
+});
+
+test('image retries stop after two extractions and never retry provider failures or refusals',async()=>{
+ const secret='private image text';
+ for(const [run,code,expected] of [
+  [()=>response({error:secret}),'extraction_failed',2],
+  [()=>response({...recipe,steps:[]}),'invalid_recipe',2],
+  [()=>Response.json({error:{code:'invalid_api_key',message:secret}},{status:401}),'authentication',1],
+  [()=>Response.json({error:{code:'insufficient_quota',message:secret}},{status:429}),'quota',1],
+  [()=>({status:'completed',output:[{type:'message',content:[{type:'refusal',refusal:secret}]}]}),'refusal',1],
+  [()=>({status:'completed',output:[]}),'invalid_response',1],
+  [()=>({status:'completed',output_text:secret}),'invalid_response',1],
+ ]){
+  let calls=0;
+  await assert.rejects(importAI(env(async()=>{calls++;return run();}),{image:'data:image/jpeg;base64,/9j/'}),error=>{
+   assert.equal(error.diagnostics.code,code);assert.ok(!JSON.stringify(error).includes(secret));assert.ok(!error.message.includes(secret));return true;
+  });
+  assert.equal(calls,expected);
+ }
+ let calls=0;await assert.rejects(importAI(env(async()=>{calls++;return response({error:'not a recipe'});}),{text:'not a recipe'}));assert.equal(calls,1);
+});
+
+test('cancelling after the first image result prevents the retry',async()=>{
+ let calls=0;const controller=new AbortController();
+ await assert.rejects(importAI(env(async()=>{calls++;return response({error:'not a recipe'});}),{image:'data:image/jpeg;base64,/9j/'},{signal:controller.signal,onPhase:()=>controller.abort()}),{name:'AbortError'});
+ assert.equal(calls,1);
 });
 
 test('blank, wrongly typed, and oversized inputs never call AI',async()=>{
