@@ -34,6 +34,13 @@ test('same-origin protection, tenant isolation, revisions and retry idempotence'
 test('unconfigured import fails clearly and all API responses are non-cacheable',async()=>{
  const response=await request('/api/import',{method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json',Cookie:auth},body:JSON.stringify({text:'レシピ'})});assert.equal(response.status,422);assert.match((await response.json()).error,/準備中/);assert.equal(response.headers.get('cache-control'),'no-store');
 });
+test('malformed import bodies are rejected before extraction',async()=>{
+ for(const input of [null,[],{url:4},{url:''},{url:'https://www.kurashiru.com/',text:'mixed source'}]){
+  const response=await request('/api/import',{method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json',Cookie:auth},body:JSON.stringify(input)});
+  assert.equal(response.status,400);assert.equal(response.headers.get('cache-control'),'no-store');
+ }
+ const config=await (await request('/api/config',{}, {...env,AI:{run(){}},AI_GATEWAY_ID:' ',AI_RECIPE_MODEL:'model'})).json();assert.equal(config.ai,false);
+});
 test('photo records sync, remain private, reject oversized images and allow removal',async()=>{
  const data={...recipe,id:'photo-recipe',photo:photoFixture(120000)};
  assert.equal((await put(data,0,'photo-create')).status,200,'A photo larger than the old 100KB request limit saves');

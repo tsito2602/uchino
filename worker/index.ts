@@ -4,7 +4,7 @@ import {demoImport} from './import-demo';
 import type {ImportEvent} from '../src/import-model';
 import {authRoutes,sessionUser,type AuthBindings,type AuthUser} from './auth';
 import {validateRecord,type Kind} from '../src/domain';
-import {importUrl,importAI,type ImportBindings} from './import';
+import {importUrl,importAI,aiConfigured,type ImportBindings} from './import';
 import {embeddedAssets} from './generated-assets';
 type Bindings=AuthBindings&ImportBindings&{APP_ENV?:string};
 const app=new Hono<{Bindings:Bindings;Variables:{user:AuthUser}}>();
@@ -20,7 +20,7 @@ app.use('*',async(c,next)=>{
 });
 app.onError((_error,c)=>c.json({error:'処理できませんでした。時間をおいて再試行してください。'},500));
 app.get('/api/health',c=>c.json({ok:true,app:'uchino',environment:c.env.APP_ENV??'local',version:'0.1.0'}));
-app.get('/api/config',c=>c.json({ai:Boolean(c.env.AI&&c.env.AI_GATEWAY_ID&&c.env.AI_RECIPE_MODEL),demoImport:c.env.APP_ENV==='staging'}));
+app.get('/api/config',c=>c.json({ai:aiConfigured(c.env),demoImport:c.env.APP_ENV==='staging'}));
 app.route('/api/auth',authRoutes);
 app.use('/api/data/*',async(c,next)=>{const user=await sessionUser(c);if(!user)return c.json({error:'ログインしてください。'},401);c.set('user',user);if(!c.env.DB)return c.json({error:'同期の準備中です。'},503);await next();});
 app.use('/api/data',async(c,next)=>{const user=await sessionUser(c);if(!user)return c.json({error:'ログインしてください。'},401);c.set('user',user);if(!c.env.DB)return c.json({error:'同期の準備中です。'},503);await next();});
@@ -48,7 +48,8 @@ app.post('/api/import/demo',c=>c.env.APP_ENV==='staging'?c.json(demoImport()):c.
 app.post('/api/import',async c=>{
   if(!await sessionUser(c))return c.json({error:'取り込みにはGoogleログインが必要です。'},401);
   let input;try{input=await body(c.req.raw,8_100_000);}catch{return c.json({error:'ファイルが大きすぎるか、読み取れませんでした。'},400);}
-  const execute=(signal:AbortSignal,onPhase?:(phase:'reading'|'sorting'|'checking')=>void)=>input?.url?importUrl(String(input.url),{signal,onPhase}):importAI(c.env,input??{},{signal,onPhase});
+  if(!input||typeof input!=='object'||Array.isArray(input)||input.url!==undefined&&(typeof input.url!=='string'||!input.url.trim()||input.url.length>2048||input.text!==undefined||input.image!==undefined))return c.json({error:'レシピのURL・本文・画像のいずれかを指定してください。'},400);
+  const execute=(signal:AbortSignal,onPhase?:(phase:'reading'|'sorting'|'checking')=>void)=>input.url!==undefined?importUrl(input.url.trim(),{signal,onPhase},c.env):importAI(c.env,input,{signal,onPhase});
   if(c.req.header('Accept')==='application/x-ndjson'){
     c.header('Content-Type','application/x-ndjson; charset=utf-8');
     return stream(c,async output=>{
