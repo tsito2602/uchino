@@ -5,7 +5,8 @@ import {useEffect,useState,useRef} from 'react';
 import {BookOpen,Search,Heart,Clock,ChevronRight,Plus,Check,ExternalLink,ShoppingBasket,Trash2,Link,ImagePlus,FileText,Pencil,RefreshCw,Download,LogOut,Cloud,Smartphone,ChefHat,Settings,RotateCcw} from 'lucide-react';
 import {type Session} from './auth';
 import {SettingsPage} from './settings-page';
-import {categories,newRecipe,scaleQuantity,formatQuantity,validateRecord,type Recipe,type ShoppingItem} from './domain';
+import {categories,newRecipe,validateRecord,type Recipe,type ShoppingItem} from './domain';
+import {formatIngredientAmount} from './ingredient-amount';
 import {useRecords,synchronize,prepareData,rows} from './storage';
 import {demoScope,getDataMode,rememberDataMode,type DataMode} from './data-mode';
 import {Dock,type Tab,type DockContext} from './dock';
@@ -81,7 +82,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab}:{session:Se
   async function run(action:()=>Promise<void>){if(busy)return;setBusy(true);try{await action();}catch(e){setFormError(e instanceof Error?e.message:'処理できませんでした。');}finally{setBusy(false);}}
   const saveRecipe=()=>void run(async()=>{if(view?.kind!=='edit'||photoBusy)return;const form=document.getElementById('recipe-form') as HTMLFormElement|null;if(!form?.reportValidity())return;const record=validateRecord('recipe',view.draft);if(!record)throw new Error('材料・手順・人数などの入力内容を確認してください。');await store.save('recipe',record);setNotice('レシピを保存しました');setClosing(true);});
   async function removeRecipe(){const saved=view?.kind==='edit'&&!view.isNew?recipes.find(recipe=>recipe.id===view.draft.id):undefined;if(!saved||busy||!confirm(`「${saved.title}」を削除しますか？`))return;await run(async()=>{await store.save('recipe',saved,true);setClosing(true);setNotice('レシピを削除しました');});}
-  async function addIngredients(){if(!detail)return;await run(async()=>{const selected=detail.ingredients.filter((_,i)=>checked.includes(String(i)));for(const ingredient of selected){await store.save('shopping',{id:crypto.randomUUID(),name:ingredient.name,quantity:formatQuantity(scaleQuantity(ingredient.quantity,detail.servings,servings),ingredient.unit),done:false,createdAt:new Date().toISOString()});}setNotice(`${selected.length}件を買い物メモに追加しました`);setChecked([]);});}
+  async function addIngredients(){if(!detail)return;await run(async()=>{const selected=detail.ingredients.filter((_,i)=>checked.includes(String(i)));for(const ingredient of selected){await store.save('shopping',{id:crypto.randomUUID(),name:ingredient.name,quantity:formatIngredientAmount(ingredient,detail.servings,servings),done:false,createdAt:new Date().toISOString()});}setNotice(`${selected.length}件を買い物メモに追加しました`);setChecked([]);});}
   async function addShopping(){
     if(busy||shoppingInFlight.current||shoppingComposing.current)return;
     const form=document.getElementById('shopping-form') as HTMLFormElement|null;if(!form?.reportValidity())return;
