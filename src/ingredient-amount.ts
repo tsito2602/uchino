@@ -56,7 +56,7 @@ function produceName(name:string){
 }
 
 export type AmountPart={quantity:string;unit:string};
-export type IngredientAmount={parts:AmountPart[];approximate:boolean;original?:string;basis?:string};
+export type IngredientAmount={parts:AmountPart[];approximate:boolean;original?:AmountPart;basis?:string};
 const formatPart=(part:AmountPart)=>isSpoonUnit(part.unit)?`${part.unit.trim()}${part.quantity}`:[part.quantity,part.unit].filter(Boolean).join(' ');
 function fraction(value:number,denominators:number[],tolerance:number):string|null {
   for(const denominator of denominators){
@@ -85,7 +85,7 @@ export function ingredientAmount(ingredient:Ingredient,base:number,servings:numb
   if(value===null||!Number.isFinite(value)||value<=0||!Number.isFinite(base)||base<=0||!Number.isFinite(servings)||servings<=0)return fallback;
   // Fractions suit pieces and spoons; reference weights/volumes are easier to read as decimals.
   if(['ml','cc','ミリリットル','g','グラム','kg','キログラム'].includes(unit))fallback.parts[0].quantity=String(Number(value.toFixed(3))||value);
-  const original=formatPart(fallback.parts[0]);
+  const original=fallback.parts[0];
   if(['ml','cc','ミリリットル'].includes(unit)){
     const parts=spoons(value);return parts?{parts,approximate:false,original}:fallback;
   }
@@ -101,5 +101,5 @@ export function ingredientAmount(ingredient:Ingredient,base:number,servings:numb
 
 export function formatIngredientAmount(ingredient:Ingredient,base:number,servings:number):string {
   const amount=ingredientAmount(ingredient,base,servings);
-  return `${amount.approximate?'約':''}${amount.parts.map(formatPart).join('＋')}${amount.original?`（${amount.original}）`:''}`;
+  return `${amount.approximate?'約':''}${amount.parts.map(formatPart).join('＋')}${amount.original?`（${formatPart(amount.original)}）`:''}`;
 }

@@ -8,7 +8,7 @@ const item=(name,quantity,unit='g')=>({name,quantity,unit});
 test('typical raw vegetables use simple fractions while retaining source weights',()=>{
  for(const [name,grams,quantity,unit] of [['玉ねぎ','100','1/2','個'],['にんじん','50','1/3','本'],['ごぼう','80','1/2','本'],['じゃがいも','300','2','個'],['ほうれん草','100','1/2','束']]){
   const value=ingredientAmount(item(name,grams),2,2);
-  assert.deepEqual(value.parts,[{quantity,unit}]);assert.equal(value.approximate,true);assert.equal(value.original,`${grams} g`);assert.match(value.basis,/目安/);
+  assert.deepEqual(value.parts,[{quantity,unit}]);assert.equal(value.approximate,true);assert.deepEqual(value.original,{quantity:grams,unit:'g'});assert.match(value.basis,/目安/);
  }
  assert.equal(formatIngredientAmount(item('玉ねぎ','100'),2,2),'約1/2 個（100 g）');
 });

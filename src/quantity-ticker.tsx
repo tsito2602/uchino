@@ -1,8 +1,44 @@
 // uchiwake's layout-based digit reels, adapted for recipe fractions and units.
-import {useLayoutEffect,useRef} from 'react';
+import {useLayoutEffect,useRef,type RefObject} from 'react';
 import './quantity-ticker.css';
 
 const DIGITS=Array.from({length:10},(_,i)=>i),HEIGHT=1.1,DURATION=900,STAGGER=40;
+// Every token shares the same width transition. Stable empty slots let labels,
+// brackets and extra spoon amounts slide together without a layout jump.
+function useQuantityWidth(root:RefObject<HTMLSpanElement|null>,value:string,measure:string){
+  useLayoutEffect(()=>{
+    const node=root.current!,text=node.querySelector<HTMLElement>(measure)!;
+    const from=node.getBoundingClientRect().width,to=text.getBoundingClientRect().width;
+    const initialized=!!node.style.width;
+    node.style.width=`${to}px`;
+    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
+    if(!initialized||reduced.matches||Math.abs(from-to)<.1)return;
+    const animation=node.animate([{width:`${from}px`},{width:`${to}px`}],{duration:DURATION,easing:'cubic-bezier(.22,1,.36,1)'});
+    const finish=()=>animation.finish();
+    reduced.addEventListener('change',finish);document.addEventListener('visibilitychange',finish);
+    return()=>{
+      node.style.width=`${node.getBoundingClientRect().width}px`;
+      animation.cancel();reduced.removeEventListener('change',finish);document.removeEventListener('visibilitychange',finish);
+    };
+  },[root,value,measure]);
+}
+
+export function QuantityLabel({value,className=''}:{value:string;className?:string}){
+  const root=useRef<HTMLSpanElement>(null),previous=useRef<string|null>(null);
+  useQuantityWidth(root,value,'.quantity-label-static');
+  useLayoutEffect(()=>{
+    const before=previous.current;previous.current=value;
+    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
+    if(before===null||before===value||!value||reduced.matches)return;
+    const text=root.current!.querySelector<HTMLElement>('.quantity-label-text')!;
+    const animation=text.animate([{opacity:0,transform:'translateX(.25em)'},{opacity:1,transform:'translateX(0)'}],{duration:250,easing:'ease-out'});
+    const finish=()=>animation.finish();
+    reduced.addEventListener('change',finish);document.addEventListener('visibilitychange',finish);
+    return()=>{animation.cancel();reduced.removeEventListener('change',finish);document.removeEventListener('visibilitychange',finish);};
+  },[value]);
+  return <span className={`quantity-label ${className}`} ref={root}><span className="quantity-label-static" aria-hidden="true">{value}</span><span className="quantity-label-text">{value}</span></span>;
+}
+
 type Glyph={char:string;key:string;digit?:number};
 function glyphs(text:string):Glyph[]{
   const result:Glyph[]=[];
@@ -17,23 +53,7 @@ function glyphs(text:string):Glyph[]{
 export function QuantityTicker({value}:{value:string}){
   const root=useRef<HTMLSpanElement>(null),previous=useRef<string|null>(null),positions=useRef(new Map<string,number>());
   const characters=glyphs(value);
-  useLayoutEffect(()=>{
-    const node=root.current!,text=node.querySelector<HTMLElement>('.quantity-ticker-static')!;
-    const from=node.getBoundingClientRect().width,to=text.getBoundingClientRect().width;
-    const initialized=!!node.style.width;
-    node.style.width=`${to}px`;
-    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
-    if(!initialized||reduced.matches||Math.abs(from-to)<.1)return;
-    // Animate the actual layout width so spoon labels and adjacent units move
-    // with the number, including interrupted integer ↔ mixed-fraction changes.
-    const animation=node.animate([{width:`${from}px`},{width:`${to}px`}],{duration:DURATION,easing:'cubic-bezier(.22,1,.36,1)'});
-    const finish=()=>animation.finish();
-    reduced.addEventListener('change',finish);
-    return()=>{
-      node.style.width=`${node.getBoundingClientRect().width}px`;
-      animation.cancel();reduced.removeEventListener('change',finish);
-    };
-  },[value]);
+  useQuantityWidth(root,value,'.quantity-ticker-static');
   useLayoutEffect(()=>{
     const node=root.current!;
     const before=previous.current;previous.current=value;node.dataset.settled='true';

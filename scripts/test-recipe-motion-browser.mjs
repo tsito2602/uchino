@@ -24,12 +24,13 @@ try{
  await page.screenshot({path:'test-results/recipe-title-and-category.png'});
  const nav=page.getByRole('navigation',{name:'操作',exact:true}),plus=nav.getByRole('button',{name:'人数を増やす',exact:true}),minus=nav.getByRole('button',{name:'人数を減らす',exact:true});
  await page.locator('.ingredient-row').first().evaluate(el=>{const scroll=el.closest('.card-panel');scroll.scrollTop+=el.getBoundingClientRect().top-scroll.querySelector('.card-panel-header').getBoundingClientRect().bottom-24;});
- const quantities=page.locator('.quantity-ticker-accessible');
- await plus.click();await page.waitForFunction(()=>document.querySelector('.quantity-ticker')?.dataset.settled==='false');assert.equal(await quantities.first().innerText(),'300');assert.equal(await quantities.nth(4).innerText(),'1と1/2');assert.equal(await page.locator('.quantity-ticker').nth(4).locator('[data-place=denominator-0]').evaluate(el=>parseFloat(el.style.top)),-2.2,'A new fraction never starts with a zero denominator');
- const spoon=await page.locator('.ingredient-quantity').nth(4).evaluate(el=>[...el.children].map(child=>child.className));assert.equal(spoon[1],'quantity-ticker','Spoon unit precedes its number');
+ const firstAmount=page.locator('.ingredient-row').first().locator('.ingredient-quantity-part').first().locator('.quantity-ticker-accessible');
+ const spoonAmount=page.locator('.ingredient-row').nth(4).locator('.ingredient-quantity-part').first();
+ await plus.click();await page.waitForFunction(()=>document.querySelector('.quantity-ticker')?.dataset.settled==='false');assert.equal(await firstAmount.innerText(),'300');assert.equal(await spoonAmount.locator('.quantity-ticker-accessible').innerText(),'1と1/2');assert.equal(await spoonAmount.locator('[data-place=denominator-0]').evaluate(el=>parseFloat(el.style.top)),-2.2,'A new fraction never starts with a zero denominator');
+ assert.equal((await spoonAmount.locator('.quantity-label-text').nth(1).innerText()).trim(),'小さじ','Spoon unit precedes its number');
  await page.screenshot({path:'test-results/quantity-reels.png'});
- await plus.click();await plus.click();await minus.click();await page.waitForFunction(()=>[...document.querySelectorAll('.quantity-ticker')].every(el=>el.dataset.settled==='true'));assert.equal(await quantities.first().innerText(),'400','Rapid changes settle on the latest quantity');
- await page.emulateMedia({reducedMotion:'reduce'});await minus.click();assert.equal(await page.locator('.quantity-ticker').first().getAttribute('data-settled'),'true');assert.equal(await quantities.first().innerText(),'300');await page.emulateMedia({reducedMotion:'no-preference'});
+ await plus.click();await plus.click();await minus.click();await page.waitForFunction(()=>[...document.querySelectorAll('.quantity-ticker')].every(el=>el.dataset.settled==='true'));assert.equal(await firstAmount.innerText(),'400','Rapid changes settle on the latest quantity');
+ await page.emulateMedia({reducedMotion:'reduce'});await minus.click();assert.equal(await page.locator('.quantity-ticker').first().getAttribute('data-settled'),'true');assert.equal(await firstAmount.innerText(),'300');await page.emulateMedia({reducedMotion:'no-preference'});
  await nav.getByRole('button',{name:'戻る',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});await page.waitForTimeout(650);
  // Switching tabs must not fade the persistent three-icon navigation.
  await page.getByRole('button',{name:'設定',exact:true}).evaluate(button=>button.click());await page.waitForTimeout(40);

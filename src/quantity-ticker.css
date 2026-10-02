@@ -6,4 +6,7 @@
 .quantity-ticker-reel>span{display:flex;align-items:center;justify-content:center;height:1.1em;line-height:1;flex-shrink:0}
 .quantity-ticker[data-settled=true]>.quantity-ticker-static{visibility:visible}
 .quantity-ticker[data-settled=true]>.quantity-ticker-glyphs{visibility:hidden}
+.quantity-label{position:relative;display:inline-flex;flex:none;overflow:clip;white-space:pre;vertical-align:baseline}
+.quantity-label-static{visibility:hidden;flex:none;white-space:pre}
+.quantity-label-text{position:absolute;inset:0;white-space:pre}
 .ingredient-quantity{display:inline-flex;align-items:baseline;justify-content:flex-end;gap:.3em;flex-wrap:wrap}

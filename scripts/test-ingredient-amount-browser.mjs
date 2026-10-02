@@ -29,6 +29,33 @@ try{
  async function showRow(i){await rows.nth(i).evaluate(el=>{const panel=el.closest('.card-panel');panel.scrollTop+=el.getBoundingClientRect().top-panel.querySelector('.card-panel-header').getBoundingClientRect().bottom-20;});}
  await showRow(0);await page.screenshot({path:'test-results/amount-vegetables-light.png',animations:'disabled'});
  await page.locator('html').evaluate(el=>{el.dataset.brandTheme='dark';el.style.colorScheme='dark';});await showRow(3);await page.screenshot({path:'test-results/amount-spoons-dark.png',animations:'disabled'});
+ const plus=page.getByRole('button',{name:'人数を増やす',exact:true}),minus=page.getByRole('button',{name:'人数を減らす',exact:true});
+ const settled=()=>page.waitForFunction(()=>[...document.querySelectorAll('.ingredient-quantity')].every(el=>[...el.querySelectorAll('.quantity-ticker')].every(ticker=>ticker.dataset.settled==='true')&&!el.getAnimations({subtree:true}).some(animation=>['running','paused'].includes(animation.playState))));
+ // Inspect actual intermediate widths, not just target text in the accessibility tree.
+ const widthFrame=async time=>rows.evaluateAll((nodes,time)=>{for(const row of nodes)for(const animation of row.querySelector('.ingredient-quantity').getAnimations({subtree:true})){if(animation.effect.getKeyframes().some(frame=>'width' in frame)){animation.pause();animation.currentTime=time;}}},time);
+ const finishWidths=()=>rows.evaluateAll(nodes=>{for(const row of nodes)for(const animation of row.querySelector('.ingredient-quantity').getAnimations({subtree:true}))if(animation.playState==='paused')animation.finish();});
+ await showRow(0);await page.emulateMedia({reducedMotion:'no-preference'});await plus.click();
+ await page.waitForFunction(()=>document.querySelectorAll('.ingredient-quantity-original .quantity-ticker')[2]?.dataset.settled==='false');
+ assert.equal(await rows.nth(2).locator('.ingredient-quantity-original .quantity-ticker-accessible').innerText(),'120');
+ const unitAndBracket=()=>rows.nth(2).evaluate(row=>[row.querySelector('.ingredient-quantity-part .quantity-label:last-child'),row.querySelector('.ingredient-quantity-original .quantity-label')].map(el=>el.getBoundingClientRect().x));
+ await widthFrame(0);const start=await unitAndBracket();await widthFrame(200);const middle=await unitAndBracket();await widthFrame(900);const end=await unitAndBracket();
+ for(let i=0;i<2;i++)assert.ok(start[i]-middle[i]>.5&&middle[i]-end[i]>.2,`Unit and parenthesis slide with the extra original digit: ${start[i]}, ${middle[i]}, ${end[i]}`);
+ await finishWidths();await settled();assert.equal(await amount(2),'約3/4本（120g）');
+ await minus.click();await settled();await showRow(3);await plus.click();
+ const secondWidth=()=>rows.nth(5).locator('.ingredient-quantity-part').nth(1).evaluate(el=>el.getBoundingClientRect().width);
+ await widthFrame(0);const fullWidth=await secondWidth();await widthFrame(200);const partialWidth=await secondWidth();await widthFrame(900);const emptyWidth=await secondWidth();
+ assert.ok(fullWidth>30&&partialWidth>0&&partialWidth<fullWidth&&emptyWidth<.1,'The extra teaspoon collapses smoothly');
+ assert.equal((await rows.nth(3).locator('.ingredient-quantity-part').first().locator('.quantity-label-text').last().innerText()).trim(),'個','Leaf/piece unit switches with servings');
+ await finishWidths();await settled();await minus.click();await settled();
+ await showRow(0);
+ // Changes interrupted by more clicks must keep the latest number, unit and source amount.
+ for(let i=0;i<4;i++)await plus.evaluate(button=>button.click());
+ await settled();assert.equal(await amount(1),'約1本（150g）');
+ await plus.evaluate(button=>button.click());await page.waitForFunction(()=>document.querySelector('.quantity-ticker[data-settled=false]'));
+ await page.emulateMedia({reducedMotion:'reduce'});await settled();
+ for(let i=0;i<5;i++)await minus.click();
+ assert.equal(await amount(1),'約1/3本（50g）');assert.equal(await amount(5),'大さじ1＋小さじ1（20ml）');
+ assert.equal(await rows.evaluateAll(nodes=>nodes.flatMap(row=>row.querySelector('.ingredient-quantity').getAnimations({subtree:true})).filter(animation=>animation.playState==='running').length),0,'Reduced motion settles digits and labels together');
  await page.getByRole('button',{name:'人数を増やす',exact:true}).click();
  assert.equal(await amount(0),'約3/4個（150g）');assert.equal(await amount(1),'約1/2本（75g）');assert.equal(await amount(4),'大さじ3（45ml）');assert.equal(await amount(5),'大さじ2（30ml）');
  await page.getByRole('button',{name:'人数を減らす',exact:true}).click();assert.equal(await amount(0),'約1/2個（100g）');
@@ -43,5 +70,5 @@ try{
  assert.equal(await page.getByRole('textbox',{name:'分量1',exact:true}).inputValue(),'100');assert.equal(await page.getByRole('textbox',{name:'単位1',exact:true}).inputValue(),'g');
  assert.equal(await page.getByRole('textbox',{name:'分量5',exact:true}).inputValue(),'30');assert.equal(await page.getByRole('textbox',{name:'単位5',exact:true}).inputValue(),'ml');
  assert.equal(records.filter(r=>r.kind==='recipe').length,1,'Viewing and shopping conversions never rewrite the recipe');assert.deepEqual(errors,[]);
- console.log('PASS: existing recipes, estimated pieces/leaves, exact mixed spoons, source amounts, serving changes, 320/390px layout, both themes, shopping, original editable data');
+ console.log('PASS: animated source digits, sliding units/brackets, collapsing mixed spoons, interrupted serving changes, reduced motion, 320/390px equal row heights, both themes, shopping and original editable data');
 }catch(error){failed=true;console.error(error);}finally{await browser.close();process.exit(failed?1:0);}
