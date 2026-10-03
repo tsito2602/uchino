@@ -37,3 +37,7 @@
 /* Favourites on a photo are white like the glass around them; filled means
    favourite. On white surfaces (the detail header) the heart stays pink. */
 .recipe-row .recipe-favorite[aria-pressed=true],.recipe-row .recipe-favorite-burst,.recipe-row .recipe-favorite-burst i:nth-child(even){color:#fff}
+/* On a photo the chip uses the heart's darker glass so the label reads on any
+   dish; on a generated cover it keeps the light glass, like the heart there. */
+.recipe-row .recipe-category{background:#17171766;border-color:#ffffff30;text-shadow:0 1px 2px #0000004d}
+.recipe-row:has(.recipe-cover) .recipe-category{background:#ffffff26;border-color:#ffffff40;text-shadow:none}

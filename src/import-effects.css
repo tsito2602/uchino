@@ -296,12 +296,10 @@
 .import-bubble-card[data-waiting]{animation:import-bubble-card-in 520ms cubic-bezier(.2,1.2,.36,1) both,import-bubble-float 3.2s ease-in-out 520ms infinite}
 .import-bubble-card>:not(.import-bubble-goo){position:relative;z-index:1}
 .import-bubble-goo{position:absolute;inset:0;z-index:0;pointer-events:none}
+.import-bubble-wave{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.import-bubble-wave path{fill:var(--liquid)}
 .import-bubble-goo i{position:absolute;left:0;top:0;border-radius:99px;background:var(--liquid)}
-.import-bubble-pool{position:absolute;left:-24px;right:-24px;bottom:-24px;height:calc(var(--level) * 64px + 24px);background:var(--liquid);transition:height 600ms cubic-bezier(.45,0,.2,1)}
-.import-bubble-bump{position:absolute;bottom:calc(var(--level) * 64px - 13px);width:36px;height:26px;margin-left:-18px;border-radius:50%;background:var(--liquid);animation:import-bubble-bob 2.4s ease-in-out infinite;transition:bottom 600ms cubic-bezier(.45,0,.2,1),scale 420ms ease-in}
-.import-bubble-card[data-done] :is(.import-bubble-pool,.import-bubble-bump){transition-timing-function:cubic-bezier(.55,0,1,.45)}
-.import-bubble-card[data-done] .import-bubble-bump{scale:0}
-.import-bubble-title{max-width:100%;min-height:1.45em;font-family:var(--recipe-title-font);font-size:18px;line-height:1.45;font-weight:700;color:var(--ink);overflow-wrap:anywhere}
+.import-bubble-card[data-done] .import-bubble-title{max-width:100%;min-height:1.45em;font-family:var(--recipe-title-font);font-size:18px;line-height:1.45;font-weight:700;color:var(--ink);overflow-wrap:anywhere}
 .import-bubble-caret{display:inline-block;width:2px;height:1em;margin-left:2px;vertical-align:-.12em;background:var(--ink);animation:import-bubble-caret 700ms steps(1) infinite}
 .import-bubble-label{margin-top:4px;font-family:var(--recipe-title-font);font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
 .import-bubble-items{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
@@ -313,7 +311,6 @@
 .import-bubble-steps i{width:var(--w);height:8px;border-radius:4px;background:var(--soft);transform-origin:left;animation:import-bubble-line 520ms cubic-bezier(.22,.72,.18,1) calc(var(--i) * 140ms + 120ms) both}
 @keyframes import-bubble-card-in{0%{opacity:0;transform:translateY(14px) scale(.94)}100%{opacity:1;transform:none}}
 @keyframes import-bubble-float{50%{transform:translateY(-6px)}}
-@keyframes import-bubble-bob{50%{transform:translate(5px,-6px)}}
 @keyframes import-bubble-caret{50%{opacity:0}}
 @keyframes import-bubble-pop{0%{transform:scale(0)}100%{transform:scale(1)}}
 @keyframes import-bubble-line{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}
