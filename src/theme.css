@@ -12,7 +12,7 @@
   --on-brand: #fff;
   --appearance-track: #e5e0d6;
   --dock-glass: #ffffff52;
-  --panel-tint: #ffffff80;
+  --panel-tint: #ffffffc4;
   --panel-header-tint: #ffffffb3;
   --surface-glow: #ffffffbd;
   --history-current: #686868;
@@ -35,7 +35,7 @@
   --dock-glass: #1c1c1b59;
   --dock-border-top: #ffffff26;
   --dock-border-bottom: #ffffff10;
-  --panel-tint: #1e1e1d80;
+  --panel-tint: #1e1e1dc4;
   --panel-header-tint: #222221b3;
   --surface-glow: #ffffff0e;
   --history-current: #bcbcbc;
@@ -73,3 +73,15 @@ html, body, #root { background: var(--canvas); color: var(--ink); }
 
 .browse-dock .dock-add { color: var(--on-brand); }
 :root[data-brand-theme='dark'] .breathing-action .import-processing-shimmer { --shimmer-base: #17171799; --shimmer-highlight: #171717; }
+/* Calm the page behind an open panel so list photos and gradients do not
+   bleed through the panel glass as stains. Nested panels keep the first veil. */
+.card-panel-backdrop:not([data-panel-nested='true']) > .card-panel-scrim {
+  background: color-mix(in srgb, var(--canvas) 58%, transparent);
+  -webkit-backdrop-filter: blur(12px) saturate(.9);
+  backdrop-filter: blur(12px) saturate(.9);
+  opacity: 1;
+  transition: opacity 260ms ease;
+}
+@starting-style { .card-panel-backdrop:not([data-panel-nested='true']) > .card-panel-scrim { opacity: 0; } }
+.card-panel-backdrop[data-closing] > .card-panel-scrim { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .card-panel-backdrop > .card-panel-scrim { transition: none; } }
