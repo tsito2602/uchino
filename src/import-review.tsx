@@ -1,7 +1,7 @@
 import {ImportFormedCard} from './import-formed-card';
 import {useId,useState} from 'react';
 import {AnimatePresence,motion,useReducedMotion} from 'motion/react';
-import {AlertCircle,Check,ChevronDown,ExternalLink,FileText,Pencil,Sparkles} from 'lucide-react';
+import {AlertCircle,Check,ChevronDown,ExternalLink,FileText,Pencil} from 'lucide-react';
 import {issueLabel,type ImportResult,type ImportSource} from './import-model';
 import {GlassCheckbox} from './glass-checkbox';
 import {RecipeEditor} from './recipe-editor';
@@ -15,31 +15,13 @@ export function ImportOriginal({source}:{source:ImportSource}) {
   </section>;
 }
 
-const sourceActions={url:'レシピページを読み取りました',video:'動画の概要欄・音声・映像を読み取りました',image:'画像の文字を読み取りました',text:'貼り付けた本文を読み取りました'} as const;
 // Summarize the import as it arrived, so later edits in the form do not rewrite what AI did.
-export function importActions(result:ImportResult,source:ImportSource):{text:string;check?:boolean}[] {
-  const {recipe}=result,groups=new Set(recipe.ingredients.map(item=>item.group).filter(Boolean)).size;
-  const stepPhotos=recipe.stepPhotos?.filter(Boolean).length??0;
-  return [
-    {text:sourceActions[source.kind]},
-    {text:`材料を${recipe.ingredients.length}品に整理${groups>1?`し、${groups}つのグループに分けました`:'しました'}`},
-    {text:`作り方を${recipe.steps.length}ステップにまとめました${stepPhotos?`（手順の写真${stepPhotos}枚つき）`:''}`},
-    {text:`${recipe.category}・${recipe.servings}人分${recipe.minutes?`・${recipe.minutes}分`:''}と判断しました`},
-    ...(recipe.photo?[{text:'料理の写真を設定しました'}]:[]),
-    result.issues.length?{text:`自信がない${result.issues.length}か所は「要確認」にしました`,check:true}:{text:'迷った箇所はありませんでした'}
-  ];
-}
-export function ImportActions({result,source}:{result:ImportResult;source:ImportSource}) {
-  const [actions]=useState(()=>importActions(result,source));
-  return <section className="import-ai-actions" aria-labelledby="import-ai-actions-title"><h3 id="import-ai-actions-title"><Sparkles size={16}/>AIがしたこと</h3><ul>{actions.map(action=><li key={action.text} data-check={action.check||undefined}>{action.check?<AlertCircle size={15}/>:<Check size={15}/>}<span>{action.text}</span></li>)}</ul></section>;
-}
 
 export function ImportReview({result,source,onChange,onSubmit,error,acknowledged,onAcknowledge,onRemoveItem,onPhotoBusyChange}:{result:ImportResult;source:ImportSource;onChange:(recipe:Recipe)=>void;onSubmit:()=>void;error:string;onPhotoBusyChange:(busy:boolean)=>void;acknowledged:string[];onAcknowledge:(fields:string[])=>void;onRemoveItem:(kind:'ingredients'|'steps',index:number)=>void}) {
   const remaining=result.issues.filter(issue=>!acknowledged.includes(issue.field));
   function edit(field:string){const input=document.querySelector<HTMLElement>(`[data-import-field="${CSS.escape(field)}"]`);input?.focus({preventScroll:true});}
   return <div className="recipe-import-review">
-    <div className="import-review-heading"><ImportFormedCard recipe={result.recipe}/><h3>一枚のレシピにまとめました</h3><p>元のレシピと照らし合わせて、内容を確認・修正してください。</p>{result.demo&&<span className="import-demo-badge">デモ · staging限定</span>}</div>
-    <ImportActions result={result} source={source}/>
+    <div className="import-review-heading"><ImportFormedCard recipe={result.recipe}/><h3>レシピの読み取りが完了しました</h3><p>元のレシピと照らし合わせて、内容を確認・修正してください。</p>{result.demo&&<span className="import-demo-badge">デモ · staging限定</span>}</div>
     <ImportOriginal source={source}/>
     {result.warnings?.map((warning,i)=><p className="form-error" role="status" key={i}>{warning}</p>)}
     {result.sourceDiagnostics&&<details className="import-error-details"><summary>概要欄の取得状況</summary><pre>{JSON.stringify(result.sourceDiagnostics,null,2)}</pre></details>}
