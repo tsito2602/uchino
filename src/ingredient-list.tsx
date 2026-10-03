@@ -1,4 +1,5 @@
 import {Fragment,useEffect,useRef,type Dispatch,type SetStateAction} from 'react';
+import {haptic} from './haptics';
 import type {Recipe} from './domain';
 import {GlassCheckbox} from './glass-checkbox';
 import {IngredientAmountView} from './ingredient-amount-view';
@@ -22,7 +23,7 @@ export function IngredientList({recipe,servings,checked,onChange,disabled=false}
       // Toggle only newly entered rows, including rows re-entered on a return sweep.
       const first=gesture.last<0?index:gesture.last+(index>gesture.last?1:-1);
       const from=Math.min(first,index),to=Math.max(first,index);
-      gesture.last=index;
+      gesture.last=index;haptic();
       latest.current.onChange(current=>{
         const selected=new Set(current);
         for(let i=from;i<=to;i++)selected.has(String(i))?selected.delete(String(i)):selected.add(String(i));

@@ -1,4 +1,5 @@
 import {AnimatePresence,motion,useIsPresent,useReducedMotion} from 'motion/react';
+import {haptic} from './haptics';
 import {Check,Trash2} from 'lucide-react';
 import type {ShoppingItem} from './domain';
 
@@ -11,7 +12,7 @@ function ShoppingEntry({item,disabled,onToggle,onRemove}:{item:ShoppingItem}&Ite
     transition={{duration:reduced?0:.32,ease:[.22,1,.36,1],opacity:{duration:reduced?0:.2},height:{duration:reduced?0:.32}}}>
     <div className={`shopping-row${item.done?' done':''}`}>
       <button type="button" className="shopping-item-toggle" role="checkbox" aria-checked={item.done} disabled={disabled}
-        aria-label={`${[item.name,item.quantity].filter(Boolean).join(' ')}を${item.done?'未購入に戻す':'購入済みにする'}`} onClick={()=>onToggle(item)}>
+        aria-label={`${[item.name,item.quantity].filter(Boolean).join(' ')}を${item.done?'未購入に戻す':'購入済みにする'}`} onClick={()=>{haptic();onToggle(item);}}>
         <span className="shopping-check" aria-hidden="true">{item.done&&<Check size={15}/>}</span>
         <span className="shopping-item-copy"><strong>{item.name}</strong>{item.quantity&&<span className="shopping-quantity">{item.quantity}</span>}</span>
       </button>
