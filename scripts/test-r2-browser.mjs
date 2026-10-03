@@ -1,6 +1,6 @@
 // Browser + actual Worker/D1 code; R2 itself uses a deterministic in-memory bucket.
 import {strict as assert} from 'node:assert';
-import {readFile,mkdir} from 'node:fs/promises';
+import {mkdir} from 'node:fs/promises';
 import {r2Backend} from '../tests/r2-fixture.mjs';
 import {photoFixture} from '../tests/photo-fixture.mjs';
 import {newRecipe} from '../src/domain.ts';
@@ -31,10 +31,7 @@ try{
  await page.waitForFunction(()=>document.querySelector('.recipe-photo img')?.naturalWidth>0);
  await page.locator('.recipe-open').first().click();await page.waitForFunction(()=>[...document.querySelectorAll('.recipe-step-photo')].length===2&&[...document.querySelectorAll('.recipe-step-photo')].every(img=>img.naturalWidth>0));
  await mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/r2-recipe-detail.png',animations:'disabled'});
- // Export must still be a complete offline backup, with original photo bytes.
  await page.getByRole('button',{name:'戻る',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});
- await page.getByRole('button',{name:'設定',exact:true}).click();const downloadEvent=page.waitForEvent('download');await page.getByRole('button',{name:'データを書き出す',exact:true}).click();
- const download=await downloadEvent,backup=JSON.parse(await readFile(await download.path(),'utf8'));const exported=backup.records.find(row=>row.data.id===original.id).data;assert.equal(exported.photo,original.photo);assert.deepEqual(exported.stepPhotos,original.stepPhotos);
  // A fresh device downloads the R2 images and retains them locally.
  const second=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'});await second.route('**/api/**',apiRoute);const another=await second.newPage();await another.goto('http://127.0.0.1:8787');await another.getByRole('heading',{name:original.title,exact:true}).waitFor();await another.waitForFunction(()=>document.querySelector('.recipe-photo img')?.naturalWidth>0);await another.locator('.recipe-open').first().click();await another.waitForFunction(()=>[...document.querySelectorAll('.recipe-step-photo')].length===2&&[...document.querySelectorAll('.recipe-step-photo')].every(img=>img.naturalWidth>0));assert.ok(backend.calls.get>=3);await second.close();
  await page.evaluate(()=>navigator.serviceWorker.ready);await page.reload();await page.waitForFunction(()=>navigator.serviceWorker.controller!==null);

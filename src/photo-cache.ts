@@ -57,13 +57,3 @@ export async function cacheRemotePhotos(recipes:Recipe[]){
   await Promise.all(Array.from({length:Math.min(4,urls.length)},async()=>{while(next<urls.length){try{await loadRecipePhoto(urls[next++]);}catch{failed=true;}}}));
   if(failed)throw new Error('一部の写真を端末に保存できませんでした。通信と空き容量を確認して「今すぐ同期」をお試しください。');
 }
-export async function exportRecipePhotos(recipe:Recipe):Promise<Recipe>{
-  const encoded=new Map<string,string>();
-  for(const url of new Set(values(recipe))){
-    if(!photoReference(url))continue;
-    const bytes=new Uint8Array(await (await loadRecipePhoto(url)).arrayBuffer());let binary='';
-    for(let index=0;index<bytes.length;index+=8192)binary+=String.fromCharCode(...bytes.subarray(index,index+8192));
-    encoded.set(url,`data:image/jpeg;base64,${btoa(binary)}`);
-  }
-  return {...recipe,...(recipe.photo!==undefined?{photo:encoded.get(recipe.photo)??recipe.photo}:{}),...(recipe.stepPhotos?{stepPhotos:recipe.stepPhotos.map(photo=>encoded.get(photo)??photo)}:{})};
-}

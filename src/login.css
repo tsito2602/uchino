@@ -30,3 +30,11 @@
 :root[data-brand-theme='dark'] .login-brand-icon .ink { fill: #f5f1e9; }
 :root[data-brand-theme='dark'] .login-brand-icon .mid { fill: #b6b0a6; }
 :root[data-brand-theme='dark'] .login-brand-icon .pale { fill: #817b72; }
+
+/* uchino's mark is a square image rather than uchiwake's inline strokes. */
+img.login-brand-icon { height: 34px; aspect-ratio: 1; }
+:root[data-brand-theme='dark'] img.login-brand-icon { filter: invert(1); }
+/* The concept line flows through the Soft Orbit palette on the same nine-second loop. */
+.login-rainbow { background: linear-gradient(90deg, #f44e9e, #c14fdd, #8b56f5, #5567f9, #2d99f4, #24bee6, #2ec4b1, #64c67f, #aec95c, #eabe50, #fc9353, #fc6975, #f44e9e) 0 0 / 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; animation: login-rainbow 9s linear infinite; }
+@keyframes login-rainbow { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .login-rainbow { animation: none; } }

@@ -3,7 +3,6 @@ import {RecipeBookOnboarding} from './recipe-book-onboarding';
 import {useSpaceControls} from './space-controls';
 import {spaceScope,type Space} from './spaces';
 import {SpaceSwitchScreen} from './space-switch-screen';
-import {exportRecipePhotos} from './photo-cache';
 import {SHOPPING_UNDO_MS} from './shopping-undo';
 import {ShoppingList} from './shopping-list';
 import {useRecipeImport} from './recipe-import';
@@ -134,9 +133,8 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
     const items=shoppingUndo.items;
     try{await run(async()=>{await store.saveMany('shopping',items);setShoppingUndo(null);setNotice('買い物リストを戻しました');});}finally{shoppingInFlight.current=false;}
   }
-  async function exportData(){const records=[];for(const {kind,data,deleted,pending} of store.allRows)records.push({kind,data:kind==='recipe'?await exportRecipePhotos(data as Recipe):data,deleted,pending});const blob=new Blob([JSON.stringify({app:'uchino',version:1,dataMode,space:spaces.space?{id:spaces.space.id,name:spaces.space.name}:null,exportedAt:new Date().toISOString(),records},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`uchino-${dataMode}-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);}
   async function selectDataMode(mode:DataMode){if(mode===dataMode)return;await run(()=>onDataMode(mode));}
-  async function canLeave(){const scopes=session.local?[realScope]:spaces.spaces.map(space=>spaceScope(session.user.id,space));if((await Promise.all(scopes.map(rows))).flat().some(row=>row.pending)){store.setError('未同期の変更があります。実データに切り替えて同期または書き出しをしてください。');return false;}return true;}
+  async function canLeave(){const scopes=session.local?[realScope]:spaces.spaces.map(space=>spaceScope(session.user.id,space));if((await Promise.all(scopes.map(rows))).flat().some(row=>row.pending)){store.setError('未同期の変更があります。実データに切り替えて同期してください。');return false;}return true;}
   const spaceControls=useSpaceControls({controller:spaces,userId:session.user.id,disabled:!!view||menuPhase!=='closed',onSelect:async id=>{spaces.select(id);}});
   const PageIcon=tab==='recipes'?BookOpen:tab==='shopping'?ShoppingBasket:Settings;
   const filterCount=Number(!!query.trim())+Number(selectedCategories.length>0)+Number(favorites);
@@ -156,7 +154,6 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
       {tab==='settings'&&formError&&<p className="form-error" role="alert">{formError}</p>}
       {tab==='settings'&&<SettingsPage onSpaceSettings={spaceControls.openSettings} session={session} pending={pending} updateReady={updateReady} dataMode={dataMode} changingData={busy} onDataMode={mode=>void selectDataMode(mode)}
         onSync={()=>void synchronize(realScope).then(()=>{store.setError('');setNotice('同期しました');}).catch(e=>store.setError(e.message))}
-        onExport={()=>void exportData().catch(error=>store.setError(error.message))}
         onUpdate={()=>void canLeave().then(allowed=>allowed?(updateReady?applyUpdate():checkUpdate()).then(found=>{setUpdateReady(!!found);setNotice(found?'更新があります。もう一度押すと更新します。':'最新版です');}):undefined).catch(()=>setNotice('更新を確認できませんでした'))}
         onLogout={()=>void canLeave().then(allowed=>allowed?session.logout():undefined).catch(e=>store.setError(e.message))}/>}
       </div>

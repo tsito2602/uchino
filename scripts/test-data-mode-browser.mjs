@@ -46,7 +46,7 @@ try{
  await mode(page,'実データ');await tab(page,'レシピ');await page.getByRole('heading',{name:'うちの卵焼き',exact:true}).waitFor();assert.equal(await page.locator('.recipe-row').count(),1);
  await tab(page,'買い物メモ');await page.getByText('実データの牛乳',{exact:true}).waitFor();assert.equal(await page.getByText('デモの卵',{exact:true}).count(),0);
  const stored=await readRows(page);assert.ok(stored.filter(row=>row.key.startsWith('demo-')).every(row=>!row.pending));assert.equal(stored.filter(row=>row.key.startsWith('guest:recipe:')&&!row.deleted).length,1);
- await mode(page,'デモデータ');const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'デモデータを書き出す',exact:true}).click();const download=await downloadPromise;assert.match(download.suggestedFilename(),/^uchino-demo-/);const stream=await download.createReadStream(),chunks=[];for await(const chunk of stream)chunks.push(chunk);const exported=JSON.parse(Buffer.concat(chunks));assert.equal(exported.dataMode,'demo');assert.ok(!exported.records.some(row=>row.data.title==='うちの卵焼き'));
+ await mode(page,'デモデータ');
  // Legacy samples move atomically while user-created recipes stay real.
  const legacyContext=await browser.newContext({serviceWorkers:'block'}),legacyPage=await legacyContext.newPage();legacyPage.on('pageerror',error=>errors.push(error.message));await legacyPage.goto('http://127.0.0.1:8787');await legacyPage.getByRole('button',{name:'この端末で使う',exact:true}).waitFor();
  const editedSample={...recipe('sample-ginger','編集したしょうが焼き'),memo:'自分の分量に編集済み'};
