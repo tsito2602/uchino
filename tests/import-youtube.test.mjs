@@ -199,3 +199,12 @@ test('metadata HTTP, content type and network failures have distinct diagnostics
  const controller=new AbortController();controller.abort(new Error('cancelled'));let diagnostic;
  await assert.rejects(()=>fetchYouTubeMetadata({id:videoId,url:videoUrl},controller.signal,value=>{diagnostic=value;}),/cancelled/);assert.equal(diagnostic,undefined);
 });
+
+test('a sign-in refusal for previews keeps step video links and reports one calm warning',async t=>{
+ const html=`<script>var ytInitialPlayerResponse = ${JSON.stringify({videoDetails:{videoId,title:'卵焼きの作り方',shortDescription:description,lengthSeconds:'180'},playabilityStatus:{status:'LOGIN_REQUIRED'}})};</script>`;
+ source(t,html);
+ const result=await importUrl(videoUrl,{},env(async()=>Response.json({success:true,result:geminiResponse()})));
+ assert.deepEqual(result.recipe.stepVideoSeconds,[12,65]);assert.equal(result.stepPhotoSheets,undefined);
+ assert.deepEqual(result.stepPhotoDiagnostics.failures,[]);assert.equal(result.stepPhotoDiagnostics.source.playabilityStatus,'LOGIN_REQUIRED');
+ assert.deepEqual(result.warnings.filter(w=>w.includes('手順画像')),['YouTube側の制限で手順画像を取得できませんでした。各手順の動画リンクから場面を確認できます。']);
+});
