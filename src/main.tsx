@@ -18,5 +18,6 @@ import './shopping.css';
 import './panel-controls.css';
 import './recipe-editor.css';
 import './kondo-route-motion.css';
+import './sticker.css';
 createRoot(document.getElementById('root')!).render(<AuthGate>{session=><App key={session.user.id} session={session}/>}</AuthGate>);
 void registerPWA().catch(()=>{});

@@ -1,0 +1,48 @@
+/* Sticker book: recipes are little white cards, categories are tilted
+   stickers, ticks become stickers in the item's colour, and finished
+   shopping gets a 「済」 stamp. Matches the import sticker card. */
+:root{--sticker-edge:#fff;--sticker-ink:#2b2420;--sticker-shadow:0 3px 7px #2a1c1022;--hanko:#e0453a}
+:root[data-brand-theme='dark']{--sticker-edge:#f4f1ea}
+.sticker-label,.recipe-row .recipe-category,.recipe-hero .recipe-category{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-family:var(--recipe-title-font);font-weight:700;font-size:10px;line-height:1.5;color:var(--ink);background:var(--paper);box-shadow:0 0 0 2.5px var(--sticker-edge),var(--sticker-shadow);transform:rotate(var(--sticker-turn,-3deg))}
+
+/* Recipe list: cover band on top, copy below on the card. */
+.recipe-row{background:var(--paper);border:1px solid var(--line);border-radius:20px;box-shadow:0 8px 18px #2a1c100d;overflow:visible}
+.recipe-open{flex-direction:column;align-items:stretch;aspect-ratio:auto;height:100%;color:var(--ink)}
+.recipe-row .recipe-photo{position:relative;inset:auto;flex:none;aspect-ratio:4/3;border-radius:19px 19px 0 0}
+.recipe-row .recipe-photo img{position:absolute;inset:0}
+.recipe-row .recipe-row-copy{position:static;flex:1;align-self:stretch;justify-content:flex-start;min-height:0;padding:10px 12px 13px}
+.recipe-row .recipe-row-copy:before,.recipe-row:has(.recipe-cover) .recipe-row-copy:before{display:none}
+.recipe-row h2{margin:0 0 4px;font-size:14px;line-height:1.5;font-weight:700;color:var(--ink);text-shadow:none}
+.recipe-row p{color:var(--muted)}
+.recipe-row .recipe-category{position:absolute;left:10px;top:10px;z-index:2;font-size:10px}
+.recipe-row:nth-child(4n+2){--sticker-turn:3deg}.recipe-row:nth-child(4n+3){--sticker-turn:2deg}.recipe-row:nth-child(4n){--sticker-turn:-2deg}
+.recipe-row .recipe-favorite{right:3px;top:3px}
+.recipe-row .recipe-favorite:not([aria-pressed=true]){color:var(--muted)}
+.recipe-row .recipe-favorite:before,.recipe-row:has(.recipe-cover) .recipe-favorite:before{inset:9px;background:var(--paper);border:0;box-shadow:0 0 0 2.5px var(--sticker-edge),var(--sticker-shadow)}
+.recipe-row .recipe-favorite svg{width:15px;height:15px}
+@media(max-width:380px){.recipe-row .recipe-row-copy{padding:9px 10px 12px}.recipe-row h2{font-size:13px}}
+
+/* Recipe detail: category sticker, sticker ticks, coloured step numbers. */
+.recipe-hero .recipe-category{font-size:11px}
+.card-panel .ingredient-row .glass-checkbox input{border-radius:50%}
+.card-panel .ingredient-row .glass-checkbox input:checked{background:var(--tone);border-color:transparent;box-shadow:0 0 0 2px var(--sticker-edge),0 2px 5px #2a1c1022}
+.ingredient-row .glass-checkbox-mark{color:var(--sticker-ink)}
+.ingredient-row .glass-checkbox-ring{border-radius:50%}
+.ingredient-row:before{background:color-mix(in srgb,var(--tone,var(--ink)) 28%,transparent)}
+.card-panel .recipe-steps>li:nth-child(n)>span{border-color:transparent;color:#fff;font-weight:700;background:#ff6b4a}
+.card-panel .recipe-steps>li:nth-child(3n+2)>span{background:#3cc497}
+.card-panel .recipe-steps>li:nth-child(3n)>span{background:#ff7fae}
+
+/* Shopping: the tick turns into the item's sticker and a stamp lands. */
+.shopping-check{border-radius:50%}
+.shopping-row.done .shopping-check,.card-panel .shopping-row.done .shopping-check{background:var(--tone);border-color:transparent;color:var(--sticker-ink);box-shadow:0 0 0 2px var(--sticker-edge),0 2px 5px #2a1c1022}
+.shopping-stamp{display:grid;place-items:center;flex:none;width:30px;height:30px;margin-left:auto;border-radius:50%;border:2px solid currentColor;box-shadow:inset 0 0 0 2px var(--paper),inset 0 0 0 3px currentColor;font-family:var(--recipe-title-font);font-size:12px;font-weight:900;line-height:1;color:var(--hanko);transform:rotate(-13deg);animation:shopping-stamp 260ms cubic-bezier(.5,0,.75,0) both}
+@keyframes shopping-stamp{0%{opacity:0;transform:rotate(-13deg) scale(2.2)}100%{opacity:1;transform:rotate(-13deg) scale(1)}}
+
+/* Settings: section icons become small coloured paper stickers. */
+.settings-page .section-heading>svg{box-sizing:border-box;width:26px;height:26px;padding:5px;border-radius:9px;color:var(--sticker-ink);background:#a7c7ff;box-shadow:0 0 0 2px var(--sticker-edge),0 2px 5px #2a1c101f;transform:rotate(-4deg)}
+.settings-page .settings-section:nth-of-type(5n+2) .section-heading>svg{background:#a8e6cf;transform:rotate(3deg)}
+.settings-page .settings-section:nth-of-type(5n+3) .section-heading>svg{background:#ffb3c7;transform:rotate(-2deg)}
+.settings-page .settings-section:nth-of-type(5n+4) .section-heading>svg{background:#ffe08a;transform:rotate(2deg)}
+.settings-page .settings-section:nth-of-type(5n) .section-heading>svg{background:#d7b8ff;transform:rotate(-3deg)}
+@media(prefers-reduced-motion:reduce){.shopping-stamp{animation:none}}
