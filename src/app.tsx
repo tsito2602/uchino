@@ -1,4 +1,5 @@
 import {useSpaces,type SpacesController} from './use-spaces';
+import {RecipeBookOnboarding} from './recipe-book-onboarding';
 import {useSpaceControls} from './space-controls';
 import {spaceScope,type Space} from './spaces';
 import {SpaceSwitchScreen} from './space-switch-screen';
@@ -33,7 +34,8 @@ export function App({session}:{session:Session}){
   const [switching,setSwitching]=useState<Space|null>(null),[loadedScope,setLoadedScope]=useState('');
   const backgroundScopes=spaces.spaces.filter(space=>space.id!==spaces.space?.id).map(space=>spaceScope(session.user.id,space)).join('|');
   useEffect(()=>{if(session.local)return;let active=true;const sync=()=>{for(const scope of backgroundScopes.split('|').filter(Boolean))void rows(scope).then(async records=>{if(active&&records.some(row=>row.pending))await synchronize(scope);}).catch(()=>{});};sync();window.addEventListener('online',sync);const timer=setInterval(sync,30000);return()=>{active=false;clearInterval(timer);window.removeEventListener('online',sync);};},[backgroundScopes,session.local]);
-  if(!session.local&&navigator.onLine&&(!spaces.ready||!spaces.space))return <main className="shell"><p role={spaces.error?'alert':'status'}>{spaces.error||'スペースを読み込んでいます…'}</p>{spaces.error&&<button className="secondary" onClick={()=>void spaces.refresh().catch(()=>{})}>再試行</button>}</main>;
+  if(!session.local&&navigator.onLine&&(!spaces.ready||(!spaces.space&&!!spaces.error)))return <main className="shell"><p role={spaces.error?'alert':'status'}>{spaces.error||'スペースを読み込んでいます…'}</p>{spaces.error&&<button className="secondary" onClick={()=>void spaces.refresh().catch(()=>{})}>再試行</button>}</main>;
+  if(!session.local&&!spaces.space)return <RecipeBookOnboarding session={session} spaces={spaces}/>;
   const realScope=session.local?'guest':spaces.space?spaceScope(session.user.id,spaces.space):`user-${session.user.id}`;
   const controller={...spaces,select:(id:string)=>{const next=spaces.spaces.find(s=>s.id===id);if(next&&next.id!==spaces.space?.id){setLoadedScope('');setSwitching(next);}spaces.select(id);}};
   return <><ScopedApp key={realScope} session={session} realScope={realScope} spaces={controller} onReady={()=>setLoadedScope(realScope)}/>{switching&&<SpaceSwitchScreen space={switching} ready={loadedScope===realScope} onExited={()=>setSwitching(null)}/>}</>;

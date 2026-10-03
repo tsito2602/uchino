@@ -10,11 +10,15 @@ type Env={Bindings:AuthBindings;Variables:{user:AuthUser;space:StoredSpace}};
 const fail=(error:string,status=400)=>Response.json({error},{status});
 const cleanName=(value:unknown)=>typeof value==='string'&&value.trim().length<=40&&!/[\u0000-\u001f\u007f]/.test(value)?value.trim():'';
 export const publicSpace=(space:StoredSpace):Space=>({id:space.id,name:space.name,owner_id:space.owner_id,is_home:!!space.is_home,member_count:space.member_count??1});
+// Only pre-space cloud data needs an automatic home. A new account stays empty
+// until the user explicitly creates a book or confirms an invitation.
 export async function bootstrapSpaces(db:D1Database,user:AuthUser){
  await ensureSpaceSchema(db);
  const owner=await photoOwner(user.id),id=`home-${owner}`;
- await db.prepare(`INSERT INTO recipe_spaces(id,name,owner_id,data_owner,photo_owner,is_home) VALUES (?,'うちのレシピ',?,?,?,1) ON CONFLICT DO NOTHING`).bind(id,user.id,user.id,owner).run();
- await db.prepare(`INSERT INTO recipe_space_members(space_id,user_id,name) SELECT id,?,? FROM recipe_spaces WHERE id=? AND deleted_at IS NULL ON CONFLICT DO NOTHING`).bind(user.id,user.name,id).run();
+ await db.prepare(`INSERT INTO recipe_spaces(id,name,owner_id,data_owner,photo_owner,is_home)
+ SELECT ?,'うちのレシピ',?,?,?,1 WHERE EXISTS (SELECT 1 FROM user_data WHERE user_id=?)
+ ON CONFLICT DO NOTHING`).bind(id,user.id,user.id,owner,user.id).run();
+ await db.prepare(`INSERT INTO recipe_space_members(space_id,user_id,name) SELECT id,?,? FROM recipe_spaces WHERE id=? AND owner_id=? AND deleted_at IS NULL ON CONFLICT DO NOTHING`).bind(user.id,user.name,id,user.id).run();
  await db.prepare(`UPDATE recipe_space_members SET name=? WHERE user_id=? AND ?<>''`).bind(user.name,user.id,user.name).run();
  return id;
 }
@@ -39,12 +43,18 @@ spacesRoutes.get('/',async c=>{
 });
 spacesRoutes.post('/',async c=>{
  const input=await readBody(c.req.raw,4096).catch(()=>null),name=cleanName(input?.name);if(!name)return fail('スペース名は1〜40文字で入力してください');
- const user=c.get('user'),id=crypto.randomUUID(),dataOwner=`space:${id}`;
- await c.env.DB!.batch([
-  c.env.DB!.prepare('INSERT INTO recipe_spaces(id,name,owner_id,data_owner,photo_owner) VALUES (?,?,?,?,?)').bind(id,name,user.id,dataOwner,await photoOwner(dataOwner)),
-  c.env.DB!.prepare('INSERT INTO recipe_space_members(space_id,user_id,name) VALUES (?,?,?)').bind(id,user.id,user.name)
+ const user=c.get('user'),db=c.env.DB!,owner=await photoOwner(user.id),home=`home-${owner}`;
+ const existingHome=await db.prepare('SELECT id FROM recipe_spaces WHERE data_owner=?').bind(user.id).first<{id:string}>();
+ if(input.initial===true&&existingHome){const existing=await membership(db,existingHome.id,user.id);if(existing)return c.json({space:publicSpace(existing)},200);return fail('レシピ帳の状態が変わりました。再読み込みしてください。',409);}
+ // The initial explicit creation reuses the account's storage namespace, so
+ // pre-existing device edits retain their revisions and photo references.
+ const initial=!existingHome,id=initial?home:crypto.randomUUID(),dataOwner=initial?user.id:`space:${id}`;
+ await db.batch([
+  db.prepare('INSERT INTO recipe_spaces(id,name,owner_id,data_owner,photo_owner,is_home) VALUES (?,?,?,?,?,?) ON CONFLICT DO NOTHING').bind(id,name,user.id,dataOwner,initial?owner:await photoOwner(dataOwner),Number(initial)),
+  db.prepare('INSERT INTO recipe_space_members(space_id,user_id,name) VALUES (?,?,?) ON CONFLICT DO NOTHING').bind(id,user.id,user.name)
  ]);
- return c.json({space:{id,name,owner_id:user.id,is_home:false,member_count:1}},201);
+ const created=await membership(db,id,user.id);if(!created)return fail('レシピ帳を作成できませんでした。もう一度お試しください。',409);
+ return c.json({space:publicSpace(created)},201);
 });
 async function checkInvite(c:Context<Env>,raw:unknown){
  const user=c.get('user'),window=Math.floor(Date.now()/600000);

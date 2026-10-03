@@ -48,7 +48,10 @@ app.use('/api/data/*',async(c,next)=>{
   let home:string;
   try{home=await bootstrapSpaces(c.env.DB,user);}catch{console.error(JSON.stringify({event:'data_sync_failed',code:'storage_initialization_failed'}));return c.json({error:'クラウドの保存先に接続できませんでした。',code:'storage_unavailable'},503);}
   const space=await membership(c.env.DB,c.req.query('space')||home,user.id);
-  if(!space)return c.json({error:'このスペースにはアクセスできません。',code:'space_access_revoked'},403);
+  if(!space){
+    if(!c.req.query('space'))return c.json({error:'レシピ帳を作るか、招待されたレシピ帳に参加してください。',code:'recipebook_required'},409);
+    return c.json({error:'このスペースにはアクセスできません。',code:'space_access_revoked'},403);
+  }
   c.set('space',space);await next();
 });
 app.get('/api/data',async c=>{
