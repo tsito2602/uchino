@@ -3,7 +3,7 @@ import {Check,ShieldCheck} from 'lucide-react';
 import type {Recipe} from './domain';
 import type {ImportPhase} from './import-model';
 import {ImportThinking} from './import-thinking';
-import {ImportStickerCard} from './import-sticker-card';
+import {ImportBubbleCard} from './import-bubble-card';
 
 export type ImportProgress={phase:ImportPhase;started:number;demo:boolean;ingredients:Recipe['ingredients'];total:number|null;recipe?:Recipe};
 export function ImportPhaseStatus({progress}:{progress:ImportProgress}) {
@@ -19,5 +19,5 @@ export function ImportPhaseStatus({progress}:{progress:ImportProgress}) {
 }
 
 export function ImportProcessing({progress}:{progress:ImportProgress}) {
-  return <div className="import-processing"><ImportStickerCard progress={progress}/></div>;
+  return <div className="import-processing"><ImportBubbleCard progress={progress}/></div>;
 }
