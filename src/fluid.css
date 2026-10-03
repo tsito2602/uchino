@@ -33,3 +33,7 @@
 .recipe-row .recipe-category{position:absolute;left:12px;top:12px;z-index:2}
 .recipe-row .recipe-category>svg{width:12px;height:12px}
 .recipe-hero .recipe-category{color:var(--ink);background:color-mix(in srgb,var(--ink) 6%,transparent);border-color:color-mix(in srgb,var(--ink) 10%,transparent)}
+
+/* Favourites on a photo are white like the glass around them; filled means
+   favourite. On white surfaces (the detail header) the heart stays pink. */
+.recipe-row .recipe-favorite[aria-pressed=true],.recipe-row .recipe-favorite-burst,.recipe-row .recipe-favorite-burst i:nth-child(even){color:#fff}
