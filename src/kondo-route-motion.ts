@@ -32,6 +32,8 @@ export function startRouteTransition(direction:number,update:()=>void):RouteTran
   try{flushSync(update);}catch(error){layer.remove();throw error;}
   const next=document.getElementById('main-content');
   if(!next){layer.remove();return;}
+  // The new page rises into place, the same way across every tab.
+  next.classList.remove('route-page-enter');void next.offsetWidth;next.classList.add('route-page-enter');
   let frame=0;
   let cleaned=false;
   let resolveFinished!:()=>void;
