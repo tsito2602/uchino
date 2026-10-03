@@ -59,12 +59,12 @@ function useSwipeToRemove(disabled:boolean|undefined,remove:()=>void){
   return {row,drop,swiped,handlers:{onPointerDown:down,onPointerMove:move,onPointerUp:up,onPointerCancel:cancel}};
 }
 
-function ShoppingEntry({item,disabled,onToggle,onRemove}:{item:ShoppingItem}&ItemActions){
+function ShoppingEntry({item,index,disabled,onToggle,onRemove}:{item:ShoppingItem;index:number}&ItemActions){
   const reduced=useReducedMotion(),present=useIsPresent();
   const swipe=useSwipeToRemove(disabled,()=>onRemove(item));
   return <motion.div className="shopping-entry" role="listitem" data-item-id={item.id} inert={!present} aria-hidden={!present||undefined}
     initial={reduced?false:{height:0,opacity:0,y:-8}} animate={{height:'auto',opacity:1,y:0}}
-    exit={{height:0,opacity:0}}
+    exit={{height:0,opacity:0,filter:reduced?'blur(0px)':'blur(3px)',transition:{duration:reduced?0:.56,ease:[.22,.72,.18,1],delay:reduced?0:Math.min(index,8)*.045,opacity:{duration:reduced?0:.4,ease:[.22,.72,.18,1],delay:reduced?0:Math.min(index,8)*.045}}}}
     transition={{duration:reduced?0:.32,ease:[.22,1,.36,1],opacity:{duration:reduced?0:.2},height:{duration:reduced?0:.32}}}>
     <div className="shopping-swipe" {...swipe.handlers}>
       <span className="shopping-swipe-drop" ref={swipe.drop} aria-hidden="true"><Trash2 size={17}/></span>
@@ -83,7 +83,7 @@ function ShoppingEntry({item,disabled,onToggle,onRemove}:{item:ShoppingItem}&Ite
 export function ShoppingList({items,label='今回の買い物',...actions}:{items:ShoppingItem[];label?:string}&ItemActions) {
   return <div className="shopping-list" role="list" aria-label={label}>
     <AnimatePresence initial={false}>
-      {items.map(item=><ShoppingEntry key={item.id} item={item} {...actions}/>)}
+      {items.map((item,index)=><ShoppingEntry key={item.id} item={item} index={index} {...actions}/>)}
     </AnimatePresence>
   </div>;
 }
