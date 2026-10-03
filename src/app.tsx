@@ -102,8 +102,8 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
   function changeTab(next:Tab){if(next===tab)return;const order=['recipes','shopping','settings'];transitionRoute(Math.sign(order.indexOf(next)-order.indexOf(tab)),()=>{onTab(next);window.scrollTo({top:0,behavior:'instant'});});}
   function exitPanel(){setView(current=>current?.kind==='edit'&&current.parent&&recipes.some(recipe=>recipe.id===current.parent!.id)?current.parent:null);setClosing(false);}
   async function run(action:()=>Promise<void>){if(busy)return;setBusy(true);try{await action();}catch(e){setFormError(e instanceof Error?e.message:'処理できませんでした。');}finally{setBusy(false);}}
-  const saveRecipe=()=>void run(async()=>{if(view?.kind!=='edit'||photoBusy)return;const form=document.getElementById('recipe-form') as HTMLFormElement|null;if(!form?.reportValidity())return;const record=validateRecord('recipe',view.draft);if(!record)throw new Error('材料・手順・人数などの入力内容を確認してください。');await store.save('recipe',record);setNotice('レシピを保存しました');setClosing(true);});
-  async function removeRecipe(){const saved=view?.kind==='edit'&&!view.isNew?recipes.find(recipe=>recipe.id===view.draft.id):undefined;if(!saved||busy||!confirm(`「${saved.title}」を削除しますか？`))return;await run(async()=>{await store.save('recipe',saved,true);setClosing(true);setNotice('レシピを削除しました');});}
+  const saveRecipe=()=>void run(async()=>{if(view?.kind!=='edit'||photoBusy)return;const form=document.getElementById('recipe-form') as HTMLFormElement|null;if(!form?.reportValidity())return;const record=validateRecord('recipe',view.draft);if(!record)throw new Error('材料・手順・人数などの入力内容を確認してください。');await store.save('recipe',record);setClosing(true);});
+  async function removeRecipe(){const saved=view?.kind==='edit'&&!view.isNew?recipes.find(recipe=>recipe.id===view.draft.id):undefined;if(!saved||busy||!confirm(`「${saved.title}」を削除しますか？`))return;await run(async()=>{await store.save('recipe',saved,true);setClosing(true);});}
   async function addIngredients(){if(!detail)return;await run(async()=>{const selected=detail.ingredients.filter((_,i)=>checked.includes(String(i)));for(const ingredient of selected){await store.save('shopping',{id:crypto.randomUUID(),name:ingredient.name,quantity:formatIngredientAmount(ingredient,detail.servings,servings),done:false,createdAt:new Date().toISOString()});}setNotice(`${selected.length}件を買い物メモに追加しました`);setChecked([]);});}
   async function addShopping(){
     if(busy||shoppingInFlight.current||shoppingComposing.current)return;
@@ -115,7 +115,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
     try{await run(async()=>{
       await store.save('shopping',{id:crypto.randomUUID(),name:name.trim(),quantity:'',done:false,createdAt:new Date().toISOString()});
       setShopName(current=>current===name?'':current);
-      setNotice(`「${name.trim()}」を追加しました`);
+      
     });}finally{shoppingInFlight.current=false;}
   }
   function changeShopping(item:ShoppingItem,remove=false){void store.save('shopping',remove?item:{...item,done:!item.done},remove).catch(error=>setFormError(error.message));}
@@ -123,7 +123,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
   function removeShopping(item:ShoppingItem){
     changeShopping(item,true);
     const message=`「${item.name}」を消しました`;
-    setShoppingUndo({items:[item],message,expiresAt:Date.now()+SHOPPING_UNDO_MS});setNotice(message);
+    setShoppingUndo({items:[item],message,expiresAt:Date.now()+SHOPPING_UNDO_MS});
   }
   async function finishShopping(keepUnpurchased:boolean){
     if(busy||shoppingInFlight.current)return;shoppingInFlight.current=true;setFormError('');
@@ -131,7 +131,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
     try{await run(async()=>{
       await store.saveMany('shopping',removed,true);
       const message=remaining?`未購入の${remaining}点を残して終了しました`:'買い物を終了しました';
-      setShoppingUndo(removed.length?{items:removed,message,expiresAt:Date.now()+SHOPPING_UNDO_MS}:null);setNotice(message);
+      setShoppingUndo(removed.length?{items:removed,message,expiresAt:Date.now()+SHOPPING_UNDO_MS}:null);
       if(view?.kind==='shopping-finish')setClosing(true);
     });}finally{shoppingInFlight.current=false;}
   }
@@ -141,14 +141,14 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
     if(Date.now()>=shoppingUndo.expiresAt){setShoppingUndo(null);setNotice(current=>current===shoppingUndo.message?'':current);return;}
     shoppingInFlight.current=true;
     const items=shoppingUndo.items;
-    try{await run(async()=>{await store.saveMany('shopping',items);setShoppingUndo(null);setNotice('買い物リストを戻しました');});}finally{shoppingInFlight.current=false;}
+    try{await run(async()=>{await store.saveMany('shopping',items);setShoppingUndo(null);});}finally{shoppingInFlight.current=false;}
   }
   async function selectDataMode(mode:DataMode){if(mode===dataMode)return;await run(()=>onDataMode(mode));}
   async function canLeave(){const scopes=session.local?[realScope]:spaces.spaces.map(space=>spaceScope(session.user.id,space));if((await Promise.all(scopes.map(rows))).flat().some(row=>row.pending)){store.setError('未同期の変更があります。実データに切り替えて同期してください。');return false;}return true;}
   const spaceControls=useSpaceControls({controller:spaces,userId:session.user.id,disabled:!!view||menuPhase!=='closed',onSelect:async id=>{spaces.select(id);}});
   const PageIcon=tab==='recipes'?BookOpen:tab==='shopping'?ShoppingBasket:Settings;
   const filterCount=Number(!!query.trim())+Number(selectedCategories.length>0)+Number(favorites);
-  const importFlow=useRecipeImport({active:view?.kind==='import',mode:importMode,ai,allowDemo:allowDemo&&dataMode==='demo',local:session.local,closing,onClose:close,onExited:()=>{setView(null);setClosing(false);},onManual:()=>open({kind:'edit',draft:newRecipe(),isNew:true}),onSave:async recipe=>{await store.save('recipe',recipe);setNotice('レシピを保存しました');setClosing(true);}});
+  const importFlow=useRecipeImport({active:view?.kind==='import',mode:importMode,ai,allowDemo:allowDemo&&dataMode==='demo',local:session.local,closing,onClose:close,onExited:()=>{setView(null);setClosing(false);},onManual:()=>open({kind:'edit',draft:newRecipe(),isNew:true}),onSave:async recipe=>{await store.save('recipe',recipe);setClosing(true);}});
   let context:DockContext|undefined;
   if(view){context={key:view.kind,label:'操作',back:close,disabled:busy||photoBusy};if(view.kind==='filters')context={...context,action:close,actionLabel:`${filtered.length}件を表示`,actionDisabled:filtered.length===0,icon:Check,secondary:{label:'条件をリセット',text:'リセット',icon:RotateCcw,disabled:!filterCount,action:()=>{setQuery('');setSelectedCategories([]);setFavorites(false);}}};if(view.kind==='edit')context={...context,action:saveRecipe,actionLabel:'保存',icon:Check,commit:true,remove:view.isNew?undefined:()=>void removeRecipe()};if(view.kind==='detail'&&detail)context={...context,action:checked.length?()=>void addIngredients():()=>open({kind:'edit',draft:structuredClone(detail),isNew:false,parent:view,parentRecipe:detail}),actionLabel:checked.length?`買い物に追加（${checked.length}）`:'編集',icon:checked.length?ShoppingBasket:Pencil,iconOnly:true,actionCount:checked.length||undefined,servings:{value:servings,onChange:setServings}};if(view.kind==='shopping')context={...context,action:shoppingFocused?()=>void addShopping():undefined,actionLabel:'追加',icon:Plus,commit:true,preserveEditorFocus:true,disabled:busy||!shopName.trim()};if(view.kind==='shopping-finish')context={...context,action:()=>void finishShopping(true),actionLabel:'未購入を残す',icon:Check,commit:true,remove:()=>void finishShopping(false),removeLabel:'すべて削除',removeText:true};if(view.kind==='import')context=importFlow.context;}
   return <>
@@ -160,11 +160,11 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
       {!store.ready&&!store.error&&<p className="subtle" role="status">読み込んでいます…</p>}
       {tab==='recipes'&&<>
         {filtered.length?<div className="recipe-list">{filtered.map(recipe=><article className="recipe-row" key={recipe.id}><button className="recipe-open" onClick={e=>{setServings(recipe.servings);setChecked([]);open({kind:'detail',id:recipe.id,origin:panelOrigin(e.currentTarget)});}}><RecipePhoto recipe={recipe}/><span className="recipe-category"><RecipeCategoryIcon category={recipe.category}/>{recipe.category}</span><div className="recipe-row-copy"><h2><PhraseText text={recipe.title}/></h2>{recipe.minutes&&<p><span><Clock size={13}/>{recipe.minutes}分</span></p>}</div></button><RecipeFavorite recipe={recipe} onToggle={()=>void store.save('recipe',{...recipe,favorite:!recipe.favorite}).catch(e=>store.setError(e.message))}/></article>)}</div>:store.ready&&<div className="empty-state">{recipes.length?<Search size={36} strokeWidth={1.4} aria-hidden="true"/>:<RiceBowl className="empty-recipe-symbol" size={44} strokeWidth={1.4} aria-hidden="true"/>}<h2>{recipes.length?'レシピが見つかりません':'また作りたい、をここに。'}</h2><p>{recipes.length?'検索条件を変えてみてください。':'お気に入りの一品から、レシピ帳を育てよう。'}</p>{recipes.length>0&&filterCount>0&&<button className="primary" onClick={()=>{setQuery('');setSelectedCategories([]);setFavorites(false);}}><RotateCcw size={18}/>条件をはずす</button>}{!recipes.length&&<><button className="primary" onClick={()=>setMenuPhase('open')}><Plus size={18}/>レシピを追加</button>{dataMode==='real'&&<button className="text-action" disabled={busy} onClick={()=>void selectDataMode('demo')}>サンプルを見てみる</button>}</>}</div>}</>}
-      {tab==='shopping'&&<>{shoppingList()}{!shopping.length&&<div className={`empty-state${shoppingEmptied?' empty-state-arriving':''}`}><ShoppingBasket size={40} strokeWidth={1.4} aria-hidden="true"/><h2>買うものをまとめよう</h2><p>レシピの材料からも追加できます。</p><button className="primary" onClick={()=>open({kind:'shopping'})}><Plus size={18}/>買うものを追加</button></div>}</>}
+      {tab==='shopping'&&<>{shoppingList()}{!shopping.length&&<div className={`empty-state${shoppingEmptied?' empty-state-arriving':''}`} onAnimationEnd={event=>{if(event.target===event.currentTarget)setShoppingEmptied(false);}}><ShoppingBasket size={40} strokeWidth={1.4} aria-hidden="true"/><h2>買うものをまとめよう</h2><p>レシピの材料からも追加できます。</p><button className="primary" onClick={()=>open({kind:'shopping'})}><Plus size={18}/>買うものを追加</button></div>}</>}
       {tab==='settings'&&formError&&<p className="form-error" role="alert">{formError}</p>}
       {tab==='settings'&&<SettingsPage onSpaceSettings={spaceControls.openSettings} session={session} pending={pending} updateReady={updateReady} dataMode={dataMode} changingData={busy} onDataMode={mode=>void selectDataMode(mode)}
         onSync={()=>synchronize(realScope).then(()=>{store.setError('');},e=>{store.setError(e.message);throw e;})}
-        onUpdate={()=>void canLeave().then(allowed=>allowed?(updateReady?applyUpdate():checkUpdate()).then(found=>{setUpdateReady(!!found);setNotice(found?'更新があります。もう一度押すと更新します。':'最新版です');}):undefined).catch(()=>setNotice('更新を確認できませんでした'))}
+        onUpdate={()=>void canLeave().then(allowed=>allowed?(updateReady?applyUpdate():checkUpdate()).then(found=>{setUpdateReady(!!found);}):undefined).catch(()=>setFormError('更新を確認できませんでした'))}
         onLogout={()=>void canLeave().then(allowed=>allowed?session.logout():undefined).catch(e=>store.setError(e.message))}/>}
       </div>
     </main>
