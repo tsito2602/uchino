@@ -15,14 +15,14 @@
 .glass-checkbox-mark{position:absolute;inset:0;width:20px;height:20px;pointer-events:none;color:var(--ink)}
 .glass-checkbox-mark path{stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1}
 .glass-checkbox-ring{position:absolute;inset:-2px;border:1px solid currentColor;border-radius:8px;opacity:0;pointer-events:none}
-.glass-checkbox[data-checked]{animation:check-bounce 420ms cubic-bezier(.22,1,.36,1)}
+.glass-checkbox[data-checked]{animation:check-bounce 460ms cubic-bezier(.22,1,.36,1)}
 .glass-checkbox[data-checked] .glass-checkbox-mark path{stroke-dashoffset:0;animation:check-draw 260ms ease-out both}
 .glass-checkbox[data-checked] .glass-checkbox-ring{animation:check-ring 460ms ease-out both}
 .glass-checkbox:has(input:disabled){opacity:.5}
 .glass-checkbox input:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
-.shopping-row.done .shopping-check{animation:check-bounce 420ms cubic-bezier(.22,1,.36,1)}
+.shopping-row.done .shopping-check{animation:check-bounce 460ms cubic-bezier(.22,1,.36,1)}
 .shopping-row.done .shopping-check svg{animation:check-appear 260ms ease-out}
-@keyframes check-bounce{0%{transform:scale(.82) rotate(-8deg)}42%{transform:scale(1.2) rotate(5deg)}70%{transform:scale(.94) rotate(-2deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes check-bounce{0%{transform:scale(.82) rotate(-8deg)}40%{transform:scale(1.2) rotate(5deg)}70%{transform:scale(.96) rotate(-2deg)}100%{transform:scale(1) rotate(0)}}
 @keyframes check-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
 @keyframes check-ring{0%{opacity:.3;transform:scale(.85)}100%{opacity:0;transform:scale(1.65)}}
 @keyframes check-appear{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
@@ -42,9 +42,9 @@
 :root[data-brand-theme=dark] .filter-favorite-row .filter-toggle:after{background:#fff}
 :root .filter-favorite-row[aria-pressed=false] .filter-toggle:after{background:color-mix(in srgb,var(--muted) 60%,var(--paper))}
 .filter-favorite-row:active .filter-toggle{transform:scale(.93)}
-.filter-favorite-row[aria-pressed=true]>svg{animation:favorite-pop 620ms cubic-bezier(.22,1,.36,1)}
+.filter-favorite-row[aria-pressed=true]>svg{animation:favorite-pop 460ms cubic-bezier(.22,1,.36,1)}
 .appearance-selection{transition:transform 480ms cubic-bezier(.34,1.35,.64,1),background 240ms}
 .card-panel :is(.category-tabs,.mode-options,.import-mode) button{transition:background 180ms,color 180ms,transform 280ms cubic-bezier(.34,1.56,.64,1)}
 .card-panel :is(.category-tabs,.mode-options,.import-mode) button:active{transform:scale(.94)}
-.card-panel .category-tabs button[aria-pressed=true]>svg{animation:check-bounce 420ms cubic-bezier(.22,1,.36,1)}
+.card-panel .category-tabs button[aria-pressed=true]>svg{animation:check-bounce 460ms cubic-bezier(.22,1,.36,1)}
 @media(prefers-reduced-motion:reduce){.glass-checkbox[data-checked],.glass-checkbox[data-checked] .glass-checkbox-mark path,.glass-checkbox[data-checked] .glass-checkbox-ring,.shopping-row.done .shopping-check,.shopping-row.done .shopping-check svg,.filter-favorite-row[aria-pressed=true]>svg,.card-panel .category-tabs button[aria-pressed=true]>svg{animation:none}.filter-toggle,.filter-toggle:after,.appearance-selection,.card-panel :is(.category-tabs,.mode-options,.import-mode) button{transition:none}}
