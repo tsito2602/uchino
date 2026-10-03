@@ -14,7 +14,7 @@ function applyTheme(preference: ThemePreference) {
   root.dataset.themePreference = preference;
   root.dataset.brandTheme = dark ? 'dark' : 'light';
   root.style.colorScheme = dark ? 'dark' : 'light';
-  document.getElementById('app-theme-color')?.setAttribute('content', dark ? '#15120f' : '#f5f3ee');
+  document.getElementById('app-theme-color')?.setAttribute('content', dark ? '#131313' : '#f5f3ee');
   window.dispatchEvent(new Event(THEME_EVENT));
 }
 
