@@ -85,12 +85,14 @@
 /* Titles wrap only between phrases (see phrases.ts). */
 .phrase-text{word-break:keep-all;overflow-wrap:break-word}
 
-/* Every empty state (recipes, search, shopping) rises into place the same way;
-   after finishing a list it waits for the rows to collapse first. */
-.empty-state{animation:empty-arrive 820ms cubic-bezier(.22,.72,.18,1) 120ms both}
-.empty-state.empty-state-arriving{animation-delay:380ms}
+/* Switching tabs: the old page fades away (kondo-route-motion) while the new
+   one rises into place. After finishing a shopping list, the empty state rises
+   the same way once the rows have collapsed. */
+#main-content.route-page-enter{animation:page-arrive 560ms cubic-bezier(.22,.72,.18,1) both}
+@keyframes page-arrive{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.empty-state.empty-state-arriving{animation:empty-arrive 820ms cubic-bezier(.22,.72,.18,1) 380ms both}
 @keyframes empty-arrive{from{opacity:0;transform:translateY(14px) scale(.98);filter:blur(6px)}to{opacity:1;transform:none;filter:blur(0)}}
-@media(prefers-reduced-motion:reduce){.empty-state{animation:none}}
+@media(prefers-reduced-motion:reduce){#main-content.route-page-enter,.empty-state.empty-state-arriving{animation:none}}
 
 /* The recipe-book button sits on the page heading's line (40px shell padding +
    half of the 31.5px heading - half of the 44px button). */
