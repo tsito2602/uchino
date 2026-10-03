@@ -52,3 +52,14 @@
 .has-photo .recipe-photo-select-label{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1117;border:1px solid #ffffff30;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .recipe-photo-remove{align-self:flex-end;min-height:44px;font-size:12px;gap:6px}
 @media(max-width:380px){.recipe-list{gap:16px 10px}.recipe-row{border-radius:18px}.recipe-row-copy{padding:44px 13px 16px}.recipe-row h2{font-size:15px}.recipe-row p{font-size:10px;gap:7px}.recipe-detail-panel{--recipe-detail-inset:16px}}
+.recipe-added-by{position:absolute;z-index:2;left:10px;top:10px;pointer-events:none}
+.member-avatar{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;overflow:hidden;border:2px solid #fff;background:var(--member-color);color:#fff;font-size:12px;font-weight:650;line-height:1;box-shadow:0 2px 8px #0003}
+.member-avatar img{display:block;width:100%;height:100%;object-fit:cover}
+.clipboard-suggestion{display:flex;flex-direction:column;gap:14px;margin:0 0 16px;padding:16px;border:1px solid var(--line);border-radius:22px;background:var(--content-card)}
+.clipboard-suggestion-copy{display:flex;align-items:center;gap:12px;min-width:0}
+.clipboard-suggestion-copy>div{min-width:0}
+.clipboard-suggestion-icon{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:14px;background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
+.clipboard-suggestion h2{margin:0;font-size:15px;line-height:1.5}
+.clipboard-suggestion p{margin:2px 0 0;font-size:12px;line-height:1.5;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.clipboard-suggestion-actions{display:flex;align-items:center;gap:8px}
+.clipboard-suggestion-later{min-height:40px;padding:0 16px;border:0;border-radius:50px;background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink);font-size:13px}

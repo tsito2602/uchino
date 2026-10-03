@@ -6,7 +6,7 @@ export function photoReference(value:unknown):{owner:string;hash:string;key:stri
 export const categories = ['すべて','主菜','副菜','汁物','主食','おやつ','その他'] as const;
 export type Category = Exclude<typeof categories[number], 'すべて'>;
 export type Ingredient = {name:string;quantity:string;unit:string;group?:string};
-export type Recipe = {id:string;title:string;category:Category;servings:number;minutes:number|null;ingredients:Ingredient[];steps:string[];stepPhotos?:string[];stepVideoSeconds?:(number|null)[];memo:string;sourceUrl:string;favorite:boolean;createdAt:string;photo?:string};
+export type Recipe = {id:string;title:string;category:Category;servings:number;minutes:number|null;ingredients:Ingredient[];steps:string[];stepPhotos?:string[];stepVideoSeconds?:(number|null)[];memo:string;sourceUrl:string;favorite:boolean;createdAt:string;photo?:string;addedBy?:string};
 export const MAX_PHOTO_BYTES=256_000;
 export const MAX_STEP_PHOTO_BYTES=80_000;
 export const STEP_PHOTOS_BUDGET=720_000;
@@ -74,6 +74,7 @@ export function validateRecord(kind:Kind,value:unknown):RecordData|null {
   }
   const title=text(v.title,200),memo=text(v.memo,10000),sourceUrl=text(v.sourceUrl,2048);
   if(v.photo!==undefined&&!validRecipePhoto(v.photo))return null;
+  if(v.addedBy!==undefined&&(typeof v.addedBy!=='string'||!/^[A-Za-z0-9_.:-]{1,128}$/.test(v.addedBy)))return null;
   if(!title||memo===null||sourceUrl===null||!categories.slice(1).includes(v.category as Category)||!Number.isInteger(v.servings)||Number(v.servings)<1||Number(v.servings)>100||typeof v.favorite!=='boolean')return null;
   if(v.minutes!==null&&(!Number.isInteger(v.minutes)||Number(v.minutes)<1||Number(v.minutes)>10080))return null;
   if(sourceUrl){try{const u=new URL(sourceUrl);if(!['https:','http:'].includes(u.protocol)||u.username||u.password)return null;}catch{return null;}}
@@ -83,6 +84,6 @@ export function validateRecord(kind:Kind,value:unknown):RecordData|null {
   const steps=v.steps.map(s=>text(s,5000));if(steps.some(s=>!s))return null;
   if(v.stepPhotos!==undefined&&(!Array.isArray(v.stepPhotos)||v.stepPhotos.length!==steps.length||v.stepPhotos.some(p=>!validRecipePhoto(p))))return null;
   if(v.stepVideoSeconds!==undefined&&(!Array.isArray(v.stepVideoSeconds)||v.stepVideoSeconds.length!==steps.length||v.stepVideoSeconds.some(t=>t!==null&&(typeof t!=='number'||!Number.isInteger(t)||t<0||t>86400))))return null;
-  const record={id,title,category:v.category as Category,servings:Number(v.servings),minutes:v.minutes as number|null,ingredients,steps:steps as string[],...(v.stepPhotos===undefined?{}:{stepPhotos:v.stepPhotos as string[]}),...(v.stepVideoSeconds===undefined?{}:{stepVideoSeconds:v.stepVideoSeconds as (number|null)[]}),memo,sourceUrl,favorite:v.favorite,createdAt,...(v.photo===undefined?{}:{photo:v.photo as string})};
+  const record={id,title,category:v.category as Category,servings:Number(v.servings),minutes:v.minutes as number|null,ingredients,steps:steps as string[],...(v.stepPhotos===undefined?{}:{stepPhotos:v.stepPhotos as string[]}),...(v.stepVideoSeconds===undefined?{}:{stepVideoSeconds:v.stepVideoSeconds as (number|null)[]}),memo,sourceUrl,favorite:v.favorite,createdAt,...(v.photo===undefined?{}:{photo:v.photo as string}),...(v.addedBy===undefined?{}:{addedBy:v.addedBy as string})};
   return new TextEncoder().encode(JSON.stringify(record)).length<=1_800_000?record:null;
 }

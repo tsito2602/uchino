@@ -11,18 +11,21 @@ import {ImportReview} from './import-review';
 import {ImportPhaseStatus,ImportProcessing,type ImportProgress} from './import-progress';
 
 type Mode='url'|'image'|'text';
-type Props={active:boolean;mode:Mode;ai:boolean;allowDemo:boolean;local:boolean;closing:boolean;onClose:()=>void;onExited:()=>void;onManual:()=>void;onSave:(recipe:Recipe)=>Promise<void>};
+type Props={active:boolean;mode:Mode;initialUrl?:string;ai:boolean;allowDemo:boolean;local:boolean;closing:boolean;onClose:()=>void;onExited:()=>void;onManual:()=>void;onSave:(recipe:Recipe)=>Promise<void>};
 export function useRecipeImport(props:Props) {
   const [mode,setMode]=useState<Mode>(props.mode),[demo,setDemo]=useState(false),[value,setValue]=useState(''),[image,setImage]=useState(''),[imageName,setImageName]=useState('');
   const [error,setError]=useState(''),[progress,setProgress]=useState<ImportProgress|null>(null),[result,setResult]=useState<ImportResult|null>(null),[source,setSource]=useState<ImportSource|null>(null),[acknowledged,setAcknowledged]=useState<string[]>([]),[saving,setSaving]=useState(false),[photoBusy,setPhotoBusy]=useState(false);
   const [diagnostics,setDiagnostics]=useState<ImportDiagnostics|null>(null);
   useEffect(()=>{if(!error)setDiagnostics(null);},[error]);
-  const request=useRef<AbortController|null>(null),fileRead=useRef<FileReader|null>(null);
+  const request=useRef<AbortController|null>(null),fileRead=useRef<FileReader|null>(null),autoStart=useRef(false);
   useEffect(()=>{
     request.current?.abort();request.current=null;fileRead.current?.abort();
-    setMode(props.mode);setDemo(false);setValue('');setImage('');setImageName('');setError('');setProgress(null);setResult(null);setSource(null);setAcknowledged([]);
+    setMode(props.mode);setDemo(false);setValue(props.mode==='url'&&props.initialUrl||'');setImage('');setImageName('');setError('');setProgress(null);setResult(null);setSource(null);setAcknowledged([]);
+    autoStart.current=props.active&&props.mode==='url'&&!!props.initialUrl;
     return()=>{request.current?.abort();fileRead.current?.abort();};
-  },[props.active,props.mode]);
+  },[props.active,props.mode,props.initialUrl]);
+  // A suggested clipboard link starts reading at once; the form stays one tap away.
+  useEffect(()=>{if(autoStart.current&&value&&value===props.initialUrl){autoStart.current=false;void start();}});
   function back(){if(saving||photoBusy)return;if(request.current){request.current.abort();request.current=null;setProgress(null);setError('');return;}props.onClose();}
   async function selectImage(event:ChangeEvent<HTMLInputElement>){
     const file=event.target.files?.[0];if(!file)return;fileRead.current?.abort();setError('');

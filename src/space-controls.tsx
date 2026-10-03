@@ -1,6 +1,7 @@
 import {useRef,useState} from 'react';
 import {UsersRound,UserRoundPlus,Plus,KeyRound,Settings,Check,Copy,Share2,RefreshCw,LogOut,Trash2} from 'lucide-react';
 import {SpaceDialog} from './space-dialog';
+import {memberColor} from './recipe-added-by';
 import {Panel} from './panel';
 import {panelOrigin,type PanelOrigin} from './use-panel-morph';
 import type {DockContext} from './dock';
@@ -8,7 +9,7 @@ import type {SpacesController} from './use-spaces';
 import {invitationText,type RecipeSpace,type SpaceMember,type SpaceInvite,type InvitePreview} from './spaces';
 
 type View='menu'|'create'|'join'|'settings'|'invite';
-export function useSpaceControls({controller,userId,disabled,onSelect}:{controller:SpacesController;userId:string;disabled:boolean;onSelect:(id:string)=>Promise<void>}){
+export function useSpaceControls({controller,userId,disabled,onSelect,addedCounts={}}:{controller:SpacesController;userId:string;disabled:boolean;onSelect:(id:string)=>Promise<void>;addedCounts?:Record<string,number>}){
   const {space,spaces,api,refresh}=controller;
   const [view,setView]=useState<View|null>(null),[closing,setClosing]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [origin,setOrigin]=useState<PanelOrigin>();
@@ -50,7 +51,7 @@ export function useSpaceControls({controller,userId,disabled,onSelect}:{controll
   }
   const button=space?<button type="button" className="space-switcher" disabled={disabled||!!view} aria-label={`レシピ帳を切り替え：${space.name}`} title={space.name} aria-haspopup="dialog" aria-expanded={!!view} onClick={()=>open('menu')}>{<UsersRound size={23}/>}</button>:null;
   const settingsContent=<div className="space-management"><form onSubmit={e=>{e.preventDefault();if(owner&&!blocked&&name.trim())saveName();}}><label className="field">レシピ帳名<input value={name} maxLength={40} disabled={!owner||blocked} onChange={e=>setName(e.target.value)}/></label></form><h3><UsersRound size={19}/>メンバー</h3>
-      <div className="space-members">{members.filter(member=>member.active).map(member=><div className="space-member" key={member.user_id}><span className="space-member-avatar">{member.avatarUrl?<img src={member.avatarUrl} referrerPolicy="no-referrer" alt=""/>:member.name.slice(0,1)}</span><span>{member.name}{member.user_id===userId?'（あなた）':''}<small>{member.user_id===space?.owner_id?'作成者':'メンバー'}</small></span>{owner&&member.user_id!==userId&&<button disabled={blocked} aria-label={`${member.name}をメンバーから外す`} onClick={()=>removeMember(member)}><Trash2 size={18}/></button>}</div>)}</div>
+      <div className="space-members">{members.filter(member=>member.active).map(member=><div className="space-member" key={member.user_id}><span className="space-member-avatar" style={member.avatarUrl?undefined:{background:memberColor(member.user_id),color:'#fff'}}>{member.avatarUrl?<img src={member.avatarUrl} referrerPolicy="no-referrer" alt=""/>:member.name.slice(0,1)}</span><span>{member.name}{member.user_id===userId?'（あなた）':''}<small>{member.user_id===space?.owner_id?'作成者':'メンバー'}{addedCounts[member.user_id]?` · ${addedCounts[member.user_id]}品を追加`:''}</small></span>{owner&&member.user_id!==userId&&<button disabled={blocked} aria-label={`${member.name}をメンバーから外す`} onClick={()=>removeMember(member)}><Trash2 size={18}/></button>}</div>)}</div>
       <p className="subtle">メンバー全員がレシピと買い物リストを編集できます。</p>
       {owner?<button className="secondary space-invite-button" disabled={blocked} onClick={event=>{setOrigin(panelOrigin(event.currentTarget));void run(async()=>{await issueInvite();open('invite');});}}><UserRoundPlus size={18}/>メンバーを招待</button>:<button className="text-action space-leave" disabled={blocked} onClick={leave}><LogOut size={18}/>レシピ帳から退出</button>}
     </div>;
