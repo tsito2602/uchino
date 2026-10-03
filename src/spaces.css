@@ -14,3 +14,6 @@
 .space-invite p,.space-invite small{margin:0}.space-invite>strong{font-size:clamp(20px,6vw,28px);user-select:all;overflow-wrap:anywhere}
 .space-invite .secondary{justify-self:center}.space-leave{color:var(--danger)}
 .space-join-preview{padding:20px;border-radius:20px;background:var(--content-card)}
+
+.card-panel-frame:has(>.recipe-space-panel){height:auto;max-height:100%}
+.recipe-space-panel{height:auto}

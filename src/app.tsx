@@ -1,6 +1,7 @@
 import {useSpaces,type SpacesController} from './use-spaces';
 import {useSpaceControls} from './space-controls';
-import {spaceScope} from './spaces';
+import {spaceScope,type Space} from './spaces';
+import {SpaceSwitchScreen} from './space-switch-screen';
 import {exportRecipePhotos} from './photo-cache';
 import {SHOPPING_UNDO_MS} from './shopping-undo';
 import {ShoppingList} from './shopping-list';
@@ -29,27 +30,30 @@ type DetailView={kind:'detail';id:string;origin?:PanelOrigin};
 type View=DetailView|{kind:'edit';draft:Recipe;isNew:boolean;parent?:DetailView;parentRecipe?:Recipe}|{kind:'import'}|{kind:'shopping'}|{kind:'shopping-finish'}|{kind:'filters'};
 export function App({session}:{session:Session}){
   const spaces=useSpaces(session);
+  const [switching,setSwitching]=useState<Space|null>(null),[loadedScope,setLoadedScope]=useState('');
   const backgroundScopes=spaces.spaces.filter(space=>space.id!==spaces.space?.id).map(space=>spaceScope(session.user.id,space)).join('|');
   useEffect(()=>{if(session.local)return;let active=true;const sync=()=>{for(const scope of backgroundScopes.split('|').filter(Boolean))void rows(scope).then(async records=>{if(active&&records.some(row=>row.pending))await synchronize(scope);}).catch(()=>{});};sync();window.addEventListener('online',sync);const timer=setInterval(sync,30000);return()=>{active=false;clearInterval(timer);window.removeEventListener('online',sync);};},[backgroundScopes,session.local]);
   if(!session.local&&navigator.onLine&&(!spaces.ready||!spaces.space))return <main className="shell"><p role={spaces.error?'alert':'status'}>{spaces.error||'スペースを読み込んでいます…'}</p>{spaces.error&&<button className="secondary" onClick={()=>void spaces.refresh().catch(()=>{})}>再試行</button>}</main>;
   const realScope=session.local?'guest':spaces.space?spaceScope(session.user.id,spaces.space):`user-${session.user.id}`;
-  return <ScopedApp key={realScope} session={session} realScope={realScope} spaces={spaces}/>;
+  const controller={...spaces,select:(id:string)=>{const next=spaces.spaces.find(s=>s.id===id);if(next&&next.id!==spaces.space?.id){setLoadedScope('');setSwitching(next);}spaces.select(id);}};
+  return <><ScopedApp key={realScope} session={session} realScope={realScope} spaces={controller} onReady={()=>setLoadedScope(realScope)}/>{switching&&<SpaceSwitchScreen space={switching} ready={loadedScope===realScope} onExited={()=>setSwitching(null)}/>}</>;
 }
-function ScopedApp({session,realScope,spaces}:{session:Session;realScope:string;spaces:SpacesController}){
+function ScopedApp({session,realScope,spaces,onReady}:{onReady:()=>void;session:Session;realScope:string;spaces:SpacesController}){
   const [mode,setMode]=useState<DataMode|null>(null),[tab,setTab]=useState<Tab>('recipes'),[error,setError]=useState(''),[attempt,setAttempt]=useState(0);
   useEffect(()=>{let active=true;setError('');void prepareData(realScope).then(async legacy=>{
     const selected=getDataMode(realScope)??(legacy?'demo':'real');
     if(selected==='demo')await prepareData(demoScope(realScope));
     if(active){rememberDataMode(realScope,selected);setMode(selected);}
   }).catch(cause=>{if(active)setError(cause.message);});return()=>{active=false;};},[realScope,attempt]);
+  useEffect(()=>{if(error)onReady();},[error,onReady]);
   async function changeDataMode(next:DataMode){
     await prepareData(next==='demo'?demoScope(realScope):realScope);
     rememberDataMode(realScope,next);setMode(next);
   }
   if(!mode)return <main className="shell"><p role={error?'alert':'status'}>{error||'読み込んでいます…'}</p>{error&&<button className="secondary" onClick={()=>setAttempt(value=>value+1)}>再試行</button>}</main>;
-  return <RecipeApp key={mode} spaces={spaces} session={session} realScope={realScope} dataMode={mode} onDataMode={changeDataMode} tab={tab} onTab={setTab}/>;
+  return <RecipeApp key={mode} onReady={onReady} spaces={spaces} session={session} realScope={realScope} dataMode={mode} onDataMode={changeDataMode} tab={tab} onTab={setTab}/>;
 }
-function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces}:{spaces:SpacesController;session:Session;realScope:string;dataMode:DataMode;onDataMode:(mode:DataMode)=>Promise<void>;tab:Tab;onTab:(tab:Tab)=>void}){
+function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onReady}:{onReady:()=>void;spaces:SpacesController;session:Session;realScope:string;dataMode:DataMode;onDataMode:(mode:DataMode)=>Promise<void>;tab:Tab;onTab:(tab:Tab)=>void}){
   const [menuPhase,setMenuPhase]=useState<'closed'|'open'|'closing'>('closed');
   const pendingAdd=useRef<(()=>void)|null>(null);
   const addOptions:AddOption[]=[
@@ -62,6 +66,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces}:{spa
   function exitAddMenu(){setMenuPhase('closed');const action=pendingAdd.current;pendingAdd.current=null;action?.();}
   const scope=dataMode==='demo'?demoScope(realScope):realScope;
   const store=useRecords(scope);
+  useEffect(()=>{if(store.ready||store.error)onReady();},[store.ready,store.error,onReady]);
   const accountStore=useRecords(realScope,false);
   const pending=accountStore.pending;
   const transitionRoute=useRouteTransition();

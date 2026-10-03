@@ -28,7 +28,6 @@ app.get('/api/health',c=>c.json({ok:true,app:'uchino',environment:c.env.APP_ENV?
 app.get('/api/config',c=>c.json({ai:aiConfigured(c.env),demoImport:c.env.APP_ENV==='staging',photoStorage:c.env.RECIPE_PHOTOS?'r2':'inline'}));
 app.route('/api/auth',authRoutes);
 app.route('/api/spaces',spacesRoutes);
-app.route('/api/spaces',spacesRoutes);
 app.get('/api/photos/:owner/:file',async c=>{
   const user=await sessionUser(c);if(!user)return c.json({error:'ログインしてください。'},401);
   const reference=photoReference(c.req.path);
