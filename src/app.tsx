@@ -9,7 +9,6 @@ import {ShoppingList} from './shopping-list';
 import {useRecipeImport} from './recipe-import';
 import {useSpaceMembers} from './use-space-members';
 import {RecipeAddedBy} from './recipe-added-by';
-import {ClipboardSuggestion,useClipboardSuggestion} from './clipboard-suggestion';
 import {useEffect,useState,useRef} from 'react';
 import {BookOpen,Search,Heart,Clock,ChevronRight,Plus,Check,ExternalLink,ShoppingBasket,Trash2,Link,ImagePlus,FileText,Pencil,RefreshCw,Download,LogOut,Cloud,Smartphone,ChefHat,Settings,RotateCcw} from 'lucide-react';
 import {type Session} from './auth';
@@ -67,7 +66,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
     {id:'text',label:'本文から取り込む',icon:FileText,onClick:()=>beginImport('text')},
     {id:'manual',label:'手入力で追加',icon:Pencil,onClick:()=>open({kind:'edit',draft:newRecipe(),isNew:true})}
   ];
-  function beginImport(mode:'url'|'image'|'text',url=''){setImportMode(mode);setImportUrl(url);open({kind:'import'});}
+  function beginImport(mode:'url'|'image'|'text'){setImportMode(mode);open({kind:'import'});}
   function exitAddMenu(){setMenuPhase('closed');const action=pendingAdd.current;pendingAdd.current=null;action?.();}
   const scope=dataMode==='demo'?demoScope(realScope):realScope;
   const store=useRecords(scope);
@@ -79,7 +78,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
   const [view,setView]=useState<View|null>(null),[closing,setClosing]=useState(false),[formError,setFormError]=useState(''),[busy,setBusy]=useState(false),[photoBusy,setPhotoBusy]=useState(false),[notice,setNotice]=useState('');
   const [servings,setServings]=useState(2),[checked,setChecked]=useState<string[]>([]),[shopName,setShopName]=useState(''),[shoppingFocused,setShoppingFocused]=useState(false),[shoppingUndo,setShoppingUndo]=useState<{items:ShoppingItem[];message:string;expiresAt:number}|null>(null);
   const shopNameInput=useRef<HTMLInputElement>(null),shoppingInFlight=useRef(false),shoppingComposing=useRef(false);
-  const [importMode,setImportMode]=useState<'url'|'image'|'text'>('url'),[importUrl,setImportUrl]=useState(''),[ai,setAI]=useState(false),[allowDemo,setAllowDemo]=useState(false),[updateReady,setUpdateReady]=useState(false);
+  const [importMode,setImportMode]=useState<'url'|'image'|'text'>('url'),[ai,setAI]=useState(false),[allowDemo,setAllowDemo]=useState(false),[updateReady,setUpdateReady]=useState(false);
   const recipes=store.rows.filter(r=>r.kind==='recipe').map(r=>r.data as Recipe).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
   const shopping=store.rows.filter(r=>r.kind==='shopping').map(r=>r.data as ShoppingItem).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)||b.id.localeCompare(a.id));
   const detailView=view?.kind==='detail'?view:view?.kind==='edit'?view.parent:undefined;
@@ -141,13 +140,12 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
   async function selectDataMode(mode:DataMode){if(mode===dataMode)return;await run(()=>onDataMode(mode));}
   async function canLeave(){const scopes=session.local?[realScope]:spaces.spaces.map(space=>spaceScope(session.user.id,space));if((await Promise.all(scopes.map(rows))).flat().some(row=>row.pending)){store.setError('未同期の変更があります。実データに切り替えて同期または書き出しをしてください。');return false;}return true;}
   const members=useSpaceMembers(spaces,session.local);
-  const clipboard=useClipboardSuggestion({enabled:!session.local&&dataMode==='real'&&store.ready,knownUrls:recipes.map(recipe=>recipe.sourceUrl).filter(Boolean)});
   const addedBy=(recipe:Recipe)=>dataMode==='real'?members.find(member=>member.user_id===recipe.addedBy):undefined;
   const withAuthor=(recipe:Recipe):Recipe=>session.local?recipe:{...recipe,addedBy:session.user.id};
   const spaceControls=useSpaceControls({controller:spaces,userId:session.user.id,disabled:!!view||menuPhase!=='closed',onSelect:async id=>{spaces.select(id);},addedCounts:dataMode==='real'?recipes.reduce<Record<string,number>>((counts,recipe)=>{if(recipe.addedBy)counts[recipe.addedBy]=(counts[recipe.addedBy]??0)+1;return counts;},{}):{}});
   const PageIcon=tab==='recipes'?BookOpen:tab==='shopping'?ShoppingBasket:Settings;
   const filterCount=Number(!!query.trim())+Number(selectedCategories.length>0)+Number(favorites);
-  const importFlow=useRecipeImport({active:view?.kind==='import',mode:importMode,initialUrl:importUrl||undefined,ai,allowDemo:allowDemo&&dataMode==='demo',local:session.local,closing,onClose:close,onExited:()=>{setView(null);setClosing(false);},onManual:()=>open({kind:'edit',draft:newRecipe(),isNew:true}),onSave:async recipe=>{await store.save('recipe',withAuthor(recipe));setNotice('レシピを保存しました');setClosing(true);}});
+  const importFlow=useRecipeImport({active:view?.kind==='import',mode:importMode,ai,allowDemo:allowDemo&&dataMode==='demo',local:session.local,closing,onClose:close,onExited:()=>{setView(null);setClosing(false);},onManual:()=>open({kind:'edit',draft:newRecipe(),isNew:true}),onSave:async recipe=>{await store.save('recipe',withAuthor(recipe));setNotice('レシピを保存しました');setClosing(true);}});
   let context:DockContext|undefined;
   if(view){context={key:view.kind,label:'操作',back:close,disabled:busy||photoBusy};if(view.kind==='filters')context={...context,action:close,actionLabel:`${filtered.length}件を表示`,actionDisabled:filtered.length===0,icon:Check,secondary:{label:'条件をリセット',text:'リセット',icon:RotateCcw,disabled:!filterCount,action:()=>{setQuery('');setSelectedCategories([]);setFavorites(false);}}};if(view.kind==='edit')context={...context,action:saveRecipe,actionLabel:'保存',icon:Check,commit:true,remove:view.isNew?undefined:()=>void removeRecipe()};if(view.kind==='detail'&&detail)context={...context,action:checked.length?()=>void addIngredients():()=>open({kind:'edit',draft:structuredClone(detail),isNew:false,parent:view,parentRecipe:detail}),actionLabel:checked.length?`買い物に追加（${checked.length}）`:'編集',icon:checked.length?ShoppingBasket:Pencil,iconOnly:true,actionCount:checked.length||undefined,servings:{value:servings,onChange:setServings}};if(view.kind==='shopping')context={...context,action:shoppingFocused?()=>void addShopping():undefined,actionLabel:'追加',icon:Plus,commit:true,preserveEditorFocus:true,disabled:busy||!shopName.trim()};if(view.kind==='shopping-finish')context={...context,action:()=>void finishShopping(true),actionLabel:'未購入を残す',icon:Check,commit:true,remove:()=>void finishShopping(false),removeLabel:'すべて削除',removeText:true};if(view.kind==='import')context=importFlow.context;}
   return <>
@@ -158,7 +156,6 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
       {store.error&&<div className="notice" role="alert"><span>{store.error}</span><button aria-label="通知を閉じる" onClick={()=>store.setError('')}>×</button></div>}
       {!store.ready&&!store.error&&<p className="subtle" role="status">読み込んでいます…</p>}
       {tab==='recipes'&&<>
-        {clipboard.suggestion&&!view&&menuPhase==='closed'&&<ClipboardSuggestion suggestion={clipboard.suggestion} onImport={url=>{clipboard.dismiss();beginImport('url',url);}} onDismiss={clipboard.dismiss} onMissing={setNotice}/>}
         {filtered.length?<div className="recipe-list">{filtered.map(recipe=><article className="recipe-row" key={recipe.id}><button className="recipe-open" onClick={e=>{setServings(recipe.servings);setChecked([]);open({kind:'detail',id:recipe.id,origin:panelOrigin(e.currentTarget)});}}><RecipePhoto recipe={recipe}/><div className="recipe-row-copy"><span className="recipe-category"><RecipeCategoryIcon category={recipe.category}/>{recipe.category}</span><h2>{recipe.title}</h2>{recipe.minutes&&<p><span><Clock size={13}/>{recipe.minutes}分</span></p>}</div><RecipeAddedBy member={addedBy(recipe)} userId={session.user.id}/></button><RecipeFavorite recipe={recipe} onToggle={()=>void store.save('recipe',{...recipe,favorite:!recipe.favorite}).catch(e=>store.setError(e.message))}/></article>)}</div>:store.ready&&<div className="empty-state">{recipes.length?<Search size={36} strokeWidth={1.4} aria-hidden="true"/>:<RiceBowl className="empty-recipe-symbol" size={44} strokeWidth={1.4} aria-hidden="true"/>}<h2>{recipes.length?'レシピが見つかりません':'また作りたい、をここに。'}</h2><p>{recipes.length?'検索条件を変えてみてください。':'お気に入りの一品から、レシピ帳を育てよう。'}</p>{!recipes.length&&<><button className="primary" onClick={()=>setMenuPhase('open')}><Plus size={18}/>レシピを追加</button>{dataMode==='real'&&<button className="text-action" disabled={busy} onClick={()=>void selectDataMode('demo')}>サンプルを見てみる</button>}</>}</div>}</>}
       {tab==='shopping'&&<>{shoppingList()}{!shopping.length&&<div className="empty-state"><ShoppingBasket size={40} strokeWidth={1.4} aria-hidden="true"/><h2>買うものをまとめよう</h2><p>今日のごはんに、必要なものを。<br/>レシピの材料からも追加できます。</p><button className="primary" onClick={()=>open({kind:'shopping'})}><Plus size={18}/>買うものを追加</button></div>}</>}
       {tab==='settings'&&formError&&<p className="form-error" role="alert">{formError}</p>}
