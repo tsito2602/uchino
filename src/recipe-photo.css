@@ -52,3 +52,11 @@
 .has-photo .recipe-photo-select-label{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1117;border:1px solid #ffffff30;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .recipe-photo-remove{align-self:flex-end;min-height:44px;font-size:12px;gap:6px}
 @media(max-width:380px){.recipe-list{gap:16px 10px}.recipe-row{border-radius:18px}.recipe-row-copy{padding:44px 13px 16px}.recipe-row h2{font-size:15px}.recipe-row p{font-size:10px;gap:7px}.recipe-detail-panel{--recipe-detail-inset:16px}}
+
+/* Photo-less covers: a dyed washi field, soft light, and a large tone-on-tone glyph. */
+.recipe-cover{position:absolute;inset:0;overflow:hidden;background:radial-gradient(120% 90% at var(--cover-x) var(--cover-y),color-mix(in srgb,var(--cover-light) 82%,#fff),var(--cover-light) 46%,var(--cover-deep));container-type:inline-size}
+.recipe-cover:after{content:'';position:absolute;inset:0;opacity:.32;mix-blend-mode:soft-light;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.recipe-cover-glyph{position:absolute;left:var(--cover-x);top:var(--cover-y);font-family:var(--recipe-title-font);font-weight:700;font-size:96cqi;line-height:1;color:#fff;opacity:.16;transform:translate(-30%,-12%) rotate(var(--cover-turn));user-select:none;white-space:nowrap}
+.recipe-row:has(.recipe-cover) .recipe-row-copy:before{background:linear-gradient(180deg,transparent,rgba(20,12,6,.22) 60%,rgba(20,12,6,.38))}
+.recipe-row:has(.recipe-cover) .recipe-favorite:before{background:#ffffff26;border-color:#ffffff40}
+:root[data-brand-theme='dark'] .recipe-cover{filter:brightness(.8) saturate(.92)}
