@@ -2,7 +2,7 @@
 import {useLayoutEffect,useRef,type RefObject} from 'react';
 import './quantity-ticker.css';
 
-const DIGITS=Array.from({length:10},(_,i)=>i),HEIGHT=1.1,DURATION=900,STAGGER=40;
+const DIGITS=Array.from({length:10},(_,i)=>i),HEIGHT=1.1,DURATION=520,STAGGER=30;
 // Every token shares the same width transition. Stable empty slots let labels,
 // brackets and extra spoon amounts slide together without a layout jump.
 function useQuantityWidth(root:RefObject<HTMLSpanElement|null>,value:string,measure:string){
@@ -13,7 +13,7 @@ function useQuantityWidth(root:RefObject<HTMLSpanElement|null>,value:string,meas
     node.style.width=`${to}px`;
     const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
     if(!initialized||reduced.matches||Math.abs(from-to)<.1)return;
-    const animation=node.animate([{width:`${from}px`},{width:`${to}px`}],{duration:DURATION,easing:'cubic-bezier(.22,1,.36,1)'});
+    const animation=node.animate([{width:`${from}px`},{width:`${to}px`}],{duration:DURATION,easing:'cubic-bezier(0.22,0.72,0.18,1)'});
     const finish=()=>animation.finish();
     reduced.addEventListener('change',finish);document.addEventListener('visibilitychange',finish);
     return()=>{
