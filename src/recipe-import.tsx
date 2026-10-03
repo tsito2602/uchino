@@ -8,6 +8,7 @@ import {readImport,importPause} from './import-client';
 import {ImportFailure,type ImportDiagnostics} from './import-errors';
 import {prepareImportPhotos} from './prepare-import-photos';
 import {ImportReview} from './import-review';
+import {ClipboardLink} from './clipboard-link';
 import {ImportPhaseStatus,ImportProcessing,type ImportProgress} from './import-progress';
 
 type Mode='url'|'image'|'text';
@@ -79,6 +80,7 @@ export function useRecipeImport(props:Props) {
       {props.allowDemo&&<div className="import-mode" role="group" aria-label="取り込み方法"><button aria-pressed={!demo} onClick={()=>{setDemo(false);setError('');}}>レシピを読み取る</button><button aria-pressed={demo} onClick={()=>{setDemo(true);setError('');}}>デモで試す</button></div>}
       {demo?<div className="import-demo-sample"><span className="import-demo-badge"><Sparkles size={13}/>デモ · staging限定</span><h3>レシピメモを読み取る</h3><p>読み取りから内容の確認・修正までを体験できます。</p><div className="import-sample-paper"><FileText size={24}/><strong>鶏肉ときのこのクリーム煮</strong><div><span>鶏もも肉</span><b>250 g</b></div><div><span>しめじ</span><b>1/2 パック</b></div><div><span>牛乳</span><b>200 ml</b></div><div><span>バター</span><b>？</b></div></div><small>保存するまでレシピは追加されません。</small></div>:<>
         <div className="mode-options">{([{value:'url',label:'URL'},{value:'image',label:'画像'},{value:'text',label:'本文'}] as const).map(item=><button key={item.value} aria-pressed={mode===item.value} className={mode===item.value?'selected':''} onClick={()=>{setMode(item.value);setValue('');setError('');}}>{item.label}</button>)}</div>
+        {mode==='url'&&!props.local&&!value.trim()&&<ClipboardLink disabled={props.closing} onUse={setValue}/>}
         {mode==='url'?<label className="field">レシピのURL<input type="url" maxLength={2048} placeholder="https://" value={value} onChange={event=>setValue(event.target.value)}/></label>:mode==='text'?<label className="field">レシピの本文<textarea rows={10} maxLength={30000} placeholder="材料・分量・作り方を貼り付け" value={value} onChange={event=>setValue(event.target.value)}/></label>:<label className="import-upload"><ImagePlus size={30}/><strong>{imageName||'画像を選択'}</strong><small>PNG・JPEG・WebP / 6MBまで</small><input aria-label="レシピ画像を選択" type="file" accept="image/png,image/jpeg,image/webp" onChange={event=>void selectImage(event)}/></label>}
         {image&&mode==='image'&&<img className="import-preview" src={image} alt="選択したレシピ画像"/>}
         {props.local?<p className="subtle">取り込みにはGoogleログインが必要です。手入力はこの端末でも使えます。</p>:mode!=='url'&&!props.ai?<p className="subtle">AI取り込みは準備中です。URLか手入力で追加できます。</p>:<p className="subtle">{mode==='url'?'レシピページやYouTubeの公開動画から取り込みます。動画は概要欄・音声・映像を読み取るため、数分かかることがあります。':'読み取り結果は、保存前に確認・修正できます。'}</p>}
