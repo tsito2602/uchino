@@ -1,4 +1,4 @@
-import {importIssues,type ImportResult} from '../src/import-model';
+import {importIssues,type ImportResult,type StepPhotoDiagnostics} from '../src/import-model';
 import {ImportFailure} from '../src/import-errors';
 import {youtubeVideo} from '../src/youtube';
 import {abortable,aiConfigured,bindingJson,recipeFromExtraction,recipeInstruction,recipeSchema,type ImportBindings,type ImportOptions} from './import-ai';
@@ -10,6 +10,7 @@ import {importYouTubeStepPhotos} from './youtube-storyboard';
 // Select Google's Generate Content endpoint explicitly for YouTube fileData.
 // Keep the same authenticated binding, uchino gateway and Unified Billing.
 // https://developers.cloudflare.com/ai-gateway/usage/providers/google-ai-studio/
+export const YOUTUBE_PREVIEW_REFUSED='YouTube側の制限で手順画像を取得できませんでした。各手順の動画リンクから場面を確認できます。';
 export const YOUTUBE_AI_MODEL='gemini-3.8-flash';
 export const YOUTUBE_AI_ENDPOINT=`v1beta/models/${YOUTUBE_AI_MODEL}:generateContent`;
 const ingredientSchema=recipeSchema.properties.ingredients.items;
@@ -99,8 +100,12 @@ export async function importYouTube(value:string,env:ImportBindings,options:Impo
   result.issues=importIssues(result.recipe,result.issues);
   options.onPhase?.('photos');
   const photo=await importRecipePhoto([`https://i.ytimg.com/vi/${video.id}/maxresdefault.jpg`,`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`],new URL(video.url),signal);
-  const stepImages=await importYouTubeStepPhotos(storyboard,stepVideoSeconds,stepPhotoSeconds,new URL(video.url),signal,seconds);
-  if(storyboardDiagnostics)stepImages.stepPhotoDiagnostics.source=storyboardDiagnostics;
+  // YouTube may ask our server to sign in before sharing previews. Respect that
+  // refusal: each step still links to its scene in the video.
+  const refused=!storyboard&&storyboardDiagnostics?.code==='player_unavailable'&&stepVideoSeconds.length>0;
+  const stepImages=refused?{warnings:[YOUTUBE_PREVIEW_REFUSED],stepPhotoDiagnostics:{total:stepVideoSeconds.length,attached:0,failures:[]}}:await importYouTubeStepPhotos(storyboard,stepVideoSeconds,stepPhotoSeconds,new URL(video.url),signal,seconds);
+  if(storyboardDiagnostics)(stepImages.stepPhotoDiagnostics as StepPhotoDiagnostics).source=storyboardDiagnostics;
+  if(refused)console.warn(JSON.stringify({event:'youtube_step_photos_refused',...storyboardDiagnostics}));
   if(stepImages.stepPhotoDiagnostics.failures.length)console.warn(JSON.stringify({event:'youtube_step_photos_failed',...stepImages.stepPhotoDiagnostics}));
   const warnings=[...(photo.warnings||[]),...(stepImages.warnings||[]),...(!metadata?['概要欄を取得できなかったため、動画から読み取りました。概要欄に分量がある場合は照合してください。']:[])];
   return {...result,...photo,stepPhotoDiagnostics:stepImages.stepPhotoDiagnostics,...(stepImages.stepPhotoSheets?{stepPhotoSheets:stepImages.stepPhotoSheets}:{}),...(sourceDiagnostics?{sourceDiagnostics}:{}),...(warnings.length?{warnings}:{}),source:{kind:'video',name:metadata?.title||result.recipe.title,url:video.url,...(metadata?.description?{text:metadata.description}:{})}};
