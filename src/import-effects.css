@@ -268,7 +268,7 @@
 @media(prefers-reduced-motion:reduce) { .import-source-toggle > svg { transition: none; } }
 
 /* Finishing moment: ingredients converge and a recipe card settles into place. */
-.import-formed{position:relative;display:grid;place-items:center;height:236px;margin:0 auto 14px}
+.import-formed{position:relative;display:grid;place-items:center;height:236px;margin:34px auto 14px}
 .import-formed-frame{position:relative;border-radius:20px;animation:import-card-settle 760ms cubic-bezier(.2,1.2,.36,1) 360ms both}
 .import-formed-frame:before{content:'';position:absolute;inset:-3px;border-radius:23px;background:conic-gradient(from var(--formed-shine),#f44e9e,#c14fdd,#8b56f5,#5567f9,#2d99f4,#24bee6,#2ec4b1,#64c67f,#aec95c,#eabe50,#fc9353,#fc6975,#f44e9e);filter:blur(5px);opacity:0;animation:import-card-shine 1300ms ease-out 900ms both}
 .import-formed-card{position:relative;width:150px;aspect-ratio:3/4;border-radius:20px;overflow:hidden;isolation:isolate;box-shadow:0 18px 36px #2a1c1022,0 2px 6px #2a1c1014}
@@ -277,9 +277,42 @@
 .import-formed-copy span{display:flex;align-items:center;gap:4px;font-size:9px;opacity:.85}
 .import-formed-copy strong{font-family:var(--recipe-title-font);font-size:13px;line-height:1.45;font-weight:700;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .import-formed-check{position:absolute;top:9px;right:9px;z-index:2;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;color:var(--on-brand);background:var(--brand);animation:import-check-pop .48s cubic-bezier(.34,1.56,.64,1) 1000ms both}
-.import-formed-piece{position:absolute;left:50%;top:50%;padding:5px 10px;border-radius:99px;font-size:11px;white-space:nowrap;color:var(--ink);background:var(--control-glass,#fff8);border:1px solid var(--line);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);opacity:0;animation:import-piece-gather 820ms cubic-bezier(.55,0,.2,1) var(--piece-delay) both}
-@keyframes import-piece-gather{0%{opacity:0;transform:translate(-50%,-50%) translate(var(--piece-x),var(--piece-y)) scale(.9)}25%{opacity:1}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(.4)}}
 @keyframes import-card-settle{0%{opacity:0;transform:translateY(16px) scale(.72) rotate(-7deg)}100%{opacity:1;transform:none}}
 @property --formed-shine{syntax:'<angle>';inherits:false;initial-value:0deg}
 @keyframes import-card-shine{0%{opacity:0;--formed-shine:0deg}30%{opacity:.95}100%{opacity:0;--formed-shine:240deg}}
-@media(prefers-reduced-motion:reduce){.import-formed-piece{display:none}.import-formed-frame,.import-formed-frame:before,.import-formed-check{animation:none}}
+.import-formed-bowl{position:absolute;inset:0;display:grid;place-items:center;animation:import-bowl-handoff 900ms cubic-bezier(.5,0,.3,1) both}
+.import-formed-bowl .import-bowl-figure{width:200px}
+@keyframes import-bowl-handoff{0%,55%{opacity:1;transform:none}100%{opacity:0;transform:scale(.6) translateY(24px)}}
+.import-formed-frame{animation-delay:620ms}
+.import-formed-frame:before{animation-delay:1150ms}
+.import-formed-check{animation-delay:1250ms}
+.import-formed-steam,.import-formed-glint{position:absolute;left:0;right:0;top:-34px;height:40px;display:flex;justify-content:center;gap:16px;pointer-events:none}
+.import-formed-steam i{width:7px;height:34px;border-radius:9px;border-left:2.5px solid color-mix(in srgb,var(--ink) 30%,transparent);opacity:0;animation:import-steam 1600ms ease-out both}
+.import-formed-steam i:nth-child(1){animation-delay:1300ms}.import-formed-steam i:nth-child(2){animation-delay:1450ms;height:40px}.import-formed-steam i:nth-child(3){animation-delay:1600ms}
+@keyframes import-steam{0%{opacity:0;transform:translateY(10px) scaleY(.6) skewX(0)}40%{opacity:.9}100%{opacity:0;transform:translateY(-16px) scaleY(1.1) skewX(-12deg)}}
+.import-formed-glint{top:0;height:100%}
+.import-formed-glint i{position:absolute;width:14px;height:14px;background:conic-gradient(from 45deg,transparent 0 10%,#fff 12%,transparent 14% 35%,#fff 37%,transparent 39% 60%,#fff 62%,transparent 64% 85%,#fff 87%,transparent 89%);border-radius:50%;filter:drop-shadow(0 0 4px #fff);opacity:0;animation:import-glint 900ms ease-out both}
+.import-formed-glint i:nth-child(1){left:calc(50% - 64px);top:18%;animation-delay:1250ms}.import-formed-glint i:nth-child(2){left:calc(50% + 52px);top:40%;animation-delay:1400ms}.import-formed-glint i:nth-child(3){left:calc(50% - 30px);top:72%;animation-delay:1550ms}
+@keyframes import-glint{0%{opacity:0;transform:scale(.2) rotate(0)}40%{opacity:1;transform:scale(1.1) rotate(45deg)}100%{opacity:0;transform:scale(.4) rotate(90deg)}}
+@media(prefers-reduced-motion:reduce){.import-formed-bowl,.import-formed-steam,.import-formed-glint{display:none}.import-formed-frame,.import-formed-frame:before,.import-formed-check{animation:none}}
+
+/* Filling prep bowl while the AI reads. */
+.import-bowl{position:relative;display:grid;place-items:center;min-height:250px;padding-top:70px;overflow:visible}
+.import-bowl-figure{width:min(76%,260px);overflow:visible}
+.import-bowl-body{fill:color-mix(in srgb,var(--paper) 70%,transparent);stroke:none}
+.import-bowl-lip{fill:none;stroke:color-mix(in srgb,var(--ink) 22%,transparent);stroke-width:2}
+.import-bowl-rim{fill:none;stroke:color-mix(in srgb,var(--ink) 26%,transparent);stroke-width:2}
+.import-bowl-shadow{fill:color-mix(in srgb,var(--ink) 8%,transparent)}
+.import-bowl-surface,.import-bowl-level{transition:transform 120ms linear}
+.import-bowl-wave{fill:color-mix(in srgb,#fff 45%,transparent);animation:import-bowl-wave 2.4s linear infinite}
+.import-bowl-figure[data-mixing] g{animation:import-bowl-mix 700ms cubic-bezier(.5,0,.3,1) both;transform-origin:120px 140px}
+@keyframes import-bowl-wave{to{transform:translateX(120px)}}
+@keyframes import-bowl-mix{0%{filter:none}50%{filter:hue-rotate(40deg) saturate(1.2)}100%{filter:hue-rotate(0)}}
+.import-bowl-piece{position:absolute;left:50%;top:calc(70px + 26%);z-index:1;padding:5px 11px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap;color:var(--ink);background:color-mix(in srgb,var(--paper) 82%,transparent);border:1px solid var(--line);box-shadow:0 4px 12px #2a1c1012;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);pointer-events:none;animation:import-bowl-toss 1050ms cubic-bezier(.45,0,.55,1) both}
+@keyframes import-bowl-toss{
+  0%{opacity:0;transform:translate(-50%,-50%) translate(var(--from-x),var(--from-y)) rotate(var(--turn)) scale(1)}
+  15%{opacity:1}
+  55%{opacity:1;transform:translate(-50%,-50%) translate(calc(var(--from-x) * .35),calc(var(--from-y) * .35 - 46px)) rotate(calc(var(--turn) * -.5)) scale(.92)}
+  100%{opacity:0;transform:translate(-50%,-50%) translate(0,22px) rotate(0) scale(.35)}}
+:root[data-brand-theme='dark'] .import-bowl-figure rect{filter:brightness(.82) saturate(.9)}
+@media(prefers-reduced-motion:reduce){.import-bowl-wave,.import-bowl-piece{animation:none}.import-bowl-piece{display:none}.import-bowl-surface,.import-bowl-level{transition:none}}
