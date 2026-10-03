@@ -42,7 +42,7 @@ spacesRoutes.get('/',async c=>{
  return c.json({spaces:result.results.map(publicSpace)});
 });
 spacesRoutes.post('/',async c=>{
- const input=await readBody(c.req.raw,4096).catch(()=>null),name=cleanName(input?.name);if(!name)return fail('スペース名は1〜40文字で入力してください');
+ const input=await readBody(c.req.raw,4096).catch(()=>null),name=cleanName(input?.name);if(!name)return fail('レシピ帳名は1〜40文字で入力してください');
  const user=c.get('user'),db=c.env.DB!,owner=await photoOwner(user.id),home=`home-${owner}`;
  const existingHome=await db.prepare('SELECT id FROM recipe_spaces WHERE data_owner=?').bind(user.id).first<{id:string}>();
  if(input.initial===true&&existingHome){const existing=await membership(db,existingHome.id,user.id);if(existing)return c.json({space:publicSpace(existing)},200);return fail('レシピ帳の状態が変わりました。再読み込みしてください。',409);}
@@ -78,7 +78,7 @@ spacesRoutes.post('/join',async c=>{
  return c.json({space:publicSpace(space)});
 });
 spacesRoutes.use('/:id/*',async(c,next)=>{
- const space=await membership(c.env.DB!,c.req.param('id')!,c.get('user').id);if(!space)return fail('スペースが見つかりません',404);c.set('space',space);await next();
+ const space=await membership(c.env.DB!,c.req.param('id')!,c.get('user').id);if(!space)return fail('レシピ帳が見つかりません',404);c.set('space',space);await next();
 });
 spacesRoutes.get('/:id/details',async c=>c.json({space:publicSpace(c.get('space')),members:await membersFor(c.env.DB!,c.get('space').id)}));
 spacesRoutes.post('/:id/invites',async c=>{
@@ -89,7 +89,7 @@ spacesRoutes.post('/:id/invites',async c=>{
 });
 spacesRoutes.put('/:id/name',async c=>{
  const space=c.get('space');if(space.owner_id!==c.get('user').id)return fail('変更できるのは作成者だけです',403);
- const input=await readBody(c.req.raw,4096).catch(()=>null),name=cleanName(input?.name);if(!name)return fail('スペース名は1〜40文字で入力してください');
+ const input=await readBody(c.req.raw,4096).catch(()=>null),name=cleanName(input?.name);if(!name)return fail('レシピ帳名は1〜40文字で入力してください');
  await c.env.DB!.prepare('UPDATE recipe_spaces SET name=? WHERE id=? AND deleted_at IS NULL').bind(name,space.id).run();return c.json({ok:true});
 });
 spacesRoutes.delete('/:id/space',async c=>{

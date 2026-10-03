@@ -50,7 +50,7 @@ app.use('/api/data/*',async(c,next)=>{
   const space=await membership(c.env.DB,c.req.query('space')||home,user.id);
   if(!space){
     if(!c.req.query('space'))return c.json({error:'レシピ帳を作るか、招待されたレシピ帳に参加してください。',code:'recipebook_required'},409);
-    return c.json({error:'このスペースにはアクセスできません。',code:'space_access_revoked'},403);
+    return c.json({error:'このレシピ帳にはアクセスできません。',code:'space_access_revoked'},403);
   }
   c.set('space',space);await next();
 });

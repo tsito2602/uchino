@@ -5,8 +5,8 @@ import type {DataMode} from './data-mode';
 import {Brand,type Session} from './auth';
 import {AppearanceSettings} from './appearance-settings';
 
-type Props={spaceName?:string;onSpaceSettings:()=>void;session:Session;pending:number;updateReady:boolean;dataMode:DataMode;changingData:boolean;onDataMode:(mode:DataMode)=>void;onSync:()=>void;onExport:()=>void;onUpdate:()=>void;onLogout:()=>void};
-export function SettingsPage({spaceName,onSpaceSettings,session,pending,updateReady,dataMode,changingData,onDataMode,onSync,onExport,onUpdate,onLogout}:Props){
+type Props={onSpaceSettings:()=>void;session:Session;pending:number;updateReady:boolean;dataMode:DataMode;changingData:boolean;onDataMode:(mode:DataMode)=>void;onSync:()=>void;onExport:()=>void;onUpdate:()=>void;onLogout:()=>void};
+export function SettingsPage({onSpaceSettings,session,pending,updateReady,dataMode,changingData,onDataMode,onSync,onExport,onUpdate,onLogout}:Props){
   return <div className="settings-page">
     <section className="section settings-section">
       <h2 className="section-heading">{session.local?<Smartphone size={20}/>:<UserRound size={20}/>}アカウント・保存先</h2>
@@ -14,10 +14,10 @@ export function SettingsPage({spaceName,onSpaceSettings,session,pending,updateRe
         {session.local?<span className="account-avatar"><Smartphone size={20}/></span>:session.user.avatarUrl?<img className="account-avatar" src={session.user.avatarUrl} referrerPolicy="no-referrer" alt="Googleアカウントのアイコン"/>:<span className="account-avatar" aria-hidden="true">{(session.user.name||session.user.email).slice(0,1)}</span>}
         <div><strong>{session.local?'この端末':session.user.name}</strong><p>{session.local?'このブラウザに保存':session.user.email}</p></div>
       </div>
-      <p className="subtle">{session.local?'機種変更の前にデータを書き出してください。':pending?`${pending}件の変更を同期待ちです。`:'選択中のスペースに保存・同期します。'}</p>
+      <p className="subtle">{session.local?'機種変更の前にデータを書き出してください。':pending?`${pending}件の変更を同期待ちです。`:'選択中のレシピ帳に保存・同期します。'}</p>
       {!session.local&&<button className="settings-add-card" onClick={onSync}><RefreshCw size={18}/>今すぐ同期</button>}
     </section>
-    {!session.local&&<section className="section settings-section"><h2 className="section-heading"><UsersRound size={20}/>スペース</h2><button className="settings-add-card" onClick={onSpaceSettings}><UsersRound size={18}/>{spaceName}<ChevronRight size={18}/></button></section>}
+    {!session.local&&<section className="section settings-section"><h2 className="section-heading"><UsersRound size={20}/>レシピ帳</h2><button className="settings-add-card" onClick={onSpaceSettings}><UsersRound size={18}/>レシピ帳の設定<ChevronRight size={18}/></button></section>}
     <AppearanceSettings/>
     <section className="section settings-section">
       <h2 className="section-heading"><Database size={20} aria-hidden="true"/>表示するデータ</h2>

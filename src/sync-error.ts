@@ -1,6 +1,6 @@
 export async function syncFailure(response:Response):Promise<Error>{
   if(response.status===401)return new Error('ログインの有効期限が切れています。再ログインすると、端末に保存した変更を同期できます。');
-  if(response.status===403){if(typeof window!=='undefined')window.dispatchEvent(new Event('uchino:spaces-refresh'));return new Error('このスペースへのアクセス権がなくなりました。スペースを切り替えてください。');}
+  if(response.status===403){if(typeof window!=='undefined')window.dispatchEvent(new Event('uchino:spaces-refresh'));return new Error('このレシピ帳へのアクセス権がなくなりました。レシピ帳を切り替えてください。');}
   if(response.status===409){
     const body=await response.json().catch(()=>null) as {code?:string}|null;
     if(body?.code==='recipebook_required'){if(typeof window!=='undefined')window.dispatchEvent(new Event('uchino:spaces-refresh'));return new Error('レシピ帳を作るか、招待されたレシピ帳に参加してください。端末のデータは保持されています。');}

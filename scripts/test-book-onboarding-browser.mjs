@@ -25,7 +25,7 @@ try{
  await a.getByRole('button',{name:'キーボードを閉じる',exact:true}).click();await a.getByRole('button',{name:'戻る',exact:true}).click();await a.getByRole('dialog').waitFor({state:'detached'});
  assert.equal(b.database.prepare('SELECT count(*) n FROM recipe_spaces').get().n,0);
  await a.getByRole('button',{name:/^レシピ帳を作る/}).click();await a.getByRole('textbox',{name:'レシピ帳名',exact:true}).fill('ふたりのレシピ');await a.getByRole('button',{name:'作成する',exact:true}).click();
- await a.getByRole('button',{name:'スペースを切り替え：ふたりのレシピ',exact:true}).waitFor();await a.reload();await a.getByRole('button',{name:'スペースを切り替え：ふたりのレシピ',exact:true}).waitFor();
+ await a.getByRole('button',{name:'レシピ帳を切り替え：ふたりのレシピ',exact:true}).waitFor();await a.reload();await a.getByRole('button',{name:'レシピ帳を切り替え：ふたりのレシピ',exact:true}).waitFor();
  const space=(await (await b.request('/api/spaces')).json()).spaces[0];assert.equal(space.name,'ふたりのレシピ');
  await b.put({...newRecipe(),id:'family-recipe',title:'ふたりの卵焼き',ingredients:[{name:'卵',quantity:'2',unit:'個'}],steps:['焼く']});
  const code=(await (await b.request(`/api/spaces/${space.id}/invites`,{method:'POST',body:'{}'})).json()).code;

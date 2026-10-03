@@ -17,3 +17,9 @@
 
 .card-panel-frame:has(>.recipe-space-panel){height:auto;max-height:100%}
 .recipe-space-panel{height:auto}
+
+/* Settings fill the available floating viewport, above the context dock. */
+.card-panel-frame:has(>.recipe-book-settings-panel){height:100%;max-height:100%}
+.recipe-book-settings-panel{height:100%}
+.page-heading{overflow-wrap:anywhere}
+.page-heading>svg{flex-shrink:0}
