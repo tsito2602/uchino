@@ -1,4 +1,4 @@
-import {importIssues,type ImportResult} from '../src/import-model';
+import {importIssues,type ImportResult,type SourceDiagnostics} from '../src/import-model';
 import {ImportFailure} from '../src/import-errors';
 import {youtubeVideo} from '../src/youtube';
 import {abortable,aiConfigured,bindingJson,recipeFromExtraction,recipeInstruction,recipeSchema,type ImportBindings,type ImportOptions} from './import-ai';
@@ -46,7 +46,9 @@ export async function importYouTube(value:string,env:ImportBindings,options:Impo
   if(!video)throw new Error('YouTubeの動画URLを入力してください。動画の共有リンク・Shortsにも対応しています。');
   if(!aiConfigured(env)||typeof env.AI?.gateway!=='function')throw new Error('動画の取り込みは準備中です。AIの接続設定を確認してください。');
   const signal=AbortSignal.any([AbortSignal.timeout(300000),...(options.signal?[options.signal]:[])]);
-  const metadata=await fetchYouTubeMetadata(video,signal);
+  let sourceDiagnostics:SourceDiagnostics|undefined;
+  const metadata=await fetchYouTubeMetadata(video,signal,diagnostics=>{sourceDiagnostics=diagnostics;});
+  if(sourceDiagnostics)console.warn(JSON.stringify({event:'youtube_metadata_failed',...sourceDiagnostics}));
   options.onPhase?.('video');signal.throwIfAborted();
   let raw:unknown,status:number|undefined;
   try{
@@ -94,5 +96,5 @@ export async function importYouTube(value:string,env:ImportBindings,options:Impo
   result.issues=importIssues(result.recipe,result.issues);
   const photo=await importRecipePhoto([`https://i.ytimg.com/vi/${video.id}/maxresdefault.jpg`,`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`],new URL(video.url),signal);
   const warnings=[...(photo.warnings||[]),...(!metadata?['概要欄を取得できなかったため、動画から読み取りました。概要欄に分量がある場合は照合してください。']:[])];
-  return {...result,...photo,...(warnings.length?{warnings}:{}),source:{kind:'video',name:metadata?.title||result.recipe.title,url:video.url,...(metadata?.description?{text:metadata.description}:{})}};
+  return {...result,...photo,...(sourceDiagnostics?{sourceDiagnostics}:{}),...(warnings.length?{warnings}:{}),source:{kind:'video',name:metadata?.title||result.recipe.title,url:video.url,...(metadata?.description?{text:metadata.description}:{})}};
 }

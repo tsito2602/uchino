@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
-import {videoId,videoUrl,description,videoRecipe,playerHtml,geminiResponse} from './youtube-fixture.mjs';
+import {videoId,videoUrl,description,videoRecipe,playerHtml,watchHtml,watchData,geminiResponse} from './youtube-fixture.mjs';
 import {photoFixture} from './photo-fixture.mjs';
 const built=await build({stdin:{contents:"export * from './worker/import';export * from './worker/import-youtube';export * from './worker/youtube-metadata';export * from './src/youtube';export * from './src/domain';",resolveDir:process.cwd()},bundle:true,write:false,format:'esm',platform:'node'});
 const {importUrl,importYouTube,youtubeMetadata,fetchYouTubeMetadata,youtubeVideo,youtubeStepUrl,geminiOutput,validateRecord,removeRecipeStep}=await import('data:text/javascript;base64,'+Buffer.from(built.outputFiles[0].text).toString('base64'));
@@ -88,7 +88,7 @@ test('complete, ingredient-only and empty descriptions all retain their original
 test('an unavailable page does not block supported direct-video input and never follows consent redirects',async t=>{
  t.mock.method(globalThis,'fetch',async url=>String(url)===videoUrl?new Response(null,{status:302,headers:{location:'https://consent.youtube.com/'}}):new Response(null,{status:404}));
  const result=await importYouTube(videoUrl,env(async(input)=>{assert.match(input.contents[0].parts[1].text,/概要欄は取得できません/);return geminiResponse();}));
- assert.deepEqual(result.recipe.steps,videoRecipe.steps);assert.equal(result.source.text,undefined);assert.ok(result.warnings.length);
+ assert.deepEqual(result.recipe.steps,videoRecipe.steps);assert.equal(result.source.text,undefined);assert.ok(result.warnings.length);assert.equal(result.sourceDiagnostics.code,'redirect');assert.equal(result.sourceDiagnostics.httpStatus,302);
 });
 
 test('invented weights from visual counts are removed and invalid timestamps never become links',async t=>{
@@ -145,4 +145,57 @@ test('YouTube channel/playlist URLs and missing configuration fail before any ou
  await assert.rejects(importUrl('https://www.youtube.com/@chef',{},env(async()=>{throw new Error('Unexpected AI');})),/動画URL/);
  await assert.rejects(importYouTube(videoUrl,{}),/接続設定/);assert.equal(calls,0);
  await assert.rejects(importYouTube(videoUrl,{AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:'uchino',AI:{run:async()=>assert.fail('Unexpected proxy call')}}),/接続設定/);assert.equal(calls,0);
+});
+
+test('current watch-page JSON reaches Gemini even when player metadata is absent',async t=>{
+ source(t,watchHtml());
+ const result=await importYouTube(videoUrl,env(async(input)=>{
+  assert.ok(input.contents[0].parts[1].text.includes(description));return geminiResponse();
+ }));
+ assert.equal(result.source.text,description);assert.equal(result.source.name,'卵焼きの作り方');
+ assert.equal(result.sourceDiagnostics,undefined);assert.equal(result.warnings,undefined);
+ assert.equal(youtubeMetadata(watchHtml(description,'differentID'),videoId),null);
+ const data={videoDetails:{videoId,title:'卵焼き',shortDescription:description,lengthSeconds:'180'}};
+ assert.equal(youtubeMetadata(`<script id="yt-initial-player-response" type="application/json">${JSON.stringify(data)}</script>`,videoId).description,description);
+});
+
+test('watch metadata supports old runs, window assignments and the expanded description panel',()=>{
+ for(const style of ['runs','panel']){
+  const data=watchData();
+  const contents=data.contents.twoColumnWatchNextResults.results.results.contents;
+  delete contents[1].videoSecondaryInfoRenderer.attributedDescription;
+  if(style==='runs')contents[1].videoSecondaryInfoRenderer.description={runs:[{text:'材料\n'},{text:'卵 2個 & 塩'}]};
+  else data.engagementPanels=[{engagementPanelSectionListRenderer:{content:{structuredDescriptionContentRenderer:{items:[{expandableVideoDescriptionBodyRenderer:{attributedDescriptionBodyText:{content:'材料\n卵 2個 & 塩'}}}]}}}}];
+  for(const assignment of ['var ytInitialData =',"window['ytInitialData'] =",'window["ytInitialData"] =']){
+   const html=`<script>${assignment} ${JSON.stringify(data)};</script>`;
+   assert.equal(youtubeMetadata(html,videoId).description,'材料\n卵 2個 & 塩');
+  }
+ }
+ // The selected video's absent description cannot be filled from recommendations.
+ const data=watchData();data.contents.twoColumnWatchNextResults.results.results.contents.pop();
+ data.contents.twoColumnWatchNextResults.secondaryResults={results:[{videoSecondaryInfoRenderer:{attributedDescription:{content:'Wrong recipe'}}}]};
+ assert.equal(youtubeMetadata(`<script>var ytInitialData = ${JSON.stringify(data)};</script>`,videoId),null);
+ assert.equal(youtubeMetadata('<script id="yt-initial-data">{invalid}</script>',videoId),null);
+ assert.equal(youtubeMetadata(watchHtml(''),videoId).description,'');
+});
+
+test('missing metadata reports bounded diagnostics without page contents or URLs',async t=>{
+ const body='<script>var ytInitialPlayerResponse={"playabilityStatus":{"status":"UNPLAYABLE","reason":"private-page-text"}};</script><script id="yt-initial-data">{"currentVideoEndpoint":{"watchEndpoint":{"videoId":"wrong"}}}</script>';
+ source(t,body);const logs=[];t.mock.method(console,'warn',message=>logs.push(message));
+ const result=await importYouTube(videoUrl,env(async()=>geminiResponse()));
+ assert.deepEqual(result.sourceDiagnostics,{code:'metadata_missing',httpStatus:200,bytes:Buffer.byteLength(body),playerDataFound:true,pageDataFound:true});
+ assert.equal(JSON.parse(logs[0]).event,'youtube_metadata_failed');
+ assert.ok(!JSON.stringify(result.sourceDiagnostics).includes('private-page-text'));assert.ok(!logs[0].includes(videoId));
+});
+
+test('metadata HTTP, content type and network failures have distinct diagnostics; cancellation still propagates',async t=>{
+ for(const [response,code] of [[new Response(null,{status:403}),'http_error'],[new Response('{}',{headers:{'content-type':'application/json'}}),'not_html'],[new Response(null,{headers:{'content-type':'text/html'}}),'empty_response'],[new Error('private-fetch-detail'),'network_error']]){
+  await t.test(code,async t=>{
+   t.mock.method(globalThis,'fetch',async()=>{if(response instanceof Error)throw response;return response;});
+   let diagnostic;assert.equal(await fetchYouTubeMetadata({id:videoId,url:videoUrl},new AbortController().signal,value=>{diagnostic=value;}),null);
+   assert.equal(diagnostic.code,code);assert.ok(!JSON.stringify(diagnostic).includes('private-fetch-detail'));
+  });
+ }
+ const controller=new AbortController();controller.abort(new Error('cancelled'));let diagnostic;
+ await assert.rejects(()=>fetchYouTubeMetadata({id:videoId,url:videoUrl},controller.signal,value=>{diagnostic=value;}),/cancelled/);assert.equal(diagnostic,undefined);
 });
