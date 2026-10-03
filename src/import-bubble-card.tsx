@@ -89,7 +89,7 @@ export function ImportBubbleCard({progress}:{progress:ImportProgress}) {
     },620);
     return()=>clearTimeout(timer);
   },[done,reduced]);
-  return <div className="import-bubble" role="img" aria-label={recipe?`${recipe.title}を一枚のレシピにまとめています`:'レシピを読み取っています'}>
+  return <div className="import-bubble" role="img" aria-label={recipe?`${recipe.title}を読み取っています`:'レシピを読み取っています'}>
     <svg width="0" height="0" aria-hidden="true" style={{position:'absolute'}}><defs><filter id={filter}><feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b"/><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"/></filter></defs></svg>
     <div ref={card} className="import-bubble-card" data-waiting={!recipe||undefined} data-done={done||undefined}>
       {!reduced&&<div className="import-bubble-goo" aria-hidden="true" style={{filter:`url(#${filter})`}}>

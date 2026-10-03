@@ -11,10 +11,11 @@ export function ImportFormedCard({recipe}:{recipe:Recipe}) {
   return <div className="import-formed" aria-hidden="true" data-finish={finish}>
     <div className="import-formed-frame"><div className="import-formed-card">
       <RecipePhoto recipe={recipe} priority/>
-      <div className="import-formed-copy"><span><RecipeCategoryIcon category={recipe.category} size={11}/>{recipe.category}</span><strong>{recipe.title}</strong></div>
+      <span className="import-formed-category"><RecipeCategoryIcon category={recipe.category} size={11}/>{recipe.category}</span>
+      <div className="import-formed-copy"><strong>{recipe.title}</strong></div>
       <span className="import-formed-check"><Check size={14} strokeWidth={2.6}/></span>
     </div>
-    {finish==='steam'?<span className="import-formed-steam"><i/><i/><i/></span>:<span className="import-formed-glint"><i/><i/><i/></span>}
+    {finish==='steam'?<span className="import-formed-steam"><svg viewBox="0 0 24 48"><path d="M12 46C5 39 19 31 12 23S5 9 12 2"/></svg><svg viewBox="0 0 24 48"><path d="M12 46C5 39 19 31 12 23S5 9 12 2"/></svg><svg viewBox="0 0 24 48"><path d="M12 46C5 39 19 31 12 23S5 9 12 2"/></svg></span>:<span className="import-formed-glint"><i/><i/><i/></span>}
     </div>
   </div>;
 }
