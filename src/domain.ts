@@ -1,3 +1,8 @@
+export function photoReference(value:unknown):{owner:string;hash:string;key:string}|null {
+  if(typeof value!=='string')return null;
+  const match=value.match(/^\/api\/photos\/([a-f0-9]{64})\/([a-f0-9]{64})\.jpg$/);
+  return match?{owner:match[1],hash:match[2],key:`${match[1]}/${match[2]}.jpg`}:null;
+}
 export const categories = ['すべて','主菜','副菜','汁物','主食','おやつ','その他'] as const;
 export type Category = Exclude<typeof categories[number], 'すべて'>;
 export type Ingredient = {name:string;quantity:string;unit:string;group?:string};
@@ -9,7 +14,7 @@ export const MAX_PHOTO_URL_LENGTH=23+4*Math.ceil(MAX_PHOTO_BYTES/3);
 export const demoPhotos={ginger:'/recipe-photos/ginger.webp',salad:'/recipe-photos/salad.webp',soup:'/recipe-photos/soup.webp',chicken:'/recipe-photos/chicken.webp'};
 export function validRecipePhoto(value:unknown):value is string {
   if(typeof value!=='string'||value.length>MAX_PHOTO_URL_LENGTH)return false;
-  if(value===''||Object.values(demoPhotos).includes(value))return true;
+  if(value===''||Object.values(demoPhotos).includes(value)||photoReference(value))return true;
   if(!value.startsWith('data:image/jpeg;base64,'))return false;
   const encoded=value.slice(23);
   if(!encoded||encoded.length%4!==0||/[^A-Za-z0-9+/=]/.test(encoded)||!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded))return false;

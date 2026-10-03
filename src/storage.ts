@@ -3,8 +3,9 @@ import {validateRecord,recipePhoto,type Kind,type RecordData,type Recipe} from '
 import {samples} from './samples';
 import {syncFailure} from './sync-error';
 import {demoScope,isLegacyDemoRecipe,localOnlyScope} from './data-mode';
-export type Row = {key:string;kind:Kind;id:string;data:RecordData;revision:number;deleted:boolean;pending:boolean;editId:string};
-type RemoteRow=Omit<Row,'key'|'pending'|'editId'>;
+import {cacheUploadedPhotos,cacheRemotePhotos,hasEmbeddedPhotos} from './photo-cache';
+export type Row = {key:string;kind:Kind;id:string;data:RecordData;revision:number;deleted:boolean;pending:boolean;editId:string;photoMigration?:boolean};
+type RemoteRow=Omit<Row,'key'|'pending'|'editId'|'photoMigration'>;
 const eventName='uchino:data';
 let database:Promise<IDBDatabase>|undefined;
 function db(){return database??=new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('uchino',1);r.onupgradeneeded=()=>r.result.createObjectStore('records',{keyPath:'key'});r.onsuccess=()=>resolve(r.result);r.onerror=()=>{database=undefined;reject(new Error('端末に保存できません。ブラウザの保存設定を確認してください。'));};});}
@@ -71,17 +72,45 @@ export function synchronize(scope:string):Promise<void>{
   const currentSync=syncing.get(scope);if(currentSync)return currentSync;
   const operation=(async()=>{
     await prepareData(scope);
-    const local=await rows(scope);
-    for(const row of local.filter(r=>r.pending)){
-      const response=await fetch(`/api/data/${row.kind}/${row.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:row.data,deleted:row.deleted,revision:row.revision,editId:row.editId}),signal:AbortSignal.timeout(15000)});
-      if(!response.ok)throw await syncFailure(response);
-      const remote=await response.json() as {revision:number};
-      await exclusive(async()=>{const current=(await rows(scope)).find(r=>r.key===row.key);if(current)await write({...current,revision:remote.revision,pending:current.editId!==row.editId});});
-    }
+    const flushPending=async()=>{
+      const local=await rows(scope);
+      for(const row of local.filter(r=>r.pending)){
+        const response=await fetch(`/api/data/${row.kind}/${row.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:row.data,deleted:row.deleted,revision:row.revision,editId:row.editId}),signal:AbortSignal.timeout(row.kind==='recipe'?90000:15000)});
+        // A storage-only migration must not overwrite a newer edit on another
+        // device or trap this device in a conflict. Fetch its latest row again.
+        if(response.status===409&&row.photoMigration){
+          await exclusive(async()=>{const current=(await rows(scope)).find(r=>r.key===row.key);if(current?.editId===row.editId)await write({...current,pending:false,photoMigration:false});});continue;
+        }
+        if(!response.ok)throw await syncFailure(response);
+        const remote=await response.json() as {revision:number;data?:RecordData};
+        const canonical=remote.data===undefined?row.data:validateRecord(row.kind,remote.data);
+        if(!canonical||canonical.id!==row.id||!Number.isInteger(remote.revision))throw new Error('同期結果を確認できませんでした。端末のデータは保持されています。');
+        if(row.kind==='recipe')await cacheUploadedPhotos(row.data as Recipe,canonical as Recipe);
+        await exclusive(async()=>{
+          const current=(await rows(scope)).find(r=>r.key===row.key);
+          if(current)await write({...current,revision:remote.revision,...(current.editId===row.editId?{data:canonical,pending:false,photoMigration:false}:{pending:true})});
+        });
+      }
+    };
+    await flushPending();
     const response=await fetch('/api/data',{cache:'no-store',signal:AbortSignal.timeout(15000)});
     if(!response.ok)throw await syncFailure(response);
-    const result=await response.json() as {records:RemoteRow[]};
-    await exclusive(async()=>{const current=await rows(scope);for(const remote of result.records){const k=key(scope,remote.kind,remote.id);if(!current.find(r=>r.key===k)?.pending&&validateRecord(remote.kind,remote.data))await write({...remote,key:k,pending:false,editId:crypto.randomUUID()});}await separateLegacyDemos(scope);});
+    const result=await response.json() as {records:RemoteRow[];photoStorage?:string};
+    await exclusive(async()=>{
+      const current=await rows(scope);
+      for(const remote of result.records){
+        const k=key(scope,remote.kind,remote.id);
+        if(!current.find(r=>r.key===k)?.pending&&validateRecord(remote.kind,remote.data)){
+          const photoMigration=result.photoStorage==='r2'&&remote.kind==='recipe'&&hasEmbeddedPhotos(remote.data as Recipe);
+          await write({...remote,key:k,pending:photoMigration,photoMigration,editId:crypto.randomUUID()});
+        }
+      }
+      await separateLegacyDemos(scope);
+    });
+    // Existing cloud photos migrate on the first successful sync, not only when
+    // the user happens to edit a recipe. Guest/demo data remain entirely local.
+    if(result.photoStorage==='r2')await flushPending();
+    await cacheRemotePhotos((await rows(scope)).filter(row=>row.kind==='recipe').map(row=>row.data as Recipe));
   })().finally(()=>{syncing.delete(scope);});syncing.set(scope,operation);return operation;
 }
 export function useRecords(scope:string,autoSync=true){

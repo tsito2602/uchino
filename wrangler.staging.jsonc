@@ -6,6 +6,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "ai": { "binding": "AI" },
+  "r2_buckets": [{ "binding": "RECIPE_PHOTOS" }],
   "d1_databases": [
     {
       "binding": "DB",
