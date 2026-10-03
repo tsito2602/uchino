@@ -85,7 +85,14 @@
 /* Titles wrap only between phrases (see phrases.ts). */
 .phrase-text{word-break:keep-all;overflow-wrap:break-word}
 
-/* Finishing the list: rows collapse first, then the empty state rises into place. */
-.empty-state.empty-state-arriving{animation:empty-arrive 820ms cubic-bezier(.22,.72,.18,1) 380ms both}
+/* Every empty state (recipes, search, shopping) rises into place the same way;
+   after finishing a list it waits for the rows to collapse first. */
+.empty-state{animation:empty-arrive 820ms cubic-bezier(.22,.72,.18,1) 120ms both}
+.empty-state.empty-state-arriving{animation-delay:380ms}
 @keyframes empty-arrive{from{opacity:0;transform:translateY(14px) scale(.98);filter:blur(6px)}to{opacity:1;transform:none;filter:blur(0)}}
-@media(prefers-reduced-motion:reduce){.empty-state.empty-state-arriving{animation:none}}
+@media(prefers-reduced-motion:reduce){.empty-state{animation:none}}
+
+/* The recipe-book button sits on the page heading's line (40px shell padding +
+   half of the 31.5px heading - half of the 44px button). */
+.space-switcher{top:calc(env(safe-area-inset-top) + 34px)}
+@media(min-width:760px){.space-switcher{top:calc(env(safe-area-inset-top) + 52px)}}
