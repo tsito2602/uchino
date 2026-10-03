@@ -1,3 +1,4 @@
+import {scopeRequest} from './spaces';
 import {useEffect,useState} from 'react';
 import {validateRecord,recipePhoto,type Kind,type RecordData,type Recipe} from './domain';
 import {samples} from './samples';
@@ -75,7 +76,8 @@ export function synchronize(scope:string):Promise<void>{
     const flushPending=async()=>{
       const local=await rows(scope);
       for(const row of local.filter(r=>r.pending)){
-        const response=await fetch(`/api/data/${row.kind}/${row.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:row.data,deleted:row.deleted,revision:row.revision,editId:row.editId}),signal:AbortSignal.timeout(row.kind==='recipe'?90000:15000)});
+        const target=scopeRequest(scope,`/${row.kind}/${row.id}`);
+        const response=await fetch(target.url,{method:'PUT',headers:{'Content-Type':'application/json','X-Uchino-User':target.userId},body:JSON.stringify({data:row.data,deleted:row.deleted,revision:row.revision,editId:row.editId}),signal:AbortSignal.timeout(row.kind==='recipe'?90000:15000)});
         // A storage-only migration must not overwrite a newer edit on another
         // device or trap this device in a conflict. Fetch its latest row again.
         if(response.status===409&&row.photoMigration){
@@ -93,7 +95,8 @@ export function synchronize(scope:string):Promise<void>{
       }
     };
     await flushPending();
-    const response=await fetch('/api/data',{cache:'no-store',signal:AbortSignal.timeout(15000)});
+    const target=scopeRequest(scope);
+    const response=await fetch(target.url,{headers:{'X-Uchino-User':target.userId},cache:'no-store',signal:AbortSignal.timeout(15000)});
     if(!response.ok)throw await syncFailure(response);
     const result=await response.json() as {records:RemoteRow[];photoStorage?:string};
     await exclusive(async()=>{
@@ -116,7 +119,7 @@ export function synchronize(scope:string):Promise<void>{
 export function useRecords(scope:string,autoSync=true){
   const [data,setData]=useState<Row[]>([]),[ready,setReady]=useState(false),[error,setError]=useState('');
   useEffect(()=>{let active=true;const load=()=>{void prepareData(scope).then(()=>rows(scope)).then(v=>{if(active){setData(v);setReady(true);}}).catch(e=>{if(active)setError(String(e.message));});};load();window.addEventListener(eventName,load);return()=>{active=false;window.removeEventListener(eventName,load);};},[scope]);
-  useEffect(()=>{if(!autoSync)return;let active=true;const sync=()=>{void synchronize(scope).then(()=>{if(active)setError('');}).catch(e=>{if(active)setError(e.message);});};sync();window.addEventListener('online',sync);const timer=setInterval(sync,30000);return()=>{active=false;clearInterval(timer);window.removeEventListener('online',sync);};},[scope,autoSync]);
+  useEffect(()=>{if(!autoSync)return;let active=true;const sync=()=>{void synchronize(scope).then(()=>{if(active)setError('');}).catch(e=>{if(active)setError(e.message);});};sync();window.addEventListener('online',sync);window.addEventListener('focus',sync);const timer=setInterval(sync,30000);return()=>{active=false;clearInterval(timer);window.removeEventListener('online',sync);window.removeEventListener('focus',sync);};},[scope,autoSync]);
   async function save(kind:Kind,record:RecordData,deleted=false){await saveRecord(scope,kind,record,deleted);void synchronize(scope).then(()=>setError('')).catch(e=>setError(e.message));}
   async function saveMany(kind:Kind,records:RecordData[],deleted=false){await saveRecords(scope,kind,records,deleted);void synchronize(scope).then(()=>setError('')).catch(e=>setError(e.message));}
   return {rows:data.filter(r=>!r.deleted),allRows:data,ready,error,setError,save,saveMany,pending:data.filter(r=>r.pending).length};

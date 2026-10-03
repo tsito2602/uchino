@@ -1,3 +1,6 @@
+import {useSpaces,type SpacesController} from './use-spaces';
+import {useSpaceControls} from './space-controls';
+import {spaceScope} from './spaces';
 import {exportRecipePhotos} from './photo-cache';
 import {SHOPPING_UNDO_MS} from './shopping-undo';
 import {ShoppingList} from './shopping-list';
@@ -25,7 +28,14 @@ import {checkUpdate,applyUpdate} from './pwa';
 type DetailView={kind:'detail';id:string;origin?:PanelOrigin};
 type View=DetailView|{kind:'edit';draft:Recipe;isNew:boolean;parent?:DetailView;parentRecipe?:Recipe}|{kind:'import'}|{kind:'shopping'}|{kind:'shopping-finish'}|{kind:'filters'};
 export function App({session}:{session:Session}){
-  const realScope=session.local?'guest':`user-${session.user.id}`;
+  const spaces=useSpaces(session);
+  const backgroundScopes=spaces.spaces.filter(space=>space.id!==spaces.space?.id).map(space=>spaceScope(session.user.id,space)).join('|');
+  useEffect(()=>{if(session.local)return;let active=true;const sync=()=>{for(const scope of backgroundScopes.split('|').filter(Boolean))void rows(scope).then(async records=>{if(active&&records.some(row=>row.pending))await synchronize(scope);}).catch(()=>{});};sync();window.addEventListener('online',sync);const timer=setInterval(sync,30000);return()=>{active=false;clearInterval(timer);window.removeEventListener('online',sync);};},[backgroundScopes,session.local]);
+  if(!session.local&&navigator.onLine&&(!spaces.ready||!spaces.space))return <main className="shell"><p role={spaces.error?'alert':'status'}>{spaces.error||'スペースを読み込んでいます…'}</p>{spaces.error&&<button className="secondary" onClick={()=>void spaces.refresh().catch(()=>{})}>再試行</button>}</main>;
+  const realScope=session.local?'guest':spaces.space?spaceScope(session.user.id,spaces.space):`user-${session.user.id}`;
+  return <ScopedApp key={realScope} session={session} realScope={realScope} spaces={spaces}/>;
+}
+function ScopedApp({session,realScope,spaces}:{session:Session;realScope:string;spaces:SpacesController}){
   const [mode,setMode]=useState<DataMode|null>(null),[tab,setTab]=useState<Tab>('recipes'),[error,setError]=useState(''),[attempt,setAttempt]=useState(0);
   useEffect(()=>{let active=true;setError('');void prepareData(realScope).then(async legacy=>{
     const selected=getDataMode(realScope)??(legacy?'demo':'real');
@@ -37,9 +47,9 @@ export function App({session}:{session:Session}){
     rememberDataMode(realScope,next);setMode(next);
   }
   if(!mode)return <main className="shell"><p role={error?'alert':'status'}>{error||'読み込んでいます…'}</p>{error&&<button className="secondary" onClick={()=>setAttempt(value=>value+1)}>再試行</button>}</main>;
-  return <RecipeApp key={mode} session={session} realScope={realScope} dataMode={mode} onDataMode={changeDataMode} tab={tab} onTab={setTab}/>;
+  return <RecipeApp key={mode} spaces={spaces} session={session} realScope={realScope} dataMode={mode} onDataMode={changeDataMode} tab={tab} onTab={setTab}/>;
 }
-function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab}:{session:Session;realScope:string;dataMode:DataMode;onDataMode:(mode:DataMode)=>Promise<void>;tab:Tab;onTab:(tab:Tab)=>void}){
+function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces}:{spaces:SpacesController;session:Session;realScope:string;dataMode:DataMode;onDataMode:(mode:DataMode)=>Promise<void>;tab:Tab;onTab:(tab:Tab)=>void}){
   const [menuPhase,setMenuPhase]=useState<'closed'|'open'|'closing'>('closed');
   const pendingAdd=useRef<(()=>void)|null>(null);
   const addOptions:AddOption[]=[
@@ -117,9 +127,10 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab}:{session:Se
     const items=shoppingUndo.items;
     try{await run(async()=>{await store.saveMany('shopping',items);setShoppingUndo(null);setNotice('買い物リストを戻しました');});}finally{shoppingInFlight.current=false;}
   }
-  async function exportData(){const records=[];for(const {kind,data,deleted,pending} of store.allRows)records.push({kind,data:kind==='recipe'?await exportRecipePhotos(data as Recipe):data,deleted,pending});const blob=new Blob([JSON.stringify({app:'uchino',version:1,dataMode,exportedAt:new Date().toISOString(),records},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`uchino-${dataMode}-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);}
+  async function exportData(){const records=[];for(const {kind,data,deleted,pending} of store.allRows)records.push({kind,data:kind==='recipe'?await exportRecipePhotos(data as Recipe):data,deleted,pending});const blob=new Blob([JSON.stringify({app:'uchino',version:1,dataMode,space:spaces.space?{id:spaces.space.id,name:spaces.space.name}:null,exportedAt:new Date().toISOString(),records},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`uchino-${dataMode}-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);}
   async function selectDataMode(mode:DataMode){if(mode===dataMode)return;await run(()=>onDataMode(mode));}
-  async function canLeave(){if((await rows(realScope)).some(row=>row.pending)){store.setError('未同期の変更があります。実データに切り替えて同期または書き出しをしてください。');return false;}return true;}
+  async function canLeave(){const scopes=session.local?[realScope]:spaces.spaces.map(space=>spaceScope(session.user.id,space));if((await Promise.all(scopes.map(rows))).flat().some(row=>row.pending)){store.setError('未同期の変更があります。実データに切り替えて同期または書き出しをしてください。');return false;}return true;}
+  const spaceControls=useSpaceControls({controller:spaces,userId:session.user.id,disabled:!!view||menuPhase!=='closed',onSelect:async id=>{spaces.select(id);}});
   const PageIcon=tab==='recipes'?BookOpen:tab==='shopping'?ShoppingBasket:Settings;
   const filterCount=Number(!!query.trim())+Number(selectedCategories.length>0)+Number(favorites);
   const importFlow=useRecipeImport({active:view?.kind==='import',mode:importMode,ai,allowDemo:allowDemo&&dataMode==='demo',local:session.local,closing,onClose:close,onExited:()=>{setView(null);setClosing(false);},onManual:()=>open({kind:'edit',draft:newRecipe(),isNew:true}),onSave:async recipe=>{await store.save('recipe',recipe);setNotice('レシピを保存しました');setClosing(true);}});
@@ -128,14 +139,15 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab}:{session:Se
   return <>
     <main className="shell">
       <div id="main-content">
-      <header className="screen-page-top page-top"><div><h1 className="page-heading"><PageIcon aria-hidden="true"/>{tab==='recipes'?'レシピ':tab==='shopping'?'買い物メモ':'設定'}</h1><p className="page-count">{tab==='recipes'?`${recipes.length}件のレシピ`:tab==='shopping'?`${shopping.filter(i=>!i.done).length}件の買うもの`:session.local?'この端末に保存':session.user.name||session.user.email}</p></div>{dataMode==='demo'&&<span className="data-mode-badge">デモ</span>}</header>
+      <header className="screen-page-top page-top"><div><h1 className="page-heading"><PageIcon aria-hidden="true"/>{tab==='recipes'?'レシピ':tab==='shopping'?'買い物メモ':'設定'}</h1><p className="page-count">{tab==='recipes'?`${recipes.length}件のレシピ`:tab==='shopping'?`${shopping.filter(i=>!i.done).length}件の買うもの`:session.local?'この端末に保存':session.user.name||session.user.email}</p>{!session.local&&<p className="space-current-name">{spaces.space?.name}</p>}</div>{dataMode==='demo'&&<span className="data-mode-badge">デモ</span>}</header>
+      {spaces.error&&<p className="subtle" role="status">スペースの更新に失敗しました。通信が戻ると再試行します。</p>}
       {store.error&&<div className="notice" role="alert"><span>{store.error}</span><button aria-label="通知を閉じる" onClick={()=>store.setError('')}>×</button></div>}
       {!store.ready&&!store.error&&<p className="subtle" role="status">読み込んでいます…</p>}
       {tab==='recipes'&&<>
         {filtered.length?<div className="recipe-list">{filtered.map(recipe=><article className="recipe-row" key={recipe.id}><button className="recipe-open" onClick={e=>{setServings(recipe.servings);setChecked([]);open({kind:'detail',id:recipe.id,origin:panelOrigin(e.currentTarget)});}}><RecipePhoto recipe={recipe}/><div className="recipe-row-copy"><span className="recipe-category"><RecipeCategoryIcon category={recipe.category}/>{recipe.category}</span><h2>{recipe.title}</h2>{recipe.minutes&&<p><span><Clock size={13}/>{recipe.minutes}分</span></p>}</div></button><RecipeFavorite recipe={recipe} onToggle={()=>void store.save('recipe',{...recipe,favorite:!recipe.favorite}).catch(e=>store.setError(e.message))}/></article>)}</div>:store.ready&&<div className="empty-state"><BookOpen size={40} strokeWidth={1.2}/><h2>{recipes.length?'レシピが見つかりません':'レシピを保存しよう'}</h2><p>{recipes.length?'検索条件を変えてみてください。':'URL・画像・手入力から追加できます。'}</p>{!recipes.length&&<><button className="primary" onClick={()=>setMenuPhase('open')}><Plus size={18}/>レシピを追加</button>{dataMode==='real'&&<button className="text-action" disabled={busy} onClick={()=>void selectDataMode('demo')}>サンプルを見てみる</button>}</>}</div>}</>}
       {tab==='shopping'&&<>{shoppingList()}{!shopping.length&&<div className="empty-state"><ShoppingBasket size={40} strokeWidth={1.2}/><h2>買うものをまとめよう</h2><p>レシピの材料からも追加できます。</p><button className="primary" onClick={()=>open({kind:'shopping'})}><Plus size={18}/>買うものを追加</button></div>}</>}
       {tab==='settings'&&formError&&<p className="form-error" role="alert">{formError}</p>}
-      {tab==='settings'&&<SettingsPage session={session} pending={pending} updateReady={updateReady} dataMode={dataMode} changingData={busy} onDataMode={mode=>void selectDataMode(mode)}
+      {tab==='settings'&&<SettingsPage spaceName={spaces.space?.name} onSpaceSettings={spaceControls.openSettings} session={session} pending={pending} updateReady={updateReady} dataMode={dataMode} changingData={busy} onDataMode={mode=>void selectDataMode(mode)}
         onSync={()=>void synchronize(realScope).then(()=>{store.setError('');setNotice('同期しました');}).catch(e=>store.setError(e.message))}
         onExport={()=>void exportData().catch(error=>store.setError(error.message))}
         onUpdate={()=>void canLeave().then(allowed=>allowed?(updateReady?applyUpdate():checkUpdate()).then(found=>{setUpdateReady(!!found);setNotice(found?'更新があります。もう一度押すと更新します。':'最新版です');}):undefined).catch(()=>setNotice('更新を確認できませんでした'))}
@@ -143,7 +155,9 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab}:{session:Se
       </div>
     </main>
     <FloatingViewport>
-    <Dock shoppingUndo={tab==='shopping'&&shoppingUndo?{expiresAt:shoppingUndo.expiresAt,onUndo:()=>void undoShopping(),disabled:busy}:undefined} onFinishShopping={tab==='shopping'&&shopping.length?requestFinishShopping:undefined} tab={tab} onTab={changeTab} onSearch={tab==='recipes'?()=>open({kind:'filters'}):undefined} filterCount={filterCount} addOpen={menuPhase==='open'} onAdd={tab==='settings'?undefined:()=>tab==='recipes'?setMenuPhase('open'):open({kind:'shopping'})} context={context}/>
+    {spaceControls.button}
+    {spaceControls.panel}
+    <Dock shoppingUndo={tab==='shopping'&&shoppingUndo?{expiresAt:shoppingUndo.expiresAt,onUndo:()=>void undoShopping(),disabled:busy}:undefined} onFinishShopping={tab==='shopping'&&shopping.length?requestFinishShopping:undefined} tab={tab} onTab={changeTab} onSearch={tab==='recipes'?()=>open({kind:'filters'}):undefined} filterCount={filterCount} addOpen={menuPhase==='open'} onAdd={tab==='settings'?undefined:()=>tab==='recipes'?setMenuPhase('open'):open({kind:'shopping'})} context={spaceControls.context??context}/>
     {menuPhase!=='closed'&&<FuseAddMenu options={addOptions} closing={menuPhase==='closing'} onClose={()=>setMenuPhase('closing')} onSelect={option=>{pendingAdd.current=option.onClick;setMenuPhase('closing');}} onExited={exitAddMenu}/>}
     {importFlow.panel}
     {detailView&&detail&&<Panel key={`detail-${detailView.id}`} actions={<RecipeFavorite recipe={detail} onToggle={()=>void store.save('recipe',{...detail,favorite:!detail.favorite}).catch(e=>store.setError(e.message))}/>} className="recipe-detail-panel" title={detail.title} suspended={view?.kind!=='detail'} closing={view?.kind==='detail'&&closing} onClose={close} onExited={exitPanel} origin={detailView.origin}>
