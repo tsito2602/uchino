@@ -1,8 +1,8 @@
 import {useEffect,useState,type CSSProperties} from 'react';
 import type {ImportProgress} from './import-progress';
 import {haptic} from './haptics';
+import {stickerTone} from './sticker-tones';
 
-const tones=['#ffe08a','#ffb3c7','#a8e6cf','#a7c7ff','#d7b8ff','#ffd0a8'];
 const stepTones=['#ff6b4a','#3cc497','#ff7fae'];
 const stepWidths=['82%','66%','74%'];
 const limit=12;
@@ -11,7 +11,7 @@ const limit=12;
 function jitter(i:number,salt:number){const x=Math.sin(i*12.9898+salt*78.233)*43758.5453;return x-Math.floor(x);}
 function sticker(i:number):CSSProperties{
   const angle=jitter(i,1)*Math.PI*2;
-  return {'--from-x':`${Math.round(Math.cos(angle)*220)}px`,'--from-y':`${Math.round(Math.sin(angle)*150-70)}px`,'--rot':`${((jitter(i,2)-.5)*12).toFixed(1)}deg`,'--spin':`${Math.round((jitter(i,3)-.5)*200)}deg`,'--tone':tones[i%tones.length]} as CSSProperties;
+  return {'--from-x':`${Math.round(Math.cos(angle)*220)}px`,'--from-y':`${Math.round(Math.sin(angle)*150-70)}px`,'--rot':`${((jitter(i,2)-.5)*12).toFixed(1)}deg`,'--spin':`${Math.round((jitter(i,3)-.5)*200)}deg`,'--tone':stickerTone(i)} as CSSProperties;
 }
 function useTyped(text:string,reduced:boolean){
   const [count,setCount]=useState(0);
