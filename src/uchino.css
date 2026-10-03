@@ -70,3 +70,6 @@ html{scrollbar-gutter:stable}body{min-width:320px}button,input,textarea,select{f
 .empty-state>.empty-recipe-symbol{margin-bottom:10px;transform-origin:50% 75%;animation:recipe-welcome 640ms cubic-bezier(.22,1,.36,1) both}
 @keyframes recipe-welcome{0%{opacity:0;transform:translateY(6px) rotate(-6deg)}60%{opacity:1;transform:translateY(0) rotate(3deg)}100%{opacity:1;transform:translateY(0) rotate(0)}}
 @media(prefers-reduced-motion:reduce){.empty-state>.empty-recipe-symbol{animation:none}}
+/* Type roles: titles and section headings share the rounded display face;
+   body, labels and numbers stay on the system face for legibility. */
+.card-panel-header h2,.card-panel h3,.settings-page h2,.settings-page h3{font-family:var(--recipe-title-font);font-weight:700;letter-spacing:.02em}
