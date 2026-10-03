@@ -2,8 +2,9 @@ import {abortable} from './import-ai';
 import type {YouTubeVideo} from '../src/youtube';
 import type {SourceDiagnostics} from '../src/import-model';
 import {Parser} from 'htmlparser2';
+import {youtubeStoryboard,type YouTubeStoryboard} from './youtube-storyboard';
 
-export type YouTubeMetadata={title:string;description:string;seconds?:number};
+export type YouTubeMetadata={title:string;description:string;seconds?:number;storyboard?:YouTubeStoryboard};
 type ObjectValue=Record<string,unknown>;
 const object=(value:unknown):ObjectValue=>value&&typeof value==='object'&&!Array.isArray(value)?value as ObjectValue:{};
 const list=(value:unknown):unknown[]=>Array.isArray(value)?value:[];
@@ -17,8 +18,8 @@ function playerMetadata(value:unknown,id:string):YouTubeMetadata|null {
   const data=object(value),details=object(data.videoDetails),microformat=object(object(data.microformat).playerMicroformatRenderer);
   const description=typeof details.shortDescription==='string'?details.shortDescription:richText(microformat.description);
   if(details.videoId!==id||typeof details.title!=='string'||description===undefined)return null;
-  const seconds=Number(details.lengthSeconds);
-  return {title:details.title.slice(0,200),description:description.slice(0,20000),...(Number.isInteger(seconds)&&seconds>0?{seconds}:{})};
+  const seconds=Number(details.lengthSeconds),storyboard=youtubeStoryboard(object(object(data.storyboards).playerStoryboardSpecRenderer).spec,id);
+  return {title:details.title.slice(0,200),description:description.slice(0,20000),...(storyboard?{storyboard}:{}),...(Number.isInteger(seconds)&&seconds>0?{seconds}:{})};
 }
 function pageMetadata(value:unknown,id:string):YouTubeMetadata|null {
   const data=object(value);

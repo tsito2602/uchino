@@ -2,9 +2,10 @@ import {MAX_PHOTO_BYTES,MAX_PHOTO_URL_LENGTH,validRecipePhoto} from './domain';
 
 export const PHOTO_INPUT_ACCEPT='image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif';
 const types=new Set(['image/jpeg','image/png','image/webp','image/heic','image/heif']);
+export type PhotoCrop={x:number;y:number;width:number;height:number;sheetWidth:number;sheetHeight:number};
 
 /** Re-encode on device: bound storage, apply browser image orientation and strip EXIF. */
-export async function prepareRecipePhoto(file:File,maxBytes=MAX_PHOTO_BYTES):Promise<string> {
+export async function prepareRecipePhoto(file:File,maxBytes=MAX_PHOTO_BYTES,crop?:PhotoCrop):Promise<string> {
   maxBytes=Math.max(4000,Math.min(MAX_PHOTO_BYTES,maxBytes));
   if(!file.size||file.size>20_000_000)throw new Error('20MB以内の写真を選んでください。');
   if(!types.has(file.type)&&!(file.type===''&&/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)))throw new Error('JPEG・PNG・WebP・HEICの写真を選んでください。');
@@ -17,14 +18,16 @@ export async function prepareRecipePhoto(file:File,maxBytes=MAX_PHOTO_BYTES):Pro
       image.src=url;
     });
     if(!image.naturalWidth||!image.naturalHeight)throw new Error('写真を読み込めませんでした。');
+    if(crop&&(!Object.values(crop).every(Number.isInteger)||crop.x<0||crop.y<0||crop.width<1||crop.height<1||crop.sheetWidth!==image.naturalWidth||crop.sheetHeight!==image.naturalHeight||crop.x+crop.width>image.naturalWidth||crop.y+crop.height>image.naturalHeight))throw new Error('動画の場面画像を確認できませんでした。');
+    const width=crop?.width??image.naturalWidth,height=crop?.height??image.naturalHeight;
     const canvas=document.createElement('canvas'),context=canvas.getContext('2d');
     if(!context)throw new Error('この端末で写真を処理できませんでした。');
     try{
       for(const maxEdge of [1280,1024,800,640,480,320]){
-        const scale=Math.min(1,maxEdge/Math.max(image.naturalWidth,image.naturalHeight));
-        canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+        const scale=Math.min(1,maxEdge/Math.max(width,height));
+        canvas.width=Math.max(1,Math.round(width*scale));canvas.height=Math.max(1,Math.round(height*scale));
         context.fillStyle='#fff';context.fillRect(0,0,canvas.width,canvas.height);
-        context.drawImage(image,0,0,canvas.width,canvas.height);
+        context.drawImage(image,crop?.x??0,crop?.y??0,width,height,0,0,canvas.width,canvas.height);
         for(const quality of [.86,.74,.62]){
           const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,'image/jpeg',quality));
           if(!blob||blob.size>maxBytes)continue;

@@ -5,7 +5,8 @@ export type ImportPhase='reading'|'video'|'sorting'|'checking';
 export type ImportSource={kind:'url'|'image'|'text'|'video';name:string;text?:string;url?:string;image?:string};
 export type ImportIssue={field:string;reason:string};
 export type SourceDiagnostics={code:'redirect'|'http_error'|'not_html'|'empty_response'|'script_too_large'|'metadata_missing'|'page_too_large'|'timeout'|'network_error';httpStatus?:number;bytes:number;playerDataFound:boolean;pageDataFound:boolean};
-export type ImportResult={sourceDiagnostics?:SourceDiagnostics;recipe:Recipe;issues:ImportIssue[];source?:ImportSource;demo?:boolean;photo?:string;stepPhotos?:{index:number;photo:string}[];stepSources?:(number|null)[];warnings?:string[]};
+export type ImportPhotoSheet={photo:string;width:number;height:number;frames:{index:number;x:number;y:number;width:number;height:number}[]};
+export type ImportResult={sourceDiagnostics?:SourceDiagnostics;recipe:Recipe;issues:ImportIssue[];source?:ImportSource;demo?:boolean;photo?:string;stepPhotos?:{index:number;photo:string}[];stepPhotoSheets?:ImportPhotoSheet[];stepSources?:(number|null)[];warnings?:string[]};
 export type ImportEvent={type:'phase';phase:ImportPhase}|{type:'result';result:ImportResult}|{type:'error';error:string;diagnostics?:ImportDiagnostics};
 
 export function issueLabel(field:string) {

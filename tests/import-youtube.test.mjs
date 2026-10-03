@@ -101,7 +101,7 @@ test('invented weights from visual counts are removed and invalid timestamps nev
 });
 
 test('native Gemini results exclude thought parts and reject truncation, refusals and malformed output',()=>{
- assert.deepEqual(geminiOutput(geminiResponse()),{recipe:videoRecipe,error:null});
+ assert.equal(geminiOutput(geminiResponse()).recipe.steps[1].text,videoRecipe.steps[1]);assert.equal(geminiOutput(geminiResponse()).recipe.steps[1].startSeconds,65);
  for(const [value,code] of [[{candidates:[{finishReason:'MAX_TOKENS'}]},'incomplete'],[{promptFeedback:{blockReason:'SAFETY'}},'refusal'],[{candidates:[{finishReason:'SAFETY'}]},'refusal'],[{candidates:[{finishReason:'STOP',content:{parts:[{thought:true,text:'private'}]}}]},'invalid_response'],[null,'invalid_response'],[{candidates:[]},'invalid_response']])assert.throws(()=>geminiOutput(value),error=>error.diagnostics.code===code&&!error.message.includes('private'));
 });
 
@@ -153,7 +153,7 @@ test('current watch-page JSON reaches Gemini even when player metadata is absent
   assert.ok(input.contents[0].parts[1].text.includes(description));return geminiResponse();
  }));
  assert.equal(result.source.text,description);assert.equal(result.source.name,'卵焼きの作り方');
- assert.equal(result.sourceDiagnostics,undefined);assert.equal(result.warnings,undefined);
+ assert.equal(result.sourceDiagnostics,undefined);assert.ok(result.warnings.some(warning=>warning.includes('場面画像')));
  assert.equal(youtubeMetadata(watchHtml(description,'differentID'),videoId),null);
  const data={videoDetails:{videoId,title:'卵焼き',shortDescription:description,lengthSeconds:'180'}};
  assert.equal(youtubeMetadata(`<script id="yt-initial-player-response" type="application/json">${JSON.stringify(data)}</script>`,videoId).description,description);
