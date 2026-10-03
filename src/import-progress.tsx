@@ -1,9 +1,9 @@
-import {useEffect,useRef,useState} from 'react';
-import {Check,ChefHat,ShieldCheck} from 'lucide-react';
+import {useEffect,useState} from 'react';
+import {Check,ShieldCheck} from 'lucide-react';
 import type {Recipe} from './domain';
 import type {ImportPhase} from './import-model';
 import {ImportThinking} from './import-thinking';
-import {scrollImportToLatest} from './import-follow-scroll';
+import {ImportBowl} from './import-bowl';
 
 export type ImportProgress={phase:ImportPhase;started:number;demo:boolean;ingredients:Recipe['ingredients'];total:number|null};
 export function ImportPhaseStatus({progress}:{progress:ImportProgress}) {
@@ -19,7 +19,5 @@ export function ImportPhaseStatus({progress}:{progress:ImportProgress}) {
 }
 
 export function ImportProcessing({progress}:{progress:ImportProgress}) {
-  const list=useRef<HTMLDivElement>(null);
-  useEffect(()=>{const viewport=list.current?.parentElement;if(viewport)scrollImportToLatest(viewport,window.matchMedia('(prefers-reduced-motion: reduce)').matches);},[progress.ingredients.length]);
-  return <div ref={list} className="import-processing"><div className="import-sorting-list" aria-label="読み取り中の材料">{progress.ingredients.length?progress.ingredients.map((item,index)=><div className="import-sorted-entry" key={index}><ChefHat size={21}/><div className="import-entry-copy"><strong>{item.name}</strong><small>{item.quantity?'分量を読み取りました':'分量は要確認'}</small></div><b>{[item.quantity,item.unit].filter(Boolean).join(' ')||'要確認'}</b></div>):<div className="import-skeleton" aria-hidden="true">{[0,1,2].map(i=><div key={i}><i/><span/><b/></div>)}</div>}</div></div>;
+  return <div className="import-processing"><ImportBowl progress={progress}/></div>;
 }
