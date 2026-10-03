@@ -41,3 +41,11 @@
    dish; on a generated cover it keeps the light glass, like the heart there. */
 .recipe-row .recipe-category{background:#17171766;border-color:#ffffff30;text-shadow:0 1px 2px #0000004d}
 .recipe-row:has(.recipe-cover) .recipe-category{background:#ffffff26;border-color:#ffffff40;text-shadow:none}
+
+/* Servings number: one value glides out while the next glides in, edges fading. */
+.servings-count{display:inline-flex;align-items:center;gap:3px}
+.servings-count small{padding-top:3px}
+.servings-count-reel{position:relative;display:inline-grid;overflow:hidden;height:1.5em;align-items:center;-webkit-mask:linear-gradient(transparent,#000 26%,#000 74%,transparent);mask:linear-gradient(transparent,#000 26%,#000 74%,transparent)}
+.servings-count-value{grid-area:1/1;text-align:center;will-change:transform}
+.servings-count-leaving{pointer-events:none}
+.servings-count-leaving:before{content:attr(data-value)}
