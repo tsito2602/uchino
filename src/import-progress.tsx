@@ -3,9 +3,9 @@ import {Check,ShieldCheck} from 'lucide-react';
 import type {Recipe} from './domain';
 import type {ImportPhase} from './import-model';
 import {ImportThinking} from './import-thinking';
-import {ImportBowl} from './import-bowl';
+import {ImportStickerCard} from './import-sticker-card';
 
-export type ImportProgress={phase:ImportPhase;started:number;demo:boolean;ingredients:Recipe['ingredients'];total:number|null};
+export type ImportProgress={phase:ImportPhase;started:number;demo:boolean;ingredients:Recipe['ingredients'];total:number|null;recipe?:Recipe};
 export function ImportPhaseStatus({progress}:{progress:ImportProgress}) {
   const [elapsed,setElapsed]=useState(0);
   useEffect(()=>{const update=()=>setElapsed(Math.floor((Date.now()-progress.started)/1000));update();const timer=setInterval(update,1000);return()=>clearInterval(timer);},[progress.started]);
@@ -19,5 +19,5 @@ export function ImportPhaseStatus({progress}:{progress:ImportProgress}) {
 }
 
 export function ImportProcessing({progress}:{progress:ImportProgress}) {
-  return <div className="import-processing"><ImportBowl progress={progress}/></div>;
+  return <div className="import-processing"><ImportStickerCard progress={progress}/></div>;
 }

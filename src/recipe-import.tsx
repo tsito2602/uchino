@@ -42,17 +42,19 @@ export function useRecipeImport(props:Props) {
     try{
       const imported=await readImport(mode==='url'?{url:value}:mode==='image'?{image}:{text:value},demo,signal,phase=>{if(request.current===controller)setProgress(current=>current?{...current,phase}:current);});
       await prepareImportPhotos(imported,signal);
-      if(demo){
-        const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if(!reduced)await importPause(2000,signal);
-        setProgress(current=>current?{...current,phase:'sorting',total:imported.recipe.ingredients.length}:current);
-        for(let count=1;count<=imported.recipe.ingredients.length;count++){
-          if(!reduced)await importPause(6000/imported.recipe.ingredients.length,signal);
-          setProgress(current=>current?{...current,ingredients:imported.recipe.ingredients.slice(0,count)}:current);
-        }
-        setProgress(current=>current?{...current,phase:'checking'}:current);
-        if(!reduced)await importPause(2000,signal);
+      // Play the result onto the sticker card: title, then each ingredient,
+      // then the stamp. The demo replays a slow import; real ones stay brisk.
+      const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches,list=imported.recipe.ingredients;
+      const pause=(ms:number)=>reduced?Promise.resolve():importPause(ms,signal);
+      if(demo)await pause(2000);
+      setProgress(current=>current?{...current,phase:'sorting',recipe:imported.recipe,total:list.length,ingredients:[]}:current);
+      await pause(demo?900:450);
+      for(let count=1;count<=list.length;count++){
+        await pause(demo?6000/list.length:Math.min(170,1800/list.length));
+        setProgress(current=>current?{...current,ingredients:list.slice(0,count)}:current);
       }
+      setProgress(current=>current?{...current,phase:'checking'}:current);
+      await pause(demo?2000:1300);
       signal.throwIfAborted();if(request.current!==controller)return;
       setSource(imported.source||original);setResult(imported);setProgress(null);
     }catch(cause){if(request.current===controller){setProgress(null);if(!controller.signal.aborted){setError(signal.aborted?'時間がかかっています。もう一度お試しください。':cause instanceof Error?cause.message:'読み取れませんでした。もう一度お試しください。');setDiagnostics(cause instanceof ImportFailure?cause.diagnostics??null:null);}}}
