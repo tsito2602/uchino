@@ -1,7 +1,7 @@
 /* Fluid look that matches the dock.
    Ticks: the circle fills from its centre like the dock's liquid glass,
-   and on the shopping list the liquid runs out of the circle and becomes the
-   strike line. Unticking drains it back. Pressing stretches the circle with the
+   and on the shopping list the liquid runs out of the circle, lets go of it and
+   becomes the strike line. Unticking drains it back. Pressing stretches the circle with the
    dock's press (320ms) and release (900ms). */
 :is(.shopping-check,.glass-checkbox){transition:transform 900ms cubic-bezier(.22,.72,.18,1)}
 .shopping-item-toggle:active:not(:disabled) .shopping-check,.ingredient-row:active .glass-checkbox:not(:has(input:disabled)){transform:scale(1.06,1.1);transition:transform 320ms cubic-bezier(.16,1,.3,1)}
@@ -13,8 +13,8 @@
 .shopping-row.done .shopping-check svg{animation:check-appear 220ms ease-out 200ms both}
 .shopping-row.done strong{text-decoration:none}
 .shopping-item-copy strong{position:relative}
-.shopping-item-copy strong:after{content:'';position:absolute;left:-26px;top:50%;width:0;height:24px;margin-top:-12px;border-radius:99px;background:var(--ink);pointer-events:none;transition:width 300ms cubic-bezier(.5,0,.6,1),height 300ms ease-in,margin-top 300ms ease-in}
-.shopping-row.done .shopping-item-copy strong:after{width:calc(100% + 28px);height:2px;margin-top:-1px;transition:width 520ms cubic-bezier(.22,.72,.18,1) 160ms,height 360ms cubic-bezier(.22,.72,.18,1) 160ms,margin-top 360ms cubic-bezier(.22,.72,.18,1) 160ms}
+.shopping-item-copy strong:after{content:'';position:absolute;left:-26px;top:50%;width:0;height:24px;margin-top:-12px;border-radius:99px;background:var(--ink);pointer-events:none;transition:left 260ms cubic-bezier(.45,0,.2,1),width 300ms cubic-bezier(.5,0,.6,1) 120ms,height 300ms ease-in 120ms,margin-top 300ms ease-in 120ms}
+.shopping-row.done .shopping-item-copy strong:after{left:-3px;width:calc(100% + 6px);height:2px;margin-top:-1px;transition:left 420ms cubic-bezier(.45,0,.2,1) 300ms,width 520ms cubic-bezier(.22,.72,.18,1) 160ms,height 360ms cubic-bezier(.22,.72,.18,1) 160ms,margin-top 360ms cubic-bezier(.22,.72,.18,1) 160ms}
 
 .glass-checkbox:before{content:'';position:absolute;inset:0;z-index:-1;border-radius:50%;background:var(--ink);transform:scale(0);transition:transform 360ms cubic-bezier(.22,.72,.18,1)}
 .glass-checkbox[data-checked]:before{transform:scale(1);transition-duration:520ms}
@@ -28,8 +28,8 @@
 @media(prefers-reduced-motion:reduce){:is(.shopping-check,.glass-checkbox),:is(.shopping-check,.glass-checkbox):before,.shopping-check:after,.shopping-item-copy strong:after{transition:none}.shopping-row.done .shopping-check svg{animation:none}}
 
 /* Glass chips: the category label is frosted glass like the dock, on the
-   recipe cards and under the detail hero. */
+   recipe cards (top left, opposite the heart) and under the detail hero. */
 .recipe-row .recipe-category,.recipe-hero .recipe-category{gap:4px;height:24px;padding:0 10px;border-radius:99px;font-weight:700;line-height:1;color:#fff;background:#ffffff2e;border:1px solid #ffffff40;-webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2)}
-.recipe-row .recipe-category{align-self:flex-start;margin-bottom:6px}
+.recipe-row .recipe-category{position:absolute;left:12px;top:12px;z-index:2}
 .recipe-row .recipe-category>svg{width:12px;height:12px}
 .recipe-hero .recipe-category{color:var(--ink);background:color-mix(in srgb,var(--ink) 6%,transparent);border-color:color-mix(in srgb,var(--ink) 10%,transparent)}
