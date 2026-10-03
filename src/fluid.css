@@ -1,0 +1,43 @@
+/* Fluid look that matches the dock.
+   Ticks: the circle fills from its centre like the dock's liquid glass,
+   and on the shopping list the liquid runs out of the circle, lets go of it and
+   becomes the strike line. Unticking drains it back. Pressing stretches the circle with the
+   dock's press (320ms) and release (900ms). */
+:is(.shopping-check,.glass-checkbox){transition:transform 900ms cubic-bezier(.22,.72,.18,1)}
+.shopping-item-toggle:active:not(:disabled) .shopping-check,.ingredient-row:active .glass-checkbox:not(:has(input:disabled)){transform:scale(1.06,1.1);transition:transform 320ms cubic-bezier(.16,1,.3,1)}
+
+.shopping-check{z-index:1;isolation:isolate}
+.shopping-check:after{content:'';position:absolute;inset:-1px;z-index:-1;border-radius:50%;background:var(--ink);transform:scale(0);transition:transform 420ms cubic-bezier(.22,.72,.18,1) 260ms}
+.shopping-row.done .shopping-check:after{transform:scale(1);transition-delay:0ms}
+.shopping-row.done .shopping-check,.card-panel .shopping-row.done .shopping-check{background:transparent;border-color:transparent;color:var(--paper);animation:none}
+.shopping-row.done .shopping-check svg{animation:check-appear 220ms ease-out 200ms both}
+.shopping-row.done strong{text-decoration:none}
+.shopping-item-copy strong{position:relative}
+.shopping-item-copy strong:after{content:'';position:absolute;left:-26px;top:50%;width:0;height:24px;margin-top:-12px;border-radius:99px;background:var(--ink);pointer-events:none;transition:left 260ms cubic-bezier(.45,0,.2,1),width 300ms cubic-bezier(.5,0,.6,1) 120ms,height 300ms ease-in 120ms,margin-top 300ms ease-in 120ms}
+.shopping-row.done .shopping-item-copy strong:after{left:-3px;width:calc(100% + 6px);height:2px;margin-top:-1px;transition:left 420ms cubic-bezier(.45,0,.2,1) 300ms,width 520ms cubic-bezier(.22,.72,.18,1) 160ms,height 360ms cubic-bezier(.22,.72,.18,1) 160ms,margin-top 360ms cubic-bezier(.22,.72,.18,1) 160ms}
+
+.glass-checkbox:before{content:'';position:absolute;inset:0;z-index:-1;border-radius:50%;background:var(--ink);transform:scale(0);transition:transform 360ms cubic-bezier(.22,.72,.18,1)}
+.glass-checkbox[data-checked]:before{transform:scale(1);transition-duration:520ms}
+.card-panel .glass-checkbox input{border-radius:50%}
+.card-panel .glass-checkbox[data-checked] input:checked{background:transparent;border-color:transparent;box-shadow:none}
+.glass-checkbox[data-checked] .glass-checkbox-mark{color:var(--paper)}
+.glass-checkbox[data-checked] .glass-checkbox-mark path{animation-delay:160ms}
+.glass-checkbox-ring{border-radius:50%}
+.glass-checkbox[data-checked]{animation:none}
+
+@media(prefers-reduced-motion:reduce){:is(.shopping-check,.glass-checkbox),:is(.shopping-check,.glass-checkbox):before,.shopping-check:after,.shopping-item-copy strong:after{transition:none}.shopping-row.done .shopping-check svg{animation:none}}
+
+/* Glass chips: the category label is frosted glass like the dock, on the
+   recipe cards (top left, opposite the heart) and under the detail hero. */
+.recipe-row .recipe-category,.recipe-hero .recipe-category{gap:4px;height:24px;padding:0 10px;border-radius:99px;font-weight:700;line-height:1;color:#fff;background:#ffffff2e;border:1px solid #ffffff40;-webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2)}
+.recipe-row .recipe-category{position:absolute;left:12px;top:12px;z-index:2}
+.recipe-row .recipe-category>svg{width:12px;height:12px}
+.recipe-hero .recipe-category{color:var(--ink);background:color-mix(in srgb,var(--ink) 6%,transparent);border-color:color-mix(in srgb,var(--ink) 10%,transparent)}
+
+/* Favourites on a photo are white like the glass around them; filled means
+   favourite. On white surfaces (the detail header) the heart stays pink. */
+.recipe-row .recipe-favorite[aria-pressed=true],.recipe-row .recipe-favorite-burst,.recipe-row .recipe-favorite-burst i:nth-child(even){color:#fff}
+/* On a photo the chip uses the heart's darker glass so the label reads on any
+   dish; on a generated cover it keeps the light glass, like the heart there. */
+.recipe-row .recipe-category{background:#17171766;border-color:#ffffff30;text-shadow:0 1px 2px #0000004d}
+.recipe-row:has(.recipe-cover) .recipe-category{background:#ffffff26;border-color:#ffffff40;text-shadow:none}

@@ -1,0 +1,40 @@
+{
+  "name": "uchino",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "dev:worker": "wrangler dev --config wrangler.staging.jsonc",
+    "build": "vite build && node scripts/build-sw.mjs && node scripts/embed-assets.mjs",
+    "bundle:worker": "npm run build && esbuild worker/index.ts --bundle --format=esm --platform=browser --target=es2022 --minify --outfile=dist/worker.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
+    "check": "npm run bundle:worker && npm run typecheck && npm test",
+    "setup:staging": "node scripts/setup-staging.mjs",
+    "db:staging": "wrangler d1 migrations apply uchino-staging --remote --config wrangler.staging.jsonc",
+    "deploy:staging": "npm run check && wrangler deploy --config wrangler.staging.jsonc --keep-vars",
+    "deploy:staging:initial": "npm run check && npm run setup:staging && npm run db:staging && wrangler deploy --config wrangler.staging.jsonc --keep-vars"
+  },
+  "dependencies": {
+    "border-beam": "1.4.1",
+    "hono": "^4.12.0",
+    "htmlparser2": "10.0.0",
+    "jose": "^6.2.12",
+    "lucide-react": "^0.468.0",
+    "motion": "13.4.4",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "thinking-orbs": "0.3.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260925.1",
+    "@types/react": "~19.2.2",
+    "@types/react-dom": "~19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "~6.0.3",
+    "vite": "^7.1.0",
+    "wrangler": "^4.135.0"
+  }
+}
