@@ -1,3 +1,4 @@
+import {ImportFormedCard} from './import-formed-card';
 import {useId,useState} from 'react';
 import {AnimatePresence,motion,useReducedMotion} from 'motion/react';
 import {AlertCircle,Check,ChevronDown,ExternalLink,FileText,Pencil,Sparkles} from 'lucide-react';
@@ -37,7 +38,7 @@ export function ImportReview({result,source,onChange,onSubmit,error,acknowledged
   const remaining=result.issues.filter(issue=>!acknowledged.includes(issue.field));
   function edit(field:string){const input=document.querySelector<HTMLElement>(`[data-import-field="${CSS.escape(field)}"]`);input?.focus({preventScroll:true});}
   return <div className="recipe-import-review">
-    <div className="import-review-heading"><span className="import-processing-symbol import-complete-symbol"><Check className="import-animated-check" size={28}/></span><h3>読み取りが完了しました</h3><p>元のレシピと照らし合わせて、内容を確認・修正してください。</p>{result.demo&&<span className="import-demo-badge">デモ · staging限定</span>}</div>
+    <div className="import-review-heading"><ImportFormedCard recipe={result.recipe}/><h3>一枚のレシピにまとめました</h3><p>元のレシピと照らし合わせて、内容を確認・修正してください。</p>{result.demo&&<span className="import-demo-badge">デモ · staging限定</span>}</div>
     <ImportActions result={result} source={source}/>
     <ImportOriginal source={source}/>
     {result.warnings?.map((warning,i)=><p className="form-error" role="status" key={i}>{warning}</p>)}
