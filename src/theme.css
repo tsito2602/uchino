@@ -21,22 +21,22 @@
 }
 :root[data-brand-theme='dark'] {
   color-scheme: dark;
-  /* ひなたの夜: iron-pot black and kinari ink, warm like the washi light theme. */
-  --canvas: #15120f;
-  --paper: #211c18;
-  --ink: #f2eadf;
-  --muted: #a39888;
-  --line: #3a332c;
-  --soft: #2b251f;
-  --content-card: #211c18;
-  --brand: #f2eadf;
-  --on-brand: #1a140c;
-  --appearance-track: #2b251f;
-  --dock-glass: #1f1a1559;
+  /* ひなたの夜: near-neutral sumi black; only a trace of warmth so it never reads yellow. */
+  --canvas: #131313;
+  --paper: #1e1e1d;
+  --ink: #efefec;
+  --muted: #9d9d98;
+  --line: #343432;
+  --soft: #282827;
+  --content-card: #1e1e1d;
+  --brand: #efefec;
+  --on-brand: #161616;
+  --appearance-track: #282827;
+  --dock-glass: #1c1c1b59;
   --dock-border-top: #ffffff26;
   --dock-border-bottom: #ffffff10;
-  --panel-tint: #211c1880;
-  --panel-header-tint: #241f1ab3;
+  --panel-tint: #1e1e1d80;
+  --panel-header-tint: #222221b3;
   --surface-glow: #ffffff0e;
   --history-current: #bcbcbc;
   --history-bar: #666;

@@ -1,6 +1,5 @@
 import {useEffect,useState} from 'react';
 import {ClipboardPaste,Link,Play} from 'lucide-react';
-import {StudioActionLabel} from './studio-action-label';
 
 type Suggestion={url:string}|{paste:true};
 export function copiedRecipeUrl(text:string):string|null {
@@ -31,6 +30,6 @@ export function ClipboardLink({disabled,onUse}:{disabled:boolean;onUse:(url:stri
   }
   return <section className="clipboard-link" aria-label="コピーしたリンクの取り込み">
     <div className="clipboard-link-copy"><span className={`clipboard-link-icon${url&&isVideo(url)?' is-video':''}`} aria-hidden="true">{url?isVideo(url)?<Play size={22} fill="currentColor"/>:<Link size={22}/>:<ClipboardPaste size={22}/>}</span><div><h3>コピーしたリンクを使う？</h3><p>{missing||(url?url.replace(/^https?:\/\/(www\.)?/,''):'コピーしたURLを貼り付けます')}</p></div></div>
-    <div className="clipboard-link-actions"><button type="button" className="studio-action" disabled={disabled} onClick={()=>url?onUse(url):void paste()}><StudioActionLabel label={url?'このURLを使う':'ペーストする'}/></button><button type="button" className="clipboard-link-later" disabled={disabled} onClick={()=>setSuggestion(null)}>あとで</button></div>
+    <div className="clipboard-link-actions"><button type="button" className="clipboard-link-use" disabled={disabled} onClick={()=>url?onUse(url):void paste()}>{url?'このURLを使う':'ペーストする'}</button><button type="button" className="clipboard-link-later" disabled={disabled} onClick={()=>setSuggestion(null)}>あとで</button></div>
   </section>;
 }
