@@ -1,4 +1,5 @@
-/* Fluid ticks: the circle fills from its centre like the dock's liquid glass,
+/* Fluid look that matches the dock.
+   Ticks: the circle fills from its centre like the dock's liquid glass,
    and on the shopping list the liquid runs out of the circle and becomes the
    strike line. Unticking drains it back. Pressing stretches the circle with the
    dock's press (320ms) and release (900ms). */
@@ -25,3 +26,10 @@
 .glass-checkbox[data-checked]{animation:none}
 
 @media(prefers-reduced-motion:reduce){:is(.shopping-check,.glass-checkbox),:is(.shopping-check,.glass-checkbox):before,.shopping-check:after,.shopping-item-copy strong:after{transition:none}.shopping-row.done .shopping-check svg{animation:none}}
+
+/* Glass chips: the category label is frosted glass like the dock, on the
+   recipe cards and under the detail hero. */
+.recipe-row .recipe-category,.recipe-hero .recipe-category{gap:4px;height:24px;padding:0 10px;border-radius:99px;font-weight:700;line-height:1;color:#fff;background:#ffffff2e;border:1px solid #ffffff40;-webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2)}
+.recipe-row .recipe-category{align-self:flex-start;margin-bottom:6px}
+.recipe-row .recipe-category>svg{width:12px;height:12px}
+.recipe-hero .recipe-category{color:var(--ink);background:color-mix(in srgb,var(--ink) 6%,transparent);border-color:color-mix(in srgb,var(--ink) 10%,transparent)}

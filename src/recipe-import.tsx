@@ -42,7 +42,7 @@ export function useRecipeImport(props:Props) {
     try{
       const imported=await readImport(mode==='url'?{url:value}:mode==='image'?{image}:{text:value},demo,signal,phase=>{if(request.current===controller)setProgress(current=>current?{...current,phase}:current);});
       await prepareImportPhotos(imported,signal);
-      // Play the result onto the sticker card: title, then each ingredient,
+      // Play the result onto the bubble card: title, then each ingredient,
       // then the stamp. The demo replays a slow import; real ones stay brisk.
       const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches,list=imported.recipe.ingredients;
       const pause=(ms:number)=>reduced?Promise.resolve():importPause(ms,signal);
