@@ -6,7 +6,7 @@
 .recipe-photo img{width:100%;height:100%;display:block;object-fit:cover;object-position:center}
 .recipe-photo-placeholder{position:absolute;inset:0;display:grid;place-items:center;padding-bottom:70px;color:var(--muted);background:radial-gradient(ellipse at 25% 15%,var(--paper),transparent 75%),var(--soft)}
 .recipe-row-copy{position:relative;z-index:1;flex:1;align-self:stretch;display:flex;flex-direction:column;justify-content:flex-end;padding:60px 16px 19px;min-width:0;isolation:isolate}
-.recipe-row-copy:before{content:'';position:absolute;z-index:-1;inset:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,.48) 38%,rgba(0,0,0,.76))}
+.recipe-row-copy:before{content:'';position:absolute;z-index:-1;inset:0;background:linear-gradient(180deg,transparent,rgba(30,20,10,.48) 38%,rgba(30,20,10,.78))}
 .recipe-row-copy{align-self:flex-end;min-height:58%}
 .recipe-row .recipe-category,.recipe-hero .recipe-category{color:rgba(255,255,255,.82);font-size:10px}
 .recipe-row h2{font-family:var(--recipe-title-font);font-size:16px;line-height:1.6;font-weight:600;letter-spacing:.015em;margin:8px 0 12px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;color:#fff;text-shadow:0 1px 8px #0003}
@@ -55,11 +55,3 @@
 .recipe-added-by{position:absolute;z-index:2;left:10px;top:10px;pointer-events:none}
 .member-avatar{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;overflow:hidden;border:2px solid #fff;background:var(--member-color);color:#fff;font-size:12px;font-weight:650;line-height:1;box-shadow:0 2px 8px #0003}
 .member-avatar img{display:block;width:100%;height:100%;object-fit:cover}
-.clipboard-suggestion{display:flex;flex-direction:column;gap:14px;margin:0 0 16px;padding:16px;border:1px solid var(--line);border-radius:22px;background:var(--content-card)}
-.clipboard-suggestion-copy{display:flex;align-items:center;gap:12px;min-width:0}
-.clipboard-suggestion-copy>div{min-width:0}
-.clipboard-suggestion-icon{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:14px;background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
-.clipboard-suggestion h2{margin:0;font-size:15px;line-height:1.5}
-.clipboard-suggestion p{margin:2px 0 0;font-size:12px;line-height:1.5;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.clipboard-suggestion-actions{display:flex;align-items:center;gap:8px}
-.clipboard-suggestion-later{min-height:40px;padding:0 16px;border:0;border-radius:50px;background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink);font-size:13px}

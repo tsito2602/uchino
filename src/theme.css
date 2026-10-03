@@ -1,7 +1,16 @@
 :root {
   color-scheme: light;
+  /* ひなた: washi canvas and sumi-brown ink over the shared kondo tokens. */
+  --canvas: #f5f3ee;
+  --paper: #fff;
+  --ink: #26221e;
+  --muted: #857d72;
+  --line: #e5e0d6;
+  --soft: #ece8e0;
+  --content-card: #ece8e0;
+  --brand: #26221e;
   --on-brand: #fff;
-  --appearance-track: #e5e5e5;
+  --appearance-track: #e5e0d6;
   --dock-glass: #ffffff52;
   --panel-tint: #ffffff80;
   --panel-header-tint: #ffffffb3;
