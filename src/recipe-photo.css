@@ -52,6 +52,3 @@
 .has-photo .recipe-photo-select-label{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1117;border:1px solid #ffffff30;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .recipe-photo-remove{align-self:flex-end;min-height:44px;font-size:12px;gap:6px}
 @media(max-width:380px){.recipe-list{gap:16px 10px}.recipe-row{border-radius:18px}.recipe-row-copy{padding:44px 13px 16px}.recipe-row h2{font-size:15px}.recipe-row p{font-size:10px;gap:7px}.recipe-detail-panel{--recipe-detail-inset:16px}}
-.recipe-added-by{position:absolute;z-index:2;left:10px;top:10px;pointer-events:none}
-.member-avatar{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;overflow:hidden;border:2px solid #fff;background:var(--member-color);color:#fff;font-size:12px;font-weight:650;line-height:1;box-shadow:0 2px 8px #0003}
-.member-avatar img{display:block;width:100%;height:100%;object-fit:cover}

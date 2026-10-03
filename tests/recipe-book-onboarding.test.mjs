@@ -60,17 +60,3 @@ test('legacy cloud data migrate once without changing recipe revisions or inline
   assert.deepEqual(await list(b,'user-b'),[]);
  }finally{b.database.close();}
 });
-test('the member who first adds a recipe is recorded and kept through edits by others',async()=>{
- const b=await r2Backend({createBooks:false});try{
-  const space=(await (await create(b)).json()).space;
-  const code=(await (await b.request(`/api/spaces/${space.id}/invites`,post({}))).json()).code;
-  assert.equal((await b.request('/api/spaces/join',post({code,space_id:space.id}),'user-b')).status,200);
-  const recipe={...newRecipe(),id:'added-by-b',title:'パートナーのレシピ',ingredients:[{name:'卵',quantity:'2',unit:'個'}],steps:['焼く'],addedBy:'user-a'};
-  const write=(data,revision,user)=>b.request(`/api/data/recipe/${data.id}?space=${space.id}`,{method:'PUT',body:JSON.stringify({data,revision,editId:crypto.randomUUID(),deleted:false})},user);
-  assert.equal((await write(recipe,0,'user-b')).status,200);
-  assert.equal(b.record(recipe.id).data.addedBy,'user-b');
-  const {addedBy:_omitted,...edited}={...recipe,title:'作成者が直したレシピ'};
-  assert.equal((await write(edited,1,'user-a')).status,200);
-  assert.equal(b.record(recipe.id).data.addedBy,'user-b');assert.equal(b.record(recipe.id).data.title,'作成者が直したレシピ');
- }finally{b.database.close();}
-});
