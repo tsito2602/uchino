@@ -266,3 +266,20 @@
 .import-source-content { margin-top: 0; padding-bottom: 12px; }
 .import-original-files a { display: inline-block; padding: 12px 0; color: var(--ink); }
 @media(prefers-reduced-motion:reduce) { .import-source-toggle > svg { transition: none; } }
+
+/* Finishing moment: ingredients converge and a recipe card settles into place. */
+.import-formed{position:relative;display:grid;place-items:center;height:236px;margin:0 auto 14px}
+.import-formed-frame{position:relative;border-radius:20px;animation:import-card-settle 760ms cubic-bezier(.2,1.2,.36,1) 360ms both}
+.import-formed-frame:before{content:'';position:absolute;inset:-3px;border-radius:23px;background:conic-gradient(from var(--formed-shine),#f44e9e,#c14fdd,#8b56f5,#5567f9,#2d99f4,#24bee6,#2ec4b1,#64c67f,#aec95c,#eabe50,#fc9353,#fc6975,#f44e9e);filter:blur(5px);opacity:0;animation:import-card-shine 1300ms ease-out 900ms both}
+.import-formed-card{position:relative;width:150px;aspect-ratio:3/4;border-radius:20px;overflow:hidden;isolation:isolate;box-shadow:0 18px 36px #2a1c1022,0 2px 6px #2a1c1014}
+.import-formed-card:after{content:'';position:absolute;inset:0;z-index:3;border-radius:inherit;pointer-events:none;box-shadow:inset 0 0 0 2px #ffffff55}
+.import-formed-copy{position:absolute;inset:auto 0 0;z-index:2;display:grid;gap:4px;padding:34px 12px 12px;color:#fff;text-align:left;background:linear-gradient(180deg,transparent,rgba(20,12,6,.42) 45%,rgba(20,12,6,.62))}
+.import-formed-copy span{display:flex;align-items:center;gap:4px;font-size:9px;opacity:.85}
+.import-formed-copy strong{font-family:var(--recipe-title-font);font-size:13px;line-height:1.45;font-weight:700;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.import-formed-check{position:absolute;top:9px;right:9px;z-index:2;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;color:var(--on-brand);background:var(--brand);animation:import-check-pop .48s cubic-bezier(.34,1.56,.64,1) 1000ms both}
+.import-formed-piece{position:absolute;left:50%;top:50%;padding:5px 10px;border-radius:99px;font-size:11px;white-space:nowrap;color:var(--ink);background:var(--control-glass,#fff8);border:1px solid var(--line);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);opacity:0;animation:import-piece-gather 820ms cubic-bezier(.55,0,.2,1) var(--piece-delay) both}
+@keyframes import-piece-gather{0%{opacity:0;transform:translate(-50%,-50%) translate(var(--piece-x),var(--piece-y)) scale(.9)}25%{opacity:1}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(.4)}}
+@keyframes import-card-settle{0%{opacity:0;transform:translateY(16px) scale(.72) rotate(-7deg)}100%{opacity:1;transform:none}}
+@property --formed-shine{syntax:'<angle>';inherits:false;initial-value:0deg}
+@keyframes import-card-shine{0%{opacity:0;--formed-shine:0deg}30%{opacity:.95}100%{opacity:0;--formed-shine:240deg}}
+@media(prefers-reduced-motion:reduce){.import-formed-piece{display:none}.import-formed-frame,.import-formed-frame:before,.import-formed-check{animation:none}}
