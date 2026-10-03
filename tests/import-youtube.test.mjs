@@ -4,7 +4,7 @@ import {build} from 'esbuild';
 import {videoId,videoUrl,description,videoRecipe,playerHtml,geminiResponse} from './youtube-fixture.mjs';
 import {photoFixture} from './photo-fixture.mjs';
 const built=await build({stdin:{contents:"export * from './worker/import';export * from './worker/import-youtube';export * from './worker/youtube-metadata';export * from './src/youtube';export * from './src/domain';",resolveDir:process.cwd()},bundle:true,write:false,format:'esm',platform:'node'});
-const {importUrl,importYouTube,youtubeMetadata,youtubeVideo,youtubeStepUrl,geminiOutput,validateRecord,removeRecipeStep}=await import('data:text/javascript;base64,'+Buffer.from(built.outputFiles[0].text).toString('base64'));
+const {importUrl,importYouTube,youtubeMetadata,fetchYouTubeMetadata,youtubeVideo,youtubeStepUrl,geminiOutput,validateRecord,removeRecipeStep}=await import('data:text/javascript;base64,'+Buffer.from(built.outputFiles[0].text).toString('base64'));
 const env=respond=>({AI_IMPORT_PROVIDER:'cloudflare',AI_GATEWAY_ID:'uchino',AI:{
  run:async()=>{assert.fail('YouTube must use the provider-native Generate Content endpoint');},
  gateway(id){assert.equal(id,'uchino');return {async run(request,options){
@@ -37,6 +37,28 @@ test('metadata reads only the requested video and safely handles braces and esca
  assert.equal(youtubeMetadata(playerHtml(text,'differentID'),videoId),null);
  assert.equal(youtubeMetadata(playerHtml().slice(0,80),videoId),null);
  assert.equal(youtubeMetadata('<html>Consent or blocked</html>',videoId),null);
+});
+
+test('metadata survives a large watch page and returns before an unrelated stalled tail',async t=>{
+ const encoder=new TextEncoder();let cancelled=false;
+ const html=encoder.encode('<!--'+'x'.repeat(2_100_000)+'-->'+playerHtml());
+ // Split a Japanese character across reads, as can happen on the network.
+ const split=Buffer.from(html).indexOf(Buffer.from('卵焼き'))+1;assert.ok(split>2_100_000);
+ t.mock.method(globalThis,'fetch',async(_url,options)=>{
+  assert.equal(options.redirect,'manual');
+  return new Response(new ReadableStream({start(controller){controller.enqueue(html.slice(0,split));controller.enqueue(html.slice(split));},cancel(){cancelled=true;}}),{headers:{'content-type':'text/html; charset=utf-8'}});
+ });
+ const result=await fetchYouTubeMetadata({id:videoId,url:videoUrl},AbortSignal.timeout(1000));
+ assert.equal(result.description,description);assert.equal(result.title,'卵焼きの作り方');assert.equal(cancelled,true);
+});
+
+test('metadata stops at the page budget and rejects descriptions for other videos',async t=>{
+ let cancelled=false;
+ t.mock.method(globalThis,'fetch',async()=>new Response(new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode('<!--'+'x'.repeat(4_100_000)+'-->'+playerHtml()));},cancel(){cancelled=true;}}),{headers:{'content-type':'text/html'}}));
+ assert.equal(await fetchYouTubeMetadata({id:videoId,url:videoUrl},AbortSignal.timeout(1000)),null);assert.equal(cancelled,true);
+ const data={videoDetails:{videoId,title:'卵焼き'},microformat:{playerMicroformatRenderer:{description:{simpleText:description}}}};
+ const html=`<script>ytInitialPlayerResponse = ${JSON.stringify(data)};</script>`;
+ assert.equal(youtubeMetadata(html,videoId).description,description);assert.equal(youtubeMetadata(html,'differentID'),null);
 });
 
 test('description plus actual video use Gemini through the existing Gateway; unknown amounts need review',async t=>{

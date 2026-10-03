@@ -14,3 +14,9 @@ test('missing quantities and provisional servings retain bounded review reasons'
  assert.deepEqual(importIssues(recipe,[{field:'ingredients.0.quantity',reason:'元資料は「？」です。'},{field:'steps.88',reason:'invalid'}]).map(i=>i.field),['ingredients.0.quantity','servings']);
  assert.equal(importIssues(recipe,[{field:'servings',reason:'a'.repeat(1000)}]).find(i=>i.field==='servings').reason.length,400);
 });
+test('review explains unset values in Japanese while preserving the issue and other details',()=>{
+ const recipe={memo:'',category:'主菜',minutes:null,ingredients:[],steps:['焼く']};
+ const result=importIssues(recipe,[{field:'minutes',reason:'調理時間の記載がないためnullとしました。'},{field:'steps.0',reason:'加熱時間はundefinedですが、強火の指定があります。'}]);
+ assert.deepEqual(result,[{field:'minutes',reason:'調理時間の記載がないため未設定としました。'},{field:'steps.0',reason:'加熱時間は未設定ですが、強火の指定があります。'}]);
+ assert.equal(recipe.minutes,null);
+});

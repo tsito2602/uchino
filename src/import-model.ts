@@ -27,7 +27,10 @@ export function importIssues(recipe:Recipe,raw:unknown):ImportIssue[] {
   const allowed=new Set(['title','category','servings','minutes','memo',...recipe.ingredients.flatMap((_,i)=>['name','quantity','unit','group'].map(key=>`ingredients.${i}.${key}`)),...recipe.steps.map((_,i)=>`steps.${i}`)]);
   const issues=new Map<string,string>();
   if(Array.isArray(raw))for(const item of raw.slice(0,100)){
-    if(item&&typeof item.field==='string'&&allowed.has(item.field)&&typeof item.reason==='string'&&item.reason.trim())issues.set(item.field,item.reason.trim().slice(0,400));
+    if(item&&typeof item.field==='string'&&allowed.has(item.field)&&typeof item.reason==='string'&&item.reason.trim()){
+      const reason=item.reason.trim().slice(0,400).replace(/\b(?:null|undefined)\b/gi,'未設定');
+      issues.set(item.field,reason);
+    }
   }
   if(recipe.memo.includes('仮設定')&&!issues.has('servings'))issues.set('servings','元資料の人数を読み取れず、2人分を仮設定しています。');
   if(recipe.category==='その他'&&!issues.has('category'))issues.set('category','カテゴリを特定できていません。適切なカテゴリを選んでください。');
