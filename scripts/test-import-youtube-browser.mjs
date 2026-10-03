@@ -2,13 +2,24 @@
 import {strict as assert} from 'node:assert';
 import {readFile,mkdir} from 'node:fs/promises';
 import {build} from 'esbuild';
-import {videoId,videoUrl,description,videoRecipe,playerHtml,watchHtml,storyboardSpec,geminiResponse} from '../tests/youtube-fixture.mjs';
+import {videoId,videoUrl,description,videoRecipe,watchHtml,storyboardSpec,geminiResponse} from '../tests/youtube-fixture.mjs';
 import './preview.mjs';
 const built=await build({entryPoints:['worker/import.ts'],bundle:true,write:false,format:'esm',platform:'node'});
 const {importUrl}=await import('data:text/javascript;base64,'+Buffer.from(built.outputFiles[0].text).toString('base64'));
 const thumbnail=await readFile('public/recipe-photos/ginger.webp'),fetchOriginal=globalThis.fetch;
 let metadataUnavailable=false,imageUnavailable=false,sheet;
-globalThis.fetch=async url=>String(url)===videoUrl?(metadataUnavailable?new Response(null,{status:403}):new Response(watchHtml()+playerHtml(description,videoId,storyboardSpec),{headers:{'content-type':'text/html'}})):String(url).includes('/sb/')?(imageUnavailable?new Response(null,{status:403}):new Response(sheet,{headers:{'content-type':'image/png'}})):String(url).startsWith('https://i.ytimg.com/')?new Response(thumbnail,{headers:{'content-type':'image/webp'}}):Promise.reject(new Error('Unexpected outbound URL'));
+const deferredPage=watchHtml().replace('<script>var ytInitialPlayerResponse = {"playabilityStatus":{"status":"UNPLAYABLE"}};</script>','')+'<script>ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"clientName":"WEB","clientVersion":"2.20261002.01.00"}}});</script>';
+let playerRequests=0;
+globalThis.fetch=async (url,options)=>{
+ if(String(url)===videoUrl)return metadataUnavailable?new Response(null,{status:403}):new Response(deferredPage,{headers:{'content-type':'text/html'}});
+ if(String(url)==='https://www.youtube.com/youtubei/v1/player'){
+  playerRequests++;assert.equal(options.method,'POST');assert.equal(JSON.parse(options.body).videoId,videoId);
+  return Response.json({videoDetails:{videoId,title:'Player title',shortDescription:description,lengthSeconds:'180'},playabilityStatus:{status:'OK'},storyboards:{playerStoryboardSpecRenderer:{spec:storyboardSpec.replace('i.ytimg.com','i9.ytimg.com')}}});
+ }
+ if(String(url).includes('/sb/'))return imageUnavailable?new Response(null,{status:403}):new Response(sheet,{headers:{'content-type':'image/png'}});
+ if(String(url).startsWith('https://i.ytimg.com/'))return new Response(thumbnail,{headers:{'content-type':'image/webp'}});
+ throw new Error('Unexpected outbound URL');
+};
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}),args:['--no-sandbox','--disable-dev-shm-usage']});
 let failed=false;
@@ -46,7 +57,7 @@ try{
  await page.getByRole('textbox',{name:'レシピのURL',exact:true}).fill(`https://youtu.be/${videoId}?si=shared`);
  assert.ok((await page.locator('.import-form').innerText()).includes('YouTubeの公開動画'));
  await page.getByRole('button',{name:'読み取る',exact:true}).click();await page.getByText('動画の音声・映像を読み取っています',{exact:true}).waitFor();assert.equal(await page.getByText('動画の音声・映像を読み取っています',{exact:true}).count(),1);await mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/youtube-progress-single-status.png',animations:'disabled'});await page.evaluate(()=>window.resumeVideoImport());await page.getByRole('heading',{name:'取り込み内容を確認',exact:true}).waitFor();
- assert.equal(await page.locator('.import-error-details').count(),0);assert.equal(await page.getByText('概要欄を取得できなかったため、動画から読み取りました。概要欄に分量がある場合は照合してください。',{exact:true}).count(),0);assert.equal(routeError,undefined);assert.equal(aiCalls,1);assert.deepEqual(phases,['video','sorting','checking','photos']);
+ assert.equal(await page.locator('.import-error-details').count(),0);assert.equal(await page.getByText('概要欄を取得できなかったため、動画から読み取りました。概要欄に分量がある場合は照合してください。',{exact:true}).count(),0);assert.equal(routeError,undefined);assert.equal(aiCalls,1);assert.equal(playerRequests,1);assert.deepEqual(phases,['video','sorting','checking','photos']);
  assert.equal(await page.getByRole('textbox',{name:'材料3',exact:true}).inputValue(),'醤油');assert.equal(await page.getByRole('textbox',{name:'分量4',exact:true}).inputValue(),'');
  const save=page.getByRole('button',{name:'確認して保存',exact:true});assert.equal(await save.isDisabled(),true);
  await page.getByRole('button',{name:'元の動画：卵焼きの作り方',exact:true}).click();assert.equal(await page.locator('.import-source pre').innerText(),description);assert.equal(await page.getByRole('link',{name:'元の動画を開く',exact:true}).getAttribute('href'),videoUrl);

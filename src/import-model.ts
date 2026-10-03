@@ -7,7 +7,8 @@ export type ImportIssue={field:string;reason:string};
 export type SourceDiagnostics={code:'redirect'|'http_error'|'not_html'|'empty_response'|'script_too_large'|'metadata_missing'|'page_too_large'|'timeout'|'network_error';httpStatus?:number;bytes:number;playerDataFound:boolean;pageDataFound:boolean};
 export type ImportPhotoSheet={photo:string;width:number;height:number;frames:{index:number;x:number;y:number;width:number;height:number}[]};
 export type StepPhotoFailure={step:number;code:'storyboard_missing'|'time_unknown'|'time_out_of_step'|'frame_unavailable'|'http_error'|'not_image'|'too_large'|'invalid_image'|'network_error'|'timeout'|'redirect_error'|'download_limit'|'budget_exceeded'|'prepare_failed';httpStatus?:number};
-export type StepPhotoDiagnostics={total:number;attached:number;failures:StepPhotoFailure[]};
+export type StoryboardDiagnostics={stage:'page'|'player';code:SourceDiagnostics['code']|'player_missing'|'player_unavailable'|'spec_missing'|'spec_unsupported'|'invalid_response';httpStatus?:number;bytes:number;playerDataFound:boolean;specFound:boolean;playabilityStatus?:'OK'|'ERROR'|'UNPLAYABLE'|'LOGIN_REQUIRED'|'CONTENT_CHECK_REQUIRED'|'AGE_CHECK_REQUIRED'|'LIVE_STREAM_OFFLINE'|'UNKNOWN'};
+export type StepPhotoDiagnostics={total:number;attached:number;failures:StepPhotoFailure[];source?:StoryboardDiagnostics};
 export function stepPhotoWarning(diagnostics:StepPhotoDiagnostics):string|undefined {
   if(diagnostics.attached>=diagnostics.total)return;
   return diagnostics.attached===0?`手順画像を取得できませんでした（0 / ${diagnostics.total}件）。手順の動画リンクから確認できます。`:`手順画像は ${diagnostics.attached} / ${diagnostics.total}件を取得しました。画像のない手順は動画リンクから確認できます。`;

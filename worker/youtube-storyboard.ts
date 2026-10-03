@@ -12,10 +12,11 @@ export function youtubeStoryboard(spec:unknown,id:string):YouTubeStoryboard|unde
     const [frameWidth,frameHeight,count,columns,rows,interval]=parts.slice(0,6).map(Number);
     if(![frameWidth,frameHeight,count,columns,rows,interval].every(n=>Number.isInteger(n)&&n>0)||frameWidth<160||frameWidth>640||frameHeight<90||frameHeight>640||count>20000||columns>10||rows>10||frameWidth*columns>4096||frameHeight*rows>4096||interval>30000)return;
     if(!/^M\$M$/.test(parts[6])||!/^[\w$-]+$/.test(parts[7]))return;
-    const template=base.replaceAll('$L',String(index)).replaceAll('$N',parts[6]);
     try{
+      // YouTube also advertises numbered image CDN hosts (for example i9).
+      const template=new URL(base,'https://i.ytimg.com/').href.replaceAll('$L',String(index)).replaceAll('$N',parts[6]);
       const url=new URL(template.replace('$M','0'));
-      if(url.protocol!=='https:'||url.hostname!=='i.ytimg.com'||url.port||url.username||url.password||!url.pathname.startsWith(`/sb/${id}/`)||!url.pathname.endsWith('/M0.jpg')||url.hash)return;
+      if(url.protocol!=='https:'||!/^i[1-9]?\.ytimg\.com$/.test(url.hostname)||url.port||url.username||url.password||!url.pathname.startsWith(`/sb/${id}/`)||!url.pathname.endsWith('/M0.jpg')||url.hash)return;
       if((template.match(/\$M/g)||[]).length!==1)return;
       const signed=new URL(template);signed.searchParams.set('sigh',parts[7]);
       const candidate={template:signed.href.replace('%24M','$M'),frameWidth,frameHeight,columns,rows,count,interval:interval/1000};
