@@ -42,7 +42,7 @@
 :root[data-brand-theme=dark] .filter-favorite-row .filter-toggle:after{background:#fff}
 :root .filter-favorite-row[aria-pressed=false] .filter-toggle:after{background:color-mix(in srgb,var(--muted) 60%,var(--paper))}
 .filter-favorite-row:active .filter-toggle{transform:scale(.93)}
-.filter-favorite-row[aria-pressed=true]>svg{animation:favorite-pop 460ms cubic-bezier(.22,1,.36,1)}
+.filter-favorite-row[aria-pressed=true]>svg{animation:favorite-squash 520ms cubic-bezier(.22,.72,.18,1)}
 .appearance-selection{transition:transform 480ms cubic-bezier(.34,1.35,.64,1),background 240ms}
 .card-panel :is(.category-tabs,.mode-options,.import-mode) button{transition:background 180ms,color 180ms,transform 280ms cubic-bezier(.34,1.56,.64,1)}
 .card-panel :is(.category-tabs,.mode-options,.import-mode) button:active{transform:scale(.94)}

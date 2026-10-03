@@ -11,9 +11,9 @@ export function IngredientAmountView({ingredient,base,servings}:{ingredient:Ingr
         const part=amount.parts[i],spoon=part&&isSpoonUnit(part.unit);
         return <span className="ingredient-quantity-part" key={i}>
           <QuantityLabel value={i>0&&part?'\u2009＋\u2009':''}/>
-          <QuantityLabel value={spoon?`${part.unit}\u2009`:''}/>
+          <QuantityLabel className="ingredient-quantity-unit" value={spoon?`${part.unit}\u2009`:''}/>
           <QuantityTicker value={part?.quantity||''}/>
-          <QuantityLabel value={part?.unit&&!spoon?`\u2009${part.unit}`:''}/>
+          <QuantityLabel className="ingredient-quantity-unit" value={part?.unit&&!spoon?`\u2009${part.unit}`:''}/>
         </span>;
       })}
     </span>

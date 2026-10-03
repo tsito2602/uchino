@@ -5,6 +5,8 @@ import {spaceScope,type Space} from './spaces';
 import {SpaceSwitchScreen} from './space-switch-screen';
 import {SHOPPING_UNDO_MS} from './shopping-undo';
 import {ShoppingList} from './shopping-list';
+import {NumberReel} from './servings-count';
+import {PhraseText} from './phrase-text';
 import {useRecipeImport} from './recipe-import';
 import {useEffect,useState,useRef} from 'react';
 import {BookOpen,Search,Heart,Clock,ChevronRight,Plus,Check,ExternalLink,ShoppingBasket,Trash2,Link,ImagePlus,FileText,Pencil,RefreshCw,Download,LogOut,Cloud,Smartphone,ChefHat,Settings,RotateCcw} from 'lucide-react';
@@ -114,7 +116,12 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
     });}finally{shoppingInFlight.current=false;}
   }
   function changeShopping(item:ShoppingItem,remove=false){void store.save('shopping',remove?item:{...item,done:!item.done},remove).catch(error=>setFormError(error.message));}
-  const shoppingList=(label='今回の買い物')=><ShoppingList items={shopping} disabled={busy} onToggle={item=>changeShopping(item)} onRemove={item=>changeShopping(item,true)} label={label}/>;
+  const shoppingList=(label='今回の買い物')=><ShoppingList items={shopping} disabled={busy} onToggle={item=>changeShopping(item)} onRemove={removeShopping} label={label}/>;
+  function removeShopping(item:ShoppingItem){
+    changeShopping(item,true);
+    const message=`「${item.name}」を消しました`;
+    setShoppingUndo({items:[item],message,expiresAt:Date.now()+SHOPPING_UNDO_MS});setNotice(message);
+  }
   async function finishShopping(keepUnpurchased:boolean){
     if(busy||shoppingInFlight.current)return;shoppingInFlight.current=true;setFormError('');
     const removed=shopping.filter(item=>!keepUnpurchased||item.done),remaining=shopping.length-removed.length;
@@ -144,16 +151,16 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
   return <>
     <main className="shell">
       <div id="main-content">
-      <header className="screen-page-top page-top"><div><h1 className={`page-heading${tab==='recipes'?' recipe-book-title':''}`}><PageIcon aria-hidden="true"/>{tab==='recipes'?(spaces.space?.name||'レシピ'):tab==='shopping'?'買い物メモ':'設定'}</h1>{tab!=='settings'&&<p className="page-count">{tab==='recipes'?`${recipes.length}件のレシピ`:`${shopping.filter(i=>!i.done).length}件の買うもの`}</p>}</div>{dataMode==='demo'&&<span className="data-mode-badge">デモ</span>}</header>
+      <header className="screen-page-top page-top"><div><h1 className={`page-heading${tab==='recipes'?' recipe-book-title':''}`}><PageIcon aria-hidden="true"/>{tab==='recipes'?(spaces.space?.name||'レシピ'):tab==='shopping'?'買い物メモ':'設定'}</h1>{tab!=='settings'&&<p className="page-count">{tab==='recipes'?<><NumberReel value={recipes.length}/>件のレシピ</>:<><NumberReel value={shopping.filter(i=>!i.done).length}/>件の買うもの</>}</p>}</div>{dataMode==='demo'&&<span className="data-mode-badge">デモ</span>}</header>
       {spaces.error&&<p className="subtle" role="status">レシピ帳の更新に失敗しました。通信が戻ると再試行します。</p>}
       {store.error&&<div className="notice" role="alert"><span>{store.error}</span><button aria-label="通知を閉じる" onClick={()=>store.setError('')}>×</button></div>}
       {!store.ready&&!store.error&&<p className="subtle" role="status">読み込んでいます…</p>}
       {tab==='recipes'&&<>
-        {filtered.length?<div className="recipe-list">{filtered.map(recipe=><article className="recipe-row" key={recipe.id}><button className="recipe-open" onClick={e=>{setServings(recipe.servings);setChecked([]);open({kind:'detail',id:recipe.id,origin:panelOrigin(e.currentTarget)});}}><RecipePhoto recipe={recipe}/><span className="recipe-category"><RecipeCategoryIcon category={recipe.category}/>{recipe.category}</span><div className="recipe-row-copy"><h2>{recipe.title}</h2>{recipe.minutes&&<p><span><Clock size={13}/>{recipe.minutes}分</span></p>}</div></button><RecipeFavorite recipe={recipe} onToggle={()=>void store.save('recipe',{...recipe,favorite:!recipe.favorite}).catch(e=>store.setError(e.message))}/></article>)}</div>:store.ready&&<div className="empty-state">{recipes.length?<Search size={36} strokeWidth={1.4} aria-hidden="true"/>:<RiceBowl className="empty-recipe-symbol" size={44} strokeWidth={1.4} aria-hidden="true"/>}<h2>{recipes.length?'レシピが見つかりません':'また作りたい、をここに。'}</h2><p>{recipes.length?'検索条件を変えてみてください。':'お気に入りの一品から、レシピ帳を育てよう。'}</p>{!recipes.length&&<><button className="primary" onClick={()=>setMenuPhase('open')}><Plus size={18}/>レシピを追加</button>{dataMode==='real'&&<button className="text-action" disabled={busy} onClick={()=>void selectDataMode('demo')}>サンプルを見てみる</button>}</>}</div>}</>}
+        {filtered.length?<div className="recipe-list">{filtered.map(recipe=><article className="recipe-row" key={recipe.id}><button className="recipe-open" onClick={e=>{setServings(recipe.servings);setChecked([]);open({kind:'detail',id:recipe.id,origin:panelOrigin(e.currentTarget)});}}><RecipePhoto recipe={recipe}/><span className="recipe-category"><RecipeCategoryIcon category={recipe.category}/>{recipe.category}</span><div className="recipe-row-copy"><h2><PhraseText text={recipe.title}/></h2>{recipe.minutes&&<p><span><Clock size={13}/>{recipe.minutes}分</span></p>}</div></button><RecipeFavorite recipe={recipe} onToggle={()=>void store.save('recipe',{...recipe,favorite:!recipe.favorite}).catch(e=>store.setError(e.message))}/></article>)}</div>:store.ready&&<div className="empty-state">{recipes.length?<Search size={36} strokeWidth={1.4} aria-hidden="true"/>:<RiceBowl className="empty-recipe-symbol" size={44} strokeWidth={1.4} aria-hidden="true"/>}<h2>{recipes.length?'レシピが見つかりません':'また作りたい、をここに。'}</h2><p>{recipes.length?'検索条件を変えてみてください。':'お気に入りの一品から、レシピ帳を育てよう。'}</p>{recipes.length>0&&filterCount>0&&<button className="primary" onClick={()=>{setQuery('');setSelectedCategories([]);setFavorites(false);}}><RotateCcw size={18}/>条件をはずす</button>}{!recipes.length&&<><button className="primary" onClick={()=>setMenuPhase('open')}><Plus size={18}/>レシピを追加</button>{dataMode==='real'&&<button className="text-action" disabled={busy} onClick={()=>void selectDataMode('demo')}>サンプルを見てみる</button>}</>}</div>}</>}
       {tab==='shopping'&&<>{shoppingList()}{!shopping.length&&<div className="empty-state"><ShoppingBasket size={40} strokeWidth={1.4} aria-hidden="true"/><h2>買うものをまとめよう</h2><p>レシピの材料からも追加できます。</p><button className="primary" onClick={()=>open({kind:'shopping'})}><Plus size={18}/>買うものを追加</button></div>}</>}
       {tab==='settings'&&formError&&<p className="form-error" role="alert">{formError}</p>}
       {tab==='settings'&&<SettingsPage onSpaceSettings={spaceControls.openSettings} session={session} pending={pending} updateReady={updateReady} dataMode={dataMode} changingData={busy} onDataMode={mode=>void selectDataMode(mode)}
-        onSync={()=>void synchronize(realScope).then(()=>{store.setError('');setNotice('同期しました');}).catch(e=>store.setError(e.message))}
+        onSync={()=>synchronize(realScope).then(()=>{store.setError('');},e=>{store.setError(e.message);throw e;})}
         onUpdate={()=>void canLeave().then(allowed=>allowed?(updateReady?applyUpdate():checkUpdate()).then(found=>{setUpdateReady(!!found);setNotice(found?'更新があります。もう一度押すと更新します。':'最新版です');}):undefined).catch(()=>setNotice('更新を確認できませんでした'))}
         onLogout={()=>void canLeave().then(allowed=>allowed?session.logout():undefined).catch(e=>store.setError(e.message))}/>}
       </div>
@@ -161,7 +168,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
     <FloatingViewport>
     {spaceControls.button}
     {spaceControls.panel}
-    <Dock shoppingUndo={tab==='shopping'&&shoppingUndo?{expiresAt:shoppingUndo.expiresAt,onUndo:()=>void undoShopping(),disabled:busy}:undefined} onFinishShopping={tab==='shopping'&&shopping.length?requestFinishShopping:undefined} tab={tab} onTab={changeTab} onSearch={tab==='recipes'?()=>open({kind:'filters'}):undefined} filterCount={filterCount} addOpen={menuPhase==='open'} onAdd={tab==='settings'?undefined:()=>tab==='recipes'?setMenuPhase('open'):open({kind:'shopping'})} context={spaceControls.context??context}/>
+    <Dock shoppingUndo={tab==='shopping'&&shoppingUndo?{expiresAt:shoppingUndo.expiresAt,onUndo:()=>void undoShopping(),disabled:busy}:undefined} onFinishShopping={tab==='shopping'&&shopping.length?requestFinishShopping:undefined} shoppingReady={shopping.length>0&&shopping.every(item=>item.done)} tab={tab} onTab={changeTab} onSearch={tab==='recipes'?()=>open({kind:'filters'}):undefined} filterCount={filterCount} addOpen={menuPhase==='open'} onAdd={tab==='settings'?undefined:()=>tab==='recipes'?setMenuPhase('open'):open({kind:'shopping'})} context={spaceControls.context??context}/>
     {menuPhase!=='closed'&&<FuseAddMenu options={addOptions} closing={menuPhase==='closing'} onClose={()=>setMenuPhase('closing')} onSelect={option=>{pendingAdd.current=option.onClick;setMenuPhase('closing');}} onExited={exitAddMenu}/>}
     {importFlow.panel}
     {detailView&&detail&&<Panel key={`detail-${detailView.id}`} actions={<RecipeFavorite recipe={detail} onToggle={()=>void store.save('recipe',{...detail,favorite:!detail.favorite}).catch(e=>store.setError(e.message))}/>} className="recipe-detail-panel" title={detail.title} suspended={view?.kind!=='detail'} closing={view?.kind==='detail'&&closing} onClose={close} onExited={exitPanel} origin={detailView.origin}>
