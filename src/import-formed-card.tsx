@@ -1,3 +1,4 @@
+import {PhraseText} from './phrase-text';
 import {Check} from 'lucide-react';
 import type {Recipe} from './domain';
 import {RecipePhoto} from './recipe-photo-view';
@@ -12,7 +13,7 @@ export function ImportFormedCard({recipe}:{recipe:Recipe}) {
     <div className="import-formed-frame"><div className="import-formed-card">
       <RecipePhoto recipe={recipe} priority/>
       <span className="import-formed-category"><RecipeCategoryIcon category={recipe.category} size={11}/>{recipe.category}</span>
-      <div className="import-formed-copy"><strong>{recipe.title}</strong></div>
+      <div className="import-formed-copy"><strong><PhraseText text={recipe.title}/></strong></div>
       <span className="import-formed-check"><Check size={14} strokeWidth={2.6}/></span>
     </div>
     {finish==='steam'?<span className="import-formed-steam"><svg viewBox="0 0 24 48"><path d="M12 46C5 39 19 31 12 23S5 9 12 2"/></svg><svg viewBox="0 0 24 48"><path d="M12 46C5 39 19 31 12 23S5 9 12 2"/></svg><svg viewBox="0 0 24 48"><path d="M12 46C5 39 19 31 12 23S5 9 12 2"/></svg></span>:<span className="import-formed-glint"><i/><i/><i/></span>}

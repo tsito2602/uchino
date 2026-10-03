@@ -19,16 +19,21 @@
 .recipe-favorite{z-index:2;right:7px;top:7px;width:44px;height:44px;isolation:isolate;color:#fff;border-radius:50%}
 .recipe-favorite:before{content:'';position:absolute;inset:4px;z-index:-1;border-radius:50%;background:#17171766;border:1px solid #ffffff30}
 .recipe-favorite[aria-pressed=true]{color:#e64b87}
-.recipe-favorite-heart{display:grid;place-items:center;pointer-events:none;transform-origin:center}
-.recipe-favorite-heart[data-motion=add]{animation:favorite-pop 460ms cubic-bezier(.22,1,.36,1)}
-.recipe-favorite-heart[data-motion=remove]{animation:favorite-release 240ms ease-out}
-.recipe-favorite-burst{position:absolute;inset:0;pointer-events:none;color:#ff86b3}
-.recipe-favorite-burst i{position:absolute;left:50%;top:50%;width:3px;height:3px;margin:-1.5px;border-radius:50%;background:currentColor;opacity:0;animation:favorite-spark 560ms ease-out both}
-.recipe-favorite-burst i:nth-child(even){width:4px;height:4px;margin:-2px;color:#ffc0d9}
-@keyframes favorite-pop{0%{transform:scale(.8) rotate(-8deg)}40%{transform:scale(1.25) rotate(5deg)}70%{transform:scale(.96) rotate(-2deg)}100%{transform:scale(1) rotate(0)}}
-@keyframes favorite-release{0%{transform:scale(.8)}65%{transform:scale(1.06)}100%{transform:scale(1)}}
-@keyframes favorite-spark{0%{opacity:0;transform:rotate(var(--spark-angle)) translateY(-8px) scale(.4)}20%{opacity:1}75%{opacity:.7}100%{opacity:0;transform:rotate(var(--spark-angle)) translateY(-22px) scale(.2)}}
-@media(prefers-reduced-motion:reduce){.recipe-favorite-heart[data-motion]{animation:none}.recipe-favorite-burst{display:none}.recipe-open{transition:none}.recipe-open:active{transform:none}}
+.recipe-favorite-heart{position:relative;display:grid;place-items:center;pointer-events:none;transform-origin:50% 80%}
+.recipe-favorite-heart>svg{grid-area:1/1}
+/* The filled heart is revealed through a wave-topped mask that rises (favourite) or sinks (removed). */
+.recipe-favorite-liquid{grid-area:1/1;display:grid;place-items:center;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Cpath d='M0 9Q4.5 6.5 9 9T18 9T27 9T36 9V36H0Z'/%3E%3C/svg%3E") -18px -11px/36px 36px repeat-x;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Cpath d='M0 9Q4.5 6.5 9 9T18 9T27 9T36 9V36H0Z'/%3E%3C/svg%3E") -18px -11px/36px 36px repeat-x}
+.recipe-favorite-heart[data-motion=add]{animation:favorite-squash 520ms cubic-bezier(.22,.72,.18,1)}
+.recipe-favorite-heart[data-motion=add] .recipe-favorite-liquid{animation:favorite-fill 420ms cubic-bezier(.3,.6,.3,1) both}
+.recipe-favorite-heart[data-motion=remove]{animation:favorite-settle 300ms ease-out}
+.recipe-favorite-heart[data-motion=remove] .recipe-favorite-liquid{animation:favorite-drain 280ms cubic-bezier(.5,0,.75,0) both}
+.recipe-favorite-ring{position:absolute;left:50%;top:50%;width:30px;height:30px;margin:-15px;border-radius:50%;border:1.5px solid currentColor;opacity:0;animation:favorite-ring 560ms cubic-bezier(.22,.72,.18,1) 140ms}
+@keyframes favorite-fill{from{-webkit-mask-position:0 17px;mask-position:0 17px}to{-webkit-mask-position:-18px -11px;mask-position:-18px -11px}}
+@keyframes favorite-drain{from{-webkit-mask-position:-18px -11px;mask-position:-18px -11px}to{-webkit-mask-position:-36px 17px;mask-position:-36px 17px}}
+@keyframes favorite-squash{0%{transform:scale(1)}35%{transform:scale(1.08,.94)}100%{transform:scale(1)}}
+@keyframes favorite-settle{0%{transform:scale(.94)}100%{transform:scale(1)}}
+@keyframes favorite-ring{0%{opacity:.7;transform:scale(.55)}100%{opacity:0;transform:scale(1.25)}}
+@media(prefers-reduced-motion:reduce){.recipe-favorite-heart[data-motion],.recipe-favorite-heart[data-motion] .recipe-favorite-liquid{animation:none}.recipe-favorite-ring{display:none}.recipe-open{transition:none}.recipe-open:active{transform:none}}
 .filter-favorite-row[aria-pressed=true]>svg{color:#e64b87}
 .recipe-open:focus-visible,.recipe-favorite:focus-visible{outline:2px solid var(--ink);outline-offset:-3px}
 .recipe-hero{position:relative;isolation:isolate;margin:0 0 6px;color:var(--ink)}
