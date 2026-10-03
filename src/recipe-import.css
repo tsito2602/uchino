@@ -36,3 +36,10 @@
 .import-complete-symbol { color: var(--on-brand); }
 :root[data-brand-theme=dark] .import-thinking-text { background-image: linear-gradient(90deg,#999 35%,#fff 50%,#999 65%); }
 @media(prefers-reduced-motion:reduce) { :root[data-brand-theme=dark] .import-thinking-text { background: none; color: var(--muted); } }
+.import-ai-actions { margin: 0 0 16px; border: 1px solid var(--line); border-radius: 20px; padding: 16px; background: var(--paper); }
+.import-ai-actions h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 15px; }
+.import-ai-actions ul { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.import-ai-actions li { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; line-height: 1.6; }
+.import-ai-actions li > svg { flex: none; margin-top: 3px; color: var(--muted); }
+.import-ai-actions li[data-check] > svg { color: #d4880f; }
+.import-ai-actions li > span { min-width: 0; }
