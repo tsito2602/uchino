@@ -143,7 +143,6 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
   const members=useSpaceMembers(spaces,session.local);
   const clipboard=useClipboardSuggestion({enabled:!session.local&&dataMode==='real'&&store.ready,knownUrls:recipes.map(recipe=>recipe.sourceUrl).filter(Boolean)});
   const addedBy=(recipe:Recipe)=>dataMode==='real'?members.find(member=>member.user_id===recipe.addedBy):undefined;
-  const addedByLabel=(recipe:Recipe)=>{const member=addedBy(recipe);return member?`${member.user_id===session.user.id?'あなた':`${member.name}さん`}が追加`:undefined;};
   const withAuthor=(recipe:Recipe):Recipe=>session.local?recipe:{...recipe,addedBy:session.user.id};
   const spaceControls=useSpaceControls({controller:spaces,userId:session.user.id,disabled:!!view||menuPhase!=='closed',onSelect:async id=>{spaces.select(id);},addedCounts:dataMode==='real'?recipes.reduce<Record<string,number>>((counts,recipe)=>{if(recipe.addedBy)counts[recipe.addedBy]=(counts[recipe.addedBy]??0)+1;return counts;},{}):{}});
   const PageIcon=tab==='recipes'?BookOpen:tab==='shopping'?ShoppingBasket:Settings;
@@ -177,7 +176,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
     {menuPhase!=='closed'&&<FuseAddMenu options={addOptions} closing={menuPhase==='closing'} onClose={()=>setMenuPhase('closing')} onSelect={option=>{pendingAdd.current=option.onClick;setMenuPhase('closing');}} onExited={exitAddMenu}/>}
     {importFlow.panel}
     {detailView&&detail&&<Panel key={`detail-${detailView.id}`} actions={<RecipeFavorite recipe={detail} onToggle={()=>void store.save('recipe',{...detail,favorite:!detail.favorite}).catch(e=>store.setError(e.message))}/>} className="recipe-detail-panel" title={detail.title} suspended={view?.kind!=='detail'} closing={view?.kind==='detail'&&closing} onClose={close} onExited={exitPanel} origin={detailView.origin}>
-      <RecipeDetail recipe={detail} addedBy={addedByLabel(detail)} servings={servings} checked={checked} onChange={setChecked} disabled={busy||view?.kind!=='detail'} error={view?.kind==='detail'?formError:undefined}/>
+      <RecipeDetail recipe={detail} servings={servings} checked={checked} onChange={setChecked} disabled={busy||view?.kind!=='detail'} error={view?.kind==='detail'?formError:undefined}/>
     </Panel>}
     {view&&view.kind!=='detail'&&view.kind!=='import'&&<Panel key={view.kind} className={view.kind==='edit'?'recipe-editor-panel':undefined} icon={view.kind==='filters'?Search:view.kind==='edit'?Pencil:view.kind==='shopping'?ShoppingBasket:view.kind==='shopping-finish'?Check:undefined} title={view.kind==='filters'?'検索・絞り込み':view.kind==='edit'?(view.isNew?'レシピを追加':'レシピを編集'):view.kind==='shopping-finish'?'この買い物を終了する':'買うものを追加'} closing={closing} onClose={close} onExited={exitPanel}>
       {view.kind==='filters'&&<div className="recipe-filters">
