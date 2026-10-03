@@ -1,7 +1,7 @@
 /* Recipe-specific layout over the shared uchiwake UI. */
 /* Local rounded faces keep names gentle without delaying offline rendering. */
 :root{--recipe-title-font:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Maru Gothic Pro","BIZ UDGothic",ui-rounded,"Hiragino Sans","Yu Gothic",sans-serif}
-.page-top h1.recipe-book-title{font-family:var(--recipe-title-font);font-weight:600;letter-spacing:.015em;line-height:1.5}
+.page-top h1.page-heading{font-family:var(--recipe-title-font);font-weight:600;letter-spacing:.015em;line-height:1.5}
 .space-option-name{font-family:var(--recipe-title-font)}
 .space-option-name small{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 html{scrollbar-gutter:stable}body{min-width:320px}button,input,textarea,select{font:inherit}button{color:inherit}textarea{resize:vertical}button:disabled{cursor:default}h3{margin:0;font-size:17px;font-weight:650}input,textarea,select{color:var(--ink)}
