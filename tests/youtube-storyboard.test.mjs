@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 import {photoFixture} from './photo-fixture.mjs';
-import {videoId,videoUrl,description,videoRecipe,playerHtml,geminiResponse,storyboardSpec} from './youtube-fixture.mjs';
+import {videoId,videoUrl,description,videoRecipe,playerHtml,watchHtml,geminiResponse,storyboardSpec} from './youtube-fixture.mjs';
 const built=await build({stdin:{contents:"export * from './worker/youtube-storyboard';export * from './worker/youtube-metadata';export * from './worker/import-youtube';",resolveDir:process.cwd()},bundle:true,write:false,format:'esm',platform:'node'});
-const {youtubeStoryboard,storyboardFrame,importYouTubeStepPhotos,youtubeMetadata,importYouTube}=await import('data:text/javascript;base64,'+Buffer.from(built.outputFiles[0].text).toString('base64'));
+const {youtubeStoryboard,storyboardFrame,importYouTubeStepPhotos,youtubeMetadata,fetchYouTubeMetadata,importYouTube}=await import('data:text/javascript;base64,'+Buffer.from(built.outputFiles[0].text).toString('base64'));
 const board=youtubeStoryboard(storyboardSpec,videoId);
 
 test('preview specification selects usable resolution and verifies the selected video and host',()=>{
@@ -31,7 +31,7 @@ test('sheets are downloaded once and missing steps never shift later photos',asy
 test('image refusal leaves the recipe usable and does not retry the video or invent images',async t=>{
  t.mock.method(globalThis,'fetch',async()=>new Response(null,{status:403}));
  const result=await importYouTubeStepPhotos(board,[12,65],[17,68],new URL(videoUrl),new AbortController().signal,180);
- assert.equal(result.stepPhotoSheets,undefined);assert.ok(result.warnings.length);
+ assert.equal(result.stepPhotoSheets,undefined);assert.match(result.warnings[0],/0 \/ 2件/);assert.deepEqual(result.stepPhotoDiagnostics,{total:2,attached:0,failures:[{step:1,code:'http_error',httpStatus:403},{step:2,code:'http_error',httpStatus:403}]});
  const controller=new AbortController();controller.abort();await assert.rejects(()=>importYouTubeStepPhotos(board,[12],[17],new URL(videoUrl),controller.signal),{name:'AbortError'});
 });
 
@@ -49,4 +49,33 @@ test('unknown or out-of-step photo times do not substitute an unrelated frame',a
  t.mock.method(globalThis,'fetch',async()=>assert.fail('No valid scene to download'));
  const result=await importYouTubeStepPhotos(board,[12,65],[68,null],new URL(videoUrl),new AbortController().signal,180);
  assert.equal(result.stepPhotoSheets,undefined);assert.ok(result.warnings.length);
+});
+
+test('page descriptions and player preview data merge in either order, including a player without text',async t=>{
+ const partialPlayer=`<script>var ytInitialPlayerResponse = ${JSON.stringify({storyboards:{playerStoryboardSpecRenderer:{spec:storyboardSpec}}})};</script>`;
+ for(const chunks of [[watchHtml(),partialPlayer],[partialPlayer,watchHtml()]]){
+  await t.test(chunks[0]===partialPlayer?'preview first':'description first',async t=>{
+   let cancelled=false;
+   t.mock.method(globalThis,'fetch',async()=>new Response(new ReadableStream({start(c){for(const chunk of chunks)c.enqueue(new TextEncoder().encode(chunk));},cancel(){cancelled=true;}}),{headers:{'content-type':'text/html'}}));
+   const result=await fetchYouTubeMetadata({id:videoId,url:videoUrl},AbortSignal.timeout(1000),undefined,true);
+   assert.equal(result.description,description);assert.deepEqual(result.storyboard,board);assert.equal(cancelled,true);
+   assert.deepEqual(youtubeMetadata(chunks.join(''),videoId).storyboard,board);
+  });
+ }
+ assert.equal(youtubeMetadata(watchHtml()+partialPlayer.replace(videoId,'differentID'),videoId).storyboard,undefined);
+});
+
+test('metadata survives an interrupted preview search instead of losing a readable description',async t=>{
+ const encoder=new TextEncoder();let reads=0,cancelled=false;
+ t.mock.method(globalThis,'fetch',async()=>new Response(new ReadableStream({pull(c){if(reads++===0)c.enqueue(encoder.encode(watchHtml()));else c.error(new Error('private network text'));},cancel(){cancelled=true;}}),{headers:{'content-type':'text/html'}}));
+ let diagnostic;
+ const result=await fetchYouTubeMetadata({id:videoId,url:videoUrl},new AbortController().signal,value=>{diagnostic=value;},true);
+ assert.equal(result.description,description);assert.equal(result.storyboard,undefined);assert.equal(diagnostic,undefined);
+});
+
+test('image content and missing timestamps produce specific step failures without URLs',async t=>{
+ t.mock.method(globalThis,'fetch',async()=>new Response('<html>private upstream text</html>',{headers:{'content-type':'text/html'}}));
+ const result=await importYouTubeStepPhotos(board,[12,null,65],[17,null,68],new URL(videoUrl),new AbortController().signal,180);
+ assert.deepEqual(result.stepPhotoDiagnostics.failures,[{step:1,code:'not_image',httpStatus:200},{step:2,code:'time_unknown'},{step:3,code:'not_image',httpStatus:200}]);
+ assert.ok(!JSON.stringify(result.stepPhotoDiagnostics).includes('private'));assert.ok(!JSON.stringify(result.stepPhotoDiagnostics).includes('https:'));
 });

@@ -48,7 +48,7 @@ export async function importYouTube(value:string,env:ImportBindings,options:Impo
   if(!aiConfigured(env)||typeof env.AI?.gateway!=='function')throw new Error('動画の取り込みは準備中です。AIの接続設定を確認してください。');
   const signal=AbortSignal.any([AbortSignal.timeout(300000),...(options.signal?[options.signal]:[])]);
   let sourceDiagnostics:SourceDiagnostics|undefined;
-  const metadata=await fetchYouTubeMetadata(video,signal,diagnostics=>{sourceDiagnostics=diagnostics;});
+  const metadata=await fetchYouTubeMetadata(video,signal,diagnostics=>{sourceDiagnostics=diagnostics;},true);
   if(sourceDiagnostics)console.warn(JSON.stringify({event:'youtube_metadata_failed',...sourceDiagnostics}));
   options.onPhase?.('video');signal.throwIfAborted();
   let raw:unknown,status:number|undefined;
@@ -98,8 +98,10 @@ export async function importYouTube(value:string,env:ImportBindings,options:Impo
   const stepPhotoSeconds=scenes.map(scene=>validTime(scene.photoSeconds)?scene.photoSeconds:null);
   result.recipe={...result.recipe,sourceUrl:video.url,stepVideoSeconds};
   result.issues=importIssues(result.recipe,result.issues);
+  options.onPhase?.('photos');
   const photo=await importRecipePhoto([`https://i.ytimg.com/vi/${video.id}/maxresdefault.jpg`,`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`],new URL(video.url),signal);
   const stepImages=await importYouTubeStepPhotos(metadata?.storyboard,stepVideoSeconds,stepPhotoSeconds,new URL(video.url),signal,metadata?.seconds);
+  if(stepImages.stepPhotoDiagnostics.failures.length)console.warn(JSON.stringify({event:'youtube_step_photos_failed',...stepImages.stepPhotoDiagnostics}));
   const warnings=[...(photo.warnings||[]),...(stepImages.warnings||[]),...(!metadata?['概要欄を取得できなかったため、動画から読み取りました。概要欄に分量がある場合は照合してください。']:[])];
-  return {...result,...photo,...(stepImages.stepPhotoSheets?{stepPhotoSheets:stepImages.stepPhotoSheets}:{}),...(sourceDiagnostics?{sourceDiagnostics}:{}),...(warnings.length?{warnings}:{}),source:{kind:'video',name:metadata?.title||result.recipe.title,url:video.url,...(metadata?.description?{text:metadata.description}:{})}};
+  return {...result,...photo,stepPhotoDiagnostics:stepImages.stepPhotoDiagnostics,...(stepImages.stepPhotoSheets?{stepPhotoSheets:stepImages.stepPhotoSheets}:{}),...(sourceDiagnostics?{sourceDiagnostics}:{}),...(warnings.length?{warnings}:{}),source:{kind:'video',name:metadata?.title||result.recipe.title,url:video.url,...(metadata?.description?{text:metadata.description}:{})}};
 }

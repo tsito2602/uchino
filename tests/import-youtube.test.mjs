@@ -69,7 +69,7 @@ test('description plus actual video use Gemini through the existing Gateway; unk
   assert.equal(input.generationConfig.responseMimeType,'application/json');assert.ok(input.generationConfig.responseJsonSchema);
   return Response.json({success:true,result:geminiResponse()});
  }));
- assert.equal(calls,1);assert.deepEqual(phases,['video','sorting','checking']);assert.equal(result.source.kind,'video');assert.equal(result.source.text,description);assert.equal(result.source.url,videoUrl);
+ assert.equal(calls,1);assert.deepEqual(phases,['video','sorting','checking','photos']);assert.equal(result.source.kind,'video');assert.equal(result.source.text,description);assert.equal(result.source.url,videoUrl);
  assert.equal(result.recipe.sourceUrl,videoUrl);assert.deepEqual(result.recipe.stepVideoSeconds,[12,65]);assert.equal(result.recipe.ingredients[2].name,'醤油');assert.equal(result.recipe.ingredients[2].group,'A');
  assert.equal(result.recipe.ingredients[3].quantity,'');assert.equal(result.recipe.ingredients[3].unit,'');assert.ok(result.issues.some(issue=>issue.field==='ingredients.3.quantity'));
  assert.ok(result.photo.startsWith('data:image/jpeg;base64,'));assert.equal(requests.length,3);assert.ok(validateRecord('recipe',result.recipe));
@@ -153,7 +153,7 @@ test('current watch-page JSON reaches Gemini even when player metadata is absent
   assert.ok(input.contents[0].parts[1].text.includes(description));return geminiResponse();
  }));
  assert.equal(result.source.text,description);assert.equal(result.source.name,'卵焼きの作り方');
- assert.equal(result.sourceDiagnostics,undefined);assert.ok(result.warnings.some(warning=>warning.includes('場面画像')));
+ assert.equal(result.sourceDiagnostics,undefined);assert.ok(result.warnings.some(warning=>warning.includes('手順画像')));
  assert.equal(youtubeMetadata(watchHtml(description,'differentID'),videoId),null);
  const data={videoDetails:{videoId,title:'卵焼き',shortDescription:description,lengthSeconds:'180'}};
  assert.equal(youtubeMetadata(`<script id="yt-initial-player-response" type="application/json">${JSON.stringify(data)}</script>`,videoId).description,description);

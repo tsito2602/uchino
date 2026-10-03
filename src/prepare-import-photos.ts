@@ -1,5 +1,5 @@
 import {MAX_STEP_PHOTO_BYTES,STEP_PHOTOS_BUDGET} from './domain';
-import type {ImportResult} from './import-model';
+import {stepPhotoWarning,type ImportResult} from './import-model';
 import {importedPhotoBlob} from './import-photo';
 import {prepareRecipePhoto,type PhotoCrop} from './recipe-photo';
 
@@ -25,13 +25,18 @@ export async function prepareImportPhotos(imported:ImportResult,signal:AbortSign
   }
   if(photos.length){
     const stepPhotos=imported.recipe.steps.map(()=>''),seen=new Set<number>();let failed=false;
+    const oldWarning=imported.stepPhotoDiagnostics?stepPhotoWarning(imported.stepPhotoDiagnostics):undefined;
     const maxBytes=Math.min(MAX_STEP_PHOTO_BYTES,Math.floor(STEP_PHOTOS_BUDGET/photos.length));
     for(const item of photos){
       if(seen.has(item.index))continue;seen.add(item.index);
-      try{stepPhotos[item.index]=await prepare(item.photo,maxBytes,item.crop);}catch{signal.throwIfAborted();failed=true;}
+      try{stepPhotos[item.index]=await prepare(item.photo,maxBytes,item.crop);}catch{signal.throwIfAborted();failed=true;if(imported.stepPhotoDiagnostics)imported.stepPhotoDiagnostics.failures.push({step:item.index+1,code:'prepare_failed'});}
     }
     imported.recipe={...imported.recipe,stepPhotos};
-    if(failed)imported.warnings=[...(imported.warnings||[]),'一部の手順写真を準備できませんでした。必要なら各手順に写真を追加してください。'];
+    if(imported.stepPhotoDiagnostics){
+      imported.stepPhotoDiagnostics.attached=stepPhotos.filter(Boolean).length;
+      const warning=stepPhotoWarning(imported.stepPhotoDiagnostics);
+      imported.warnings=[...(imported.warnings||[]).filter(value=>value!==oldWarning),...(warning?[warning]:[])];
+    }else if(failed)imported.warnings=[...(imported.warnings||[]),'一部の手順写真を準備できませんでした。必要なら各手順に写真を追加してください。'];
   }
   delete imported.stepPhotos;delete imported.stepPhotoSheets;
 }

@@ -14,12 +14,14 @@ function richText(value:unknown):string|undefined {
   if(typeof data.simpleText==='string')return data.simpleText;
   if(Array.isArray(data.runs)&&data.runs.every(run=>typeof object(run).text==='string'))return data.runs.map(run=>object(run).text).join('');
 }
-function playerMetadata(value:unknown,id:string):YouTubeMetadata|null {
+function playerMetadata(value:unknown,id:string):Partial<YouTubeMetadata> {
   const data=object(value),details=object(data.videoDetails),microformat=object(object(data.microformat).playerMicroformatRenderer);
+  if(details.videoId!==undefined&&details.videoId!==id)return {};
+  // Preview URLs carry the exact video ID even when this player omits its text.
+  const storyboard=youtubeStoryboard(object(object(data.storyboards).playerStoryboardSpecRenderer).spec,id);
   const description=typeof details.shortDescription==='string'?details.shortDescription:richText(microformat.description);
-  if(details.videoId!==id||typeof details.title!=='string'||description===undefined)return null;
-  const seconds=Number(details.lengthSeconds),storyboard=youtubeStoryboard(object(object(data.storyboards).playerStoryboardSpecRenderer).spec,id);
-  return {title:details.title.slice(0,200),description:description.slice(0,20000),...(storyboard?{storyboard}:{}),...(Number.isInteger(seconds)&&seconds>0?{seconds}:{})};
+  const seconds=Number(details.lengthSeconds);
+  return {...(details.videoId===id&&typeof details.title==='string'&&description!==undefined?{title:details.title.slice(0,200),description:description.slice(0,20000)}:{}),...(storyboard?{storyboard}:{}),...(details.videoId===id&&Number.isInteger(seconds)&&seconds>0?{seconds}:{})};
 }
 function pageMetadata(value:unknown,id:string):YouTubeMetadata|null {
   const data=object(value);
@@ -58,34 +60,33 @@ function* assignedData(script:string):Generator<{kind:'player'|'page';value:unkn
     }
   }
 }
-function scriptMetadata(script:string,id:string,scriptId='',found?:(kind:'player'|'page')=>void):YouTubeMetadata|null {
+function scriptMetadata(script:string,id:string,scriptId:string,accept:(value:Partial<YouTubeMetadata>)=>void,found?:(kind:'player'|'page')=>void) {
+  const read=(kind:'player'|'page',value:unknown)=>{found?.(kind);accept((kind==='page'?pageMetadata(value,id):playerMetadata(value,id))||{});};
   if(scriptId==='yt-initial-data'||scriptId==='yt-initial-player-response'){
-    const kind=scriptId==='yt-initial-data'?'page':'player';found?.(kind);
-    try{return kind==='page'?pageMetadata(JSON.parse(script),id):playerMetadata(JSON.parse(script),id);}catch{return null;}
+    const kind=scriptId==='yt-initial-data'?'page':'player';
+    try{read(kind,JSON.parse(script));}catch{/* Ignore malformed page data. */}return;
   }
-  for(const {kind,value} of assignedData(script)){
-    found?.(kind);
-    const result=kind==='page'?pageMetadata(value,id):playerMetadata(value,id);
-    if(result)return result;
-  }
-  return null;
+  for(const {kind,value} of assignedData(script))read(kind,value);
 }
-function metadataParser(id:string,onMetadata:(value:YouTubeMetadata)=>void,found?:(kind:'player'|'page')=>void,onOversized?:()=>void) {
+function metadataParser(id:string,onMetadata:(value:Partial<YouTubeMetadata>)=>void,found?:(kind:'player'|'page')=>void,onOversized?:()=>void) {
   let script:string|null=null,scriptId='',scriptTooLarge=false;
   return new Parser({
     onopentag(name,attrs){if(name==='script'){script='';scriptId=attrs.id||'';scriptTooLarge=false;}},
     ontext(text){if(script!==null&&!scriptTooLarge){if(script.length+text.length>2_000_000){script='';scriptTooLarge=true;onOversized?.();}else script+=text;}},
-    onclosetag(name){if(name==='script'){if(script&&!scriptTooLarge){const result=scriptMetadata(script,id,scriptId,found);if(result)onMetadata(result);}script=null;}},
+    onclosetag(name){if(name==='script'){if(script&&!scriptTooLarge){scriptMetadata(script,id,scriptId,onMetadata,found);}script=null;}},
   },{decodeEntities:false});
 }
+function metadataCollector(){
+  let data:Partial<YouTubeMetadata>={};
+  return {accept(value:Partial<YouTubeMetadata>){data={...value,...data};},get(){return typeof data.title==='string'&&typeof data.description==='string'?data as YouTubeMetadata:null;}};
+}
 export function youtubeMetadata(html:string,id:string):YouTubeMetadata|null {
-  let metadata:YouTubeMetadata|null=null;
-  const parser=metadataParser(id,value=>{metadata??=value;});parser.end(html);
-  return metadata;
+  const collector=metadataCollector();metadataParser(id,collector.accept).end(html);return collector.get();
 }
 
-export async function fetchYouTubeMetadata(video:YouTubeVideo,parent:AbortSignal,onFailure?:(diagnostics:SourceDiagnostics)=>void):Promise<YouTubeMetadata|null> {
+export async function fetchYouTubeMetadata(video:YouTubeVideo,parent:AbortSignal,onFailure?:(diagnostics:SourceDiagnostics)=>void,includeStoryboard=false):Promise<YouTubeMetadata|null> {
   const signal=AbortSignal.any([parent,AbortSignal.timeout(10000)]);
+  const collector=metadataCollector();
   let httpStatus:number|undefined,bytes=0,playerDataFound=false,pageDataFound=false,scriptTooLarge=false;
   const fail=(code:SourceDiagnostics['code'])=>{onFailure?.({code,...(httpStatus?{httpStatus}:{}),bytes,playerDataFound,pageDataFound});return null;};
   try{
@@ -96,21 +97,23 @@ export async function fetchYouTubeMetadata(video:YouTubeVideo,parent:AbortSignal
       await response.body?.cancel();return fail(response.status>=300&&response.status<400?'redirect':!response.ok?'http_error':'not_html');
     }
     const reader=response.body?.getReader();if(!reader)return fail('empty_response');
-    const decoder=new TextDecoder();let metadata:YouTubeMetadata|null=null;
-    const parser=metadataParser(video.id,value=>{metadata??=value;},kind=>{if(kind==='player')playerDataFound=true;else pageDataFound=true;},()=>{scriptTooLarge=true;});
+    const decoder=new TextDecoder();let previewDeadline:AbortSignal|undefined;
+    const parser=metadataParser(video.id,collector.accept,kind=>{if(kind==='player')playerDataFound=true;else pageDataFound=true;},()=>{scriptTooLarge=true;});
     const cancel=()=>{void reader.cancel().catch(()=>{});};signal.addEventListener('abort',cancel,{once:true});
     try{
       while(true){
-        const {done,value}=await abortable(reader.read(),signal);signal.throwIfAborted();
-        if(done){parser.end(decoder.decode());return metadata??fail(scriptTooLarge?'script_too_large':'metadata_missing');}
+        const {done,value}=await abortable(reader.read(),previewDeadline?AbortSignal.any([signal,previewDeadline]):signal);signal.throwIfAborted();
+        if(done){parser.end(decoder.decode());return collector.get()??fail(scriptTooLarge?'script_too_large':'metadata_missing');}
         for(let offset=0;offset<value.length;offset+=65536){
           const chunk=value.subarray(offset,Math.min(offset+65536,value.length));
           const remaining=4_000_000-bytes,part=chunk.subarray(0,Math.max(0,remaining));
           bytes+=part.length;parser.write(decoder.decode(part,{stream:true}));
-          if(metadata)return metadata;
-          if(bytes>=4_000_000)return fail('page_too_large');
+          const metadata=collector.get();
+          if(metadata&&(!includeStoryboard||metadata.storyboard))return metadata;
+          if(metadata)previewDeadline??=AbortSignal.timeout(2500);
+          if(bytes>=4_000_000)return metadata??fail('page_too_large');
         }
       }
     }finally{signal.removeEventListener('abort',cancel);await reader.cancel().catch(()=>{});reader.releaseLock();}
-  }catch{parent.throwIfAborted();return fail(signal.aborted?'timeout':'network_error');}
+  }catch{parent.throwIfAborted();return collector.get()??fail(signal.aborted?'timeout':'network_error');}
 }

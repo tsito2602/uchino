@@ -149,7 +149,7 @@ test('authenticated YouTube NDJSON import preserves phases and timestamps, and s
  const before=database.prepare('SELECT count(*) AS count FROM user_data').get().count;
  const response=await request('/api/import',{...options,headers:{...options.headers,Cookie:auth}},bindings);
  assert.equal(response.status,200);const events=(await response.text()).trim().split('\n').filter(Boolean).map(line=>JSON.parse(line));
- assert.deepEqual(events.filter(event=>event.type==='phase').map(event=>event.phase),['reading','video','sorting','checking']);
+ assert.deepEqual(events.filter(event=>event.type==='phase').map(event=>event.phase),['reading','video','sorting','checking','photos']);
  const result=events.at(-1).result;assert.equal(result.source.kind,'video');assert.equal(result.recipe.ingredients[3].quantity,'');assert.deepEqual(result.recipe.stepVideoSeconds,[12,65]);
  assert.equal(database.prepare('SELECT count(*) AS count FROM user_data').get().count,before);
  assert.equal((await put(result.recipe,0,'youtube-save')).status,200);

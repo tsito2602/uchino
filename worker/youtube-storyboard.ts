@@ -1,5 +1,5 @@
-import type {ImportPhotoSheet} from '../src/import-model';
-import {importRecipePhoto} from './import-photo';
+import {stepPhotoWarning,type StepPhotoDiagnostics,type StepPhotoFailure,type ImportPhotoSheet} from '../src/import-model';
+import {importRecipePhoto,type PhotoFailure} from './import-photo';
 
 export type YouTubeStoryboard={template:string;frameWidth:number;frameHeight:number;columns:number;rows:number;count:number;interval:number};
 // These are the public preview sheets advertised by the selected video's player.
@@ -31,29 +31,37 @@ export function storyboardFrame(board:YouTubeStoryboard,seconds:number,start:num
   const frame=Math.max(first,Math.min(last,Math.round(seconds/board.interval))),perSheet=board.columns*board.rows,cell=frame%perSheet;
   return {url:board.template.replace('$M',String(Math.floor(frame/perSheet))),x:(cell%board.columns)*board.frameWidth,y:Math.floor(cell/board.columns)*board.frameHeight,width:board.frameWidth,height:board.frameHeight};
 }
-export async function importYouTubeStepPhotos(board:YouTubeStoryboard|undefined,starts:(number|null)[],photos:(number|null)[],source:URL,parent:AbortSignal,seconds?:number):Promise<{stepPhotoSheets?:ImportPhotoSheet[];warnings?:string[]}> {
+export async function importYouTubeStepPhotos(board:YouTubeStoryboard|undefined,starts:(number|null)[],photos:(number|null)[],source:URL,parent:AbortSignal,seconds?:number):Promise<{stepPhotoSheets?:ImportPhotoSheet[];warnings?:string[];stepPhotoDiagnostics:StepPhotoDiagnostics}> {
   parent.throwIfAborted();
-  const warning='一部の手順の場面画像を取得できませんでした。手順の動画リンクから確認できます。';
-  if(!board)return {warnings:[warning]};
-  const requests=new Map<string,ImportPhotoSheet['frames']>();let missing=false;
+  const failures=new Map<number,StepPhotoFailure>(),stepPhotoSheets:ImportPhotoSheet[]=[];
+  const fail=(index:number,code:StepPhotoFailure['code'],httpStatus?:number)=>failures.set(index,{step:index+1,code,...(httpStatus?{httpStatus}:{})});
+  const finish=()=>{
+    const attached=stepPhotoSheets.reduce((sum,sheet)=>sum+sheet.frames.length,0),stepPhotoDiagnostics={total:starts.length,attached,failures:[...failures.values()].sort((a,b)=>a.step-b.step)};
+    const warning=stepPhotoWarning(stepPhotoDiagnostics);
+    return {...(stepPhotoSheets.length?{stepPhotoSheets}:{}),...(warning?{warnings:[warning]}:{}),stepPhotoDiagnostics};
+  };
+  if(!board){starts.forEach((_,index)=>fail(index,'storyboard_missing'));return finish();}
+  const requests=new Map<string,ImportPhotoSheet['frames']>();
   starts.forEach((start,index)=>{
-    if(start===null){missing=true;return;}
+    if(start===null){fail(index,'time_unknown');return;}
     const end=starts.slice(index+1).find((value):value is number=>value!==null&&value>start)??seconds;
     const photo=photos[index];
-    if(typeof photo!=='number'||!Number.isFinite(photo)||photo<start||end!==undefined&&photo>=end){missing=true;return;}
-    const frame=storyboardFrame(board,photo,start,end);if(!frame){missing=true;return;}
+    if(typeof photo!=='number'||!Number.isFinite(photo)){fail(index,'time_unknown');return;}
+    if(photo<start||end!==undefined&&photo>=end){fail(index,'time_out_of_step');return;}
+    const frame=storyboardFrame(board,photo,start,end);if(!frame){fail(index,'frame_unavailable');return;}
     const {url,...crop}=frame;const frames=requests.get(url)||[];frames.push({index,...crop});requests.set(url,frames);
   });
-  const signal=AbortSignal.any([parent,AbortSignal.timeout(15000)]),stepPhotoSheets:ImportPhotoSheet[]=[];let size=0,attempts=0;
-  // Deduplicate sheets: several steps often share one image. Bound the response
-  // independently of the number of recipe steps (the client has an 18MB limit).
+  const signal=AbortSignal.any([parent,AbortSignal.timeout(15000)]);let size=0,attempts=0;
   for(const [url,frames] of requests){
-    parent.throwIfAborted();if(signal.aborted||attempts++>=16){missing=true;break;}
+    parent.throwIfAborted();
+    if(signal.aborted||attempts++>=16){frames.forEach(frame=>fail(frame.index,signal.aborted?'timeout':'download_limit'));continue;}
     try{
-      const result=await importRecipePhoto([url],source,signal);
-      if(!result.photo||size+result.photo.length>8_000_000){missing=true;continue;}
+      let failure:PhotoFailure|undefined;
+      const result=await importRecipePhoto([url],source,signal,value=>{failure??=value;});
+      if(!result.photo){frames.forEach(frame=>fail(frame.index,failure?.code||'invalid_image',failure?.httpStatus));continue;}
+      if(size+result.photo.length>8_000_000){frames.forEach(frame=>fail(frame.index,'budget_exceeded'));continue;}
       size+=result.photo.length;stepPhotoSheets.push({photo:result.photo,width:board.frameWidth*board.columns,height:board.frameHeight*board.rows,frames});
-    }catch{parent.throwIfAborted();missing=true;break;}
+    }catch{parent.throwIfAborted();frames.forEach(frame=>fail(frame.index,signal.aborted?'timeout':'network_error'));}
   }
-  return {...(stepPhotoSheets.length?{stepPhotoSheets}:{}),...(missing?{warnings:[warning]}:{})};
+  return finish();
 }
