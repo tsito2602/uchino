@@ -1,8 +1,7 @@
-import {Fragment,useEffect,useRef,type Dispatch,type SetStateAction,type CSSProperties} from 'react';
+import {Fragment,useEffect,useRef,type Dispatch,type SetStateAction} from 'react';
 import {haptic} from './haptics';
 import type {Recipe} from './domain';
 import {GlassCheckbox} from './glass-checkbox';
-import {stickerTone} from './sticker-tones';
 import {IngredientAmountView} from './ingredient-amount-view';
 
 type Props={recipe:Recipe;servings:number;checked:string[];onChange:Dispatch<SetStateAction<string[]>>;disabled?:boolean};
@@ -114,5 +113,5 @@ export function IngredientList({recipe,servings,checked,onChange,disabled=false}
       window.removeEventListener('blur',stop);document.removeEventListener('keydown',keyDown);
     };
   },[recipe.id]);
-  return <div className="ingredient-list" ref={root} role="group" aria-label="材料を選択">{recipe.ingredients.map((ingredient,index)=><Fragment key={index}>{ingredient.group!==recipe.ingredients[index-1]?.group&&(ingredient.group||recipe.ingredients[index-1]?.group)&&<h4 className="ingredient-group">{ingredient.group||'その他の材料'}</h4>}<label className="ingredient-row" data-ingredient-index={index} data-checked={checked.includes(String(index))||undefined} style={{'--tone':stickerTone(index)} as CSSProperties} key={index}><GlassCheckbox disabled={disabled} checked={checked.includes(String(index))} onChange={event=>{const select=event.target.checked;onChange(current=>select?[...new Set([...current,String(index)])]:current.filter(id=>id!==String(index)));}}/><span>{ingredient.name}</span><IngredientAmountView ingredient={ingredient} base={recipe.servings} servings={servings}/></label></Fragment>)}</div>;
+  return <div className="ingredient-list" ref={root} role="group" aria-label="材料を選択">{recipe.ingredients.map((ingredient,index)=><Fragment key={index}>{ingredient.group!==recipe.ingredients[index-1]?.group&&(ingredient.group||recipe.ingredients[index-1]?.group)&&<h4 className="ingredient-group">{ingredient.group||'その他の材料'}</h4>}<label className="ingredient-row" data-ingredient-index={index} data-checked={checked.includes(String(index))||undefined} key={index}><GlassCheckbox disabled={disabled} checked={checked.includes(String(index))} onChange={event=>{const select=event.target.checked;onChange(current=>select?[...new Set([...current,String(index)])]:current.filter(id=>id!==String(index)));}}/><span>{ingredient.name}</span><IngredientAmountView ingredient={ingredient} base={recipe.servings} servings={servings}/></label></Fragment>)}</div>;
 }
