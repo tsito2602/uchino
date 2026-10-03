@@ -116,7 +116,7 @@ test('sync initializes a new database without migrations and retains existing us
   assert.equal(saved.status,200);
   // A new binding simulates a new Worker isolate initializing the same DB.
   const result=await (await request('/api/data',{headers:{Cookie:auth}},{...env,DB:d1(fresh)})).json();
-  assert.equal(result.records.length,1);assert.deepEqual(result.records[0].data,{...data,addedBy:'user-a'});assert.equal(result.records[0].revision,1);
+  assert.equal(result.records.length,1);assert.deepEqual(result.records[0].data,data);assert.equal(result.records[0].revision,1);
  }finally{fresh.close();}
 });
 

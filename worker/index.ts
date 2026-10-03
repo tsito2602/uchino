@@ -71,9 +71,6 @@ app.put('/api/data/:kind/:id',async c=>{
   if(previous&&previous.edit_id===input.editId)return c.json({revision:previous.revision,...(c.env.RECIPE_PHOTOS?{data:JSON.parse(previous.data)}:{})});
   if((previous?.revision??0)!==input.revision)return c.json({error:'他の端末で変更されています。'},409);
   if(kind==='recipe'){
-    // The first writer is recorded server-side and never reassigned by later edits.
-    const {addedBy:_claimed,...recipe}=data as Recipe,original=previous?(JSON.parse(previous.data) as Recipe).addedBy:c.get('user').id;
-    data=original?{...recipe,addedBy:original}:recipe;
     try{data=await storeRecipePhotos(c.env.RECIPE_PHOTOS,user,data as Recipe,previous?JSON.parse(previous.data):undefined);}
     catch(error){if(error instanceof PhotoStorageFailure)return c.json({error:error.message,code:error.code},error.code==='photo_reference_invalid'?400:503);throw error;}
   }
