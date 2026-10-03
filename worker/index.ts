@@ -15,7 +15,7 @@ type Bindings=AuthBindings&ImportBindings&PhotoBindings&{APP_ENV?:string};
 const app=new Hono<{Bindings:Bindings;Variables:{user:AuthUser;space:StoredSpace}}>();
 app.use('*',async(c,next)=>{
   c.header('X-Content-Type-Options','nosniff');c.header('Referrer-Policy','no-referrer');c.header('X-Frame-Options','DENY');
-  c.header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.googleusercontent.com; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+  c.header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleusercontent.com; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
   if(c.req.path.startsWith('/api/'))c.header('Cache-Control','no-store');
   if(!['GET','HEAD','OPTIONS'].includes(c.req.method)){
     const origin=c.req.header('Origin');if(origin!==new URL(c.req.url).origin)return c.json({error:'ページを再読み込みしてください。'},403);
