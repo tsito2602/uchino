@@ -11,7 +11,7 @@ export function HapticTouch(){
   const input=useRef<HTMLInputElement>(null),pressed=useRef(false);
   useLayoutEffect(()=>{
     const node=input.current,host=node?.parentElement;if(!node||!host)return;
-    if(getComputedStyle(host).position==='static')host.style.position='relative';
+    host.setAttribute('data-haptic-host','');
     // The native change event fires after the toggle is complete (React's
     // onChange for checkboxes fires earlier, during the click).
     const press=()=>{if(!pressed.current)return;pressed.current=false;host.click();};
