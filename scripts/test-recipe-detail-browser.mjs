@@ -41,7 +41,7 @@ try{
  for(const width of [320,360,390,1280]){
   await page.setViewportSize({width,height:844});await page.waitForTimeout(80);
   const islands=await nav.locator('.context-island').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().toJSON()));
-  assert.equal(islands.length,3);assert.ok(islands[0].x+islands[0].width<=islands[1].x&&islands[1].x+islands[1].width<=islands[2].x,'Dock islands never overlap');assert.ok(islands[2].x+islands[2].width<=width,'Dock stays in viewport');
+  assert.equal(islands.length,4);assert.ok(islands.every((box,i)=>i===0||islands[i-1].x+islands[i-1].width<=box.x),'Dock islands never overlap');assert.ok(islands[3].x+islands[3].width<=width,'Dock stays in viewport');
   const controls=await nav.locator('.context-servings button').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().toJSON()));assert.ok(controls.every(box=>box.width>=44&&box.height>=44),'Serving buttons have touch targets');
   if(width===320)await page.screenshot({path:'test-results/recipe-selection-320.png'});
  }
