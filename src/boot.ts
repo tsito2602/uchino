@@ -24,7 +24,7 @@ function toDock(screen:HTMLElement){
   if(!d.width||!p.width)return false;
   const drop=document.createElement('div');
   drop.style.cssText=`position:fixed;left:0;top:0;background:${getComputedStyle(screen).color};pointer-events:none`;
-  screen.append(drop);
+  screen.appendChild(drop);
   const box=(left:number,top:number,width:number,height:number)=>({left:`${left}px`,top:`${top}px`,width:`${width}px`,height:`${height}px`,borderRadius:`${height/2}px`});
   const cx=p.left+p.width/2,FALL=180,MORPH=760,landAt=FALL+MORPH*.8;
   screen.querySelector('.boot-name')?.animate([{opacity:1},{opacity:0,filter:'blur(4px)',transform:'translateY(6px)'}],{duration:260,easing:'ease-in',fill:'forwards'});
