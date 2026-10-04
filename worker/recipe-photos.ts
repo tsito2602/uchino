@@ -1,13 +1,21 @@
 import type {Recipe} from '../src/domain';
 import {photoHash,photoOwner,photoReference} from '../src/photo-ref';
 
-export type PhotoBindings={RECIPE_PHOTOS?:R2Bucket};
+// LEGACY_RECIPE_PHOTOS is the previous environment's bucket (production reads
+// staging's photos after the data move). A photo missing here is copied over on
+// first use, so the old bucket can be unbound once everything has been opened.
+export type PhotoBindings={RECIPE_PHOTOS?:R2Bucket;LEGACY_RECIPE_PHOTOS?:R2Bucket};
+export async function adoptLegacyPhoto(bucket:R2Bucket,legacy:R2Bucket|undefined,key:string):Promise<boolean>{
+  if(!legacy)return false;
+  const old=await legacy.get(key);if(!old)return false;
+  return !!await bucket.put(key,await old.arrayBuffer(),{httpMetadata:{contentType:'image/jpeg'}});
+}
 export class PhotoStorageFailure extends Error {
   constructor(public code:'photo_reference_invalid'|'photo_storage_unavailable'|'photo_storage_unconfigured'){
     super(code==='photo_reference_invalid'?'写真を確認してください。':'写真の保存先に接続できませんでした。端末の写真は保持されています。');
   }
 }
-export async function storeRecipePhotos(bucket:R2Bucket|undefined,userId:string,recipe:Recipe,previous?:Recipe):Promise<Recipe>{
+export async function storeRecipePhotos(bucket:R2Bucket|undefined,userId:string,recipe:Recipe,previous?:Recipe,legacy?:R2Bucket):Promise<Recipe>{
   const photos=[recipe.photo,...(recipe.stepPhotos||[])];
   if(!bucket){
     if(photos.some(photo=>photoReference(photo)))throw new PhotoStorageFailure('photo_storage_unconfigured');
@@ -20,7 +28,7 @@ export async function storeRecipePhotos(bucket:R2Bucket|undefined,userId:string,
     const reference=photoReference(photo);
     if(reference){
       if(reference.owner!==owner)throw new PhotoStorageFailure('photo_reference_invalid');
-      if(!existing.has(photo)&&!await bucket.head(reference.key))throw new PhotoStorageFailure('photo_reference_invalid');
+      if(!existing.has(photo)&&!await bucket.head(reference.key)&&!await adoptLegacyPhoto(bucket,legacy,reference.key))throw new PhotoStorageFailure('photo_reference_invalid');
       results.set(photo,photo);return;
     }
     if(!photo.startsWith('data:image/jpeg;base64,')){results.set(photo,photo);return;}

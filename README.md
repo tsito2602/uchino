@@ -47,7 +47,7 @@ npm run db:staging
 npm run deploy:staging
 ```
 
-詳細は [stagingの設定](docs/STAGING.md) を参照してください。
+詳細は [stagingの設定](docs/STAGING.md) を参照してください。本番（mainブランチ → Worker `uchino`）は [本番環境](docs/PRODUCTION.md) を参照してください。
 
 ## 保存と同期
 
