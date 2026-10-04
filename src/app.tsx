@@ -1,3 +1,4 @@
+import {haptic} from './haptics';
 import {useSpaces,type SpacesController} from './use-spaces';
 import {RecipeBookOnboarding} from './recipe-book-onboarding';
 import {useSpaceControls} from './space-controls';
@@ -102,9 +103,9 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
   function changeTab(next:Tab){if(next===tab)return;const order=['recipes','shopping','settings'];transitionRoute(Math.sign(order.indexOf(next)-order.indexOf(tab)),()=>{onTab(next);window.scrollTo({top:0,behavior:'instant'});});}
   function exitPanel(){setView(current=>current?.kind==='edit'&&current.parent&&recipes.some(recipe=>recipe.id===current.parent!.id)?current.parent:null);setClosing(false);}
   async function run(action:()=>Promise<void>){if(busy)return;setBusy(true);try{await action();}catch(e){setFormError(e instanceof Error?e.message:'処理できませんでした。');}finally{setBusy(false);}}
-  const saveRecipe=()=>void run(async()=>{if(view?.kind!=='edit'||photoBusy)return;const form=document.getElementById('recipe-form') as HTMLFormElement|null;if(!form?.reportValidity())return;const record=validateRecord('recipe',view.draft);if(!record)throw new Error('材料・手順・人数などの入力内容を確認してください。');await store.save('recipe',record);setClosing(true);});
+  const saveRecipe=()=>void run(async()=>{if(view?.kind!=='edit'||photoBusy)return;const form=document.getElementById('recipe-form') as HTMLFormElement|null;if(!form?.reportValidity())return;const record=validateRecord('recipe',view.draft);if(!record)throw new Error('材料・手順・人数などの入力内容を確認してください。');haptic();await store.save('recipe',record);setClosing(true);});
   async function removeRecipe(){const saved=view?.kind==='edit'&&!view.isNew?recipes.find(recipe=>recipe.id===view.draft.id):undefined;if(!saved||busy||!confirm(`「${saved.title}」を削除しますか？`))return;await run(async()=>{await store.save('recipe',saved,true);setClosing(true);});}
-  async function addIngredients(){if(!detail)return;await run(async()=>{const selected=detail.ingredients.filter((_,i)=>checked.includes(String(i)));for(const ingredient of selected){await store.save('shopping',{id:crypto.randomUUID(),name:ingredient.name,quantity:formatIngredientAmount(ingredient,detail.servings,servings),done:false,createdAt:new Date().toISOString()});}setNotice(`${selected.length}件を買い物メモに追加しました`);setChecked([]);});}
+  async function addIngredients(){if(!detail||busy)return;haptic();await run(async()=>{const selected=detail.ingredients.filter((_,i)=>checked.includes(String(i)));for(const ingredient of selected){await store.save('shopping',{id:crypto.randomUUID(),name:ingredient.name,quantity:formatIngredientAmount(ingredient,detail.servings,servings),done:false,createdAt:new Date().toISOString()});}setNotice(`${selected.length}件を買い物メモに追加しました`);setChecked([]);});}
   async function addShopping(){
     if(busy||shoppingInFlight.current||shoppingComposing.current)return;
     const form=document.getElementById('shopping-form') as HTMLFormElement|null;if(!form?.reportValidity())return;
@@ -126,7 +127,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
     setShoppingUndo({items:[item],message,expiresAt:Date.now()+SHOPPING_UNDO_MS});
   }
   async function finishShopping(keepUnpurchased:boolean){
-    if(busy||shoppingInFlight.current)return;shoppingInFlight.current=true;setFormError('');
+    if(busy||shoppingInFlight.current)return;haptic();shoppingInFlight.current=true;setFormError('');
     const removed=shopping.filter(item=>!keepUnpurchased||item.done),remaining=shopping.length-removed.length;
     try{await run(async()=>{
       await store.saveMany('shopping',removed,true);
@@ -139,7 +140,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
   async function undoShopping(){
     if(!shoppingUndo||busy||shoppingInFlight.current)return;
     if(Date.now()>=shoppingUndo.expiresAt){setShoppingUndo(null);setNotice(current=>current===shoppingUndo.message?'':current);return;}
-    shoppingInFlight.current=true;
+    haptic();shoppingInFlight.current=true;
     const items=shoppingUndo.items;
     try{await run(async()=>{await store.saveMany('shopping',items);setShoppingUndo(null);});}finally{shoppingInFlight.current=false;}
   }

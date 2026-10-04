@@ -1,3 +1,4 @@
+import {haptic} from './haptics';
 import {useEffect,useRef,useState,type ChangeEvent} from 'react';
 import {BookOpen,Check,FileText,ImagePlus,Pencil,Sparkles} from 'lucide-react';
 import {Panel} from './panel';
@@ -35,6 +36,7 @@ export function useRecipeImport(props:Props) {
     if(request.current||saving)return;
     if(demo&&!props.allowDemo)return;
     if(!demo&&props.local){setError('取り込みにはGoogleログインが必要です。');return;}
+    haptic();
     const controller=new AbortController();request.current=controller;const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(mode==='url'?360000:120000)]);
     const original:ImportSource={kind:mode,name:mode==='image'?imageName:mode==='url'?'レシピのURL':'貼り付けた本文',...(mode==='image'?{image}:mode==='url'?{url:value}:{text:value})};
     (document.activeElement as HTMLElement|null)?.blur();setError('');setDiagnostics(null);setResult(null);setAcknowledged([]);
@@ -72,7 +74,7 @@ export function useRecipeImport(props:Props) {
     if(remaining){setError('「要確認」の内容を確かめてチェックしてください。');return;}
     const form=document.getElementById('recipe-form') as HTMLFormElement|null;if(!form?.reportValidity())return;
     const recipe=validateRecord('recipe',result.recipe);if(!recipe){setError('材料・手順・人数などの入力内容を確認してください。');return;}
-    setError('');setSaving(true);
+    haptic();setError('');setSaving(true);
     try{await props.onSave(recipe as Recipe);}catch(cause){setError(cause instanceof Error?cause.message:'保存できませんでした。');}finally{setSaving(false);}
   }
   const disabled=props.closing||!!progress||saving||photoBusy||(!result&&!demo&&(props.local||(mode!=='url'&&!props.ai)||(mode==='image'?!image:!value.trim())));
