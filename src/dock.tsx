@@ -17,7 +17,7 @@ export const tabs=[{key:'recipes',label:'レシピ',icon:BookOpen},{key:'shoppin
 export function Dock({tab,onTab,onAdd,addOpen=false,onSearch,onFinishShopping,shoppingReady=false,shoppingUndo,filterCount=0,context}:{tab:Tab;onTab:(tab:Tab)=>void;onAdd?:()=>void;addOpen?:boolean;onSearch?:()=>void;onFinishShopping?:()=>void;shoppingReady?:boolean;shoppingUndo?:ShoppingUndoProps;filterCount?:number;context?:DockContext}){
   const [preview,setPreview]=useState<number|null>(null);
   const pointer=useRef<{id:number;target:HTMLElement;x:number;y:number}|null>(null);
-  const swallowClick=useRef(false);
+  const swallowClick=useRef(false),pendingTab=useRef(0);
   const root=useRef<HTMLDivElement>(null),morph=useRef<FluidDockHandle>(null);
   useLayoutEffect(()=>{morph.current?.measure();},[context,tab,onAdd,onSearch,onFinishShopping,shoppingUndo]);
   // Every press in the dock ticks on iPhone through the HapticTouch layer in
@@ -34,6 +34,7 @@ export function Dock({tab,onTab,onAdd,addOpen=false,onSearch,onFinishShopping,sh
     if(held?.target.hasPointerCapture(held.id))held.target.releasePointerCapture(held.id);
   }
   useEffect(()=>{release();},[tab,!!context]);
+  useEffect(()=>()=>window.clearTimeout(pendingTab.current),[]);
   useEffect(()=>{
     const end=(event:globalThis.PointerEvent)=>{if(pointer.current?.id===event.pointerId)release();};
     window.addEventListener('blur',release);window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
@@ -53,12 +54,26 @@ export function Dock({tab,onTab,onAdd,addOpen=false,onSearch,onFinishShopping,sh
     setPreview(hit(event));
   }
   function up(event:PointerEvent<HTMLElement>) {
-    if(pointer.current?.id!==event.pointerId)return;
-    const index=hit(event);
-    swallowClick.current=true;
-    window.setTimeout(()=>{swallowClick.current=false;},0);
+    const held=pointer.current;if(held?.id!==event.pointerId)return;
+    const index=hit(event),slid=held.target.hasPointerCapture(held.id);
     release();
-    if(index!==null)onTab(tabs[index].key);
+    if(index===null)return;
+    if(slid){
+      swallowClick.current=true;
+      window.setTimeout(()=>{swallowClick.current=false;},0);
+      onTab(tabs[index].key);return;
+    }
+    // A plain tap switches through the tab's click. On iPhone that click
+    // toggles the haptic label's switch, and Safari drops it when the page has
+    // already changed under the finger, so the switch waits for the click and
+    // only falls back to switching here if no click arrives.
+    window.clearTimeout(pendingTab.current);
+    const key=tabs[index].key;setPreview(index);
+    pendingTab.current=window.setTimeout(()=>{pendingTab.current=0;onTab(key);},400);
+  }
+  function choose(key:Tab) {
+    window.clearTimeout(pendingTab.current);pendingTab.current=0;
+    onTab(key);
   }
   const Icon=context?.icon??Check,SecondaryIcon=context?.secondary?.icon??Check,ExtraIcon=context?.extra?.icon??Check;
   // Reflect changes within browse/import too, without restarting on every
@@ -68,7 +83,7 @@ export function Dock({tab,onTab,onAdd,addOpen=false,onSearch,onFinishShopping,sh
         onPointerCancel={event=>{if(pointer.current?.id===event.pointerId)release();}}
         onLostPointerCapture={event=>{if(event.target===event.currentTarget&&pointer.current?.id===event.pointerId)release();}}
         onContextMenu={event=>event.preventDefault()}
-        onClickCapture={event=>{if(swallowClick.current){if(!(event.target as Element).classList.contains('haptic-touch'))event.preventDefault();event.stopPropagation();swallowClick.current=false;}}}
-        style={{'--selection-tab':preview??tabs.findIndex(t=>t.key===tab)} as CSSProperties}><span className="dock-selection" aria-hidden="true"/>{tabs.map((t,index)=><button key={t.key} data-dock-index={index} onClick={()=>onTab(t.key)} aria-label={t.label} aria-current={tab===t.key?'page':undefined}><HapticTouch/><t.icon size={22} strokeWidth={1.8}/></button>)}</nav>{onSearch&&<div className="dock-month recipe-tools"><button aria-label="レシピの検索・絞り込み" aria-haspopup="dialog" data-active={filterCount>0||undefined} onClick={onSearch}><HapticTouch/><Search size={21}/><span>{filterCount>0?'絞り込み中':'検索'}</span></button></div>}{shoppingUndo?<ShoppingUndoAction {...shoppingUndo}/>:onFinishShopping&&<div className="dock-month shopping-finish" data-ready={shoppingReady||undefined}><button type="button" aria-label="この買い物を終了する" onClick={onFinishShopping}><HapticTouch/><span className="shopping-finish-fill" aria-hidden="true"/><Check size={19}/><span className="shopping-finish-label"><span>この買い物を</span><span>終了する</span></span></button></div>}{onAdd&&<button className="dock-add" onClick={onAdd} aria-haspopup={tab==='recipes'?'menu':undefined} aria-expanded={tab==='recipes'?addOpen:undefined} style={{opacity:addOpen?0:1,transform:addOpen?'scale(.5)':undefined}} aria-label={tab==='recipes'?'レシピを追加':'買い物を追加'}><HapticTouch/><Plus size={23}/></button>}</div>}</DockContent></div></div>;
+        onClickCapture={event=>{if(swallowClick.current){if(!(event.target as Element).closest('.haptic-touch'))event.preventDefault();event.stopPropagation();swallowClick.current=false;}}}
+        style={{'--selection-tab':preview??tabs.findIndex(t=>t.key===tab)} as CSSProperties}><span className="dock-selection" aria-hidden="true"/>{tabs.map((t,index)=><button key={t.key} data-dock-index={index} onClick={()=>choose(t.key)} aria-label={t.label} aria-current={tab===t.key?'page':undefined}><HapticTouch/><t.icon size={22} strokeWidth={1.8}/></button>)}</nav>{onSearch&&<div className="dock-month recipe-tools"><button aria-label="レシピの検索・絞り込み" aria-haspopup="dialog" data-active={filterCount>0||undefined} onClick={onSearch}><HapticTouch/><Search size={21}/><span>{filterCount>0?'絞り込み中':'検索'}</span></button></div>}{shoppingUndo?<ShoppingUndoAction {...shoppingUndo}/>:onFinishShopping&&<div className="dock-month shopping-finish" data-ready={shoppingReady||undefined}><button type="button" aria-label="この買い物を終了する" onClick={onFinishShopping}><HapticTouch/><span className="shopping-finish-fill" aria-hidden="true"/><Check size={19}/><span className="shopping-finish-label"><span>この買い物を</span><span>終了する</span></span></button></div>}{onAdd&&<button className="dock-add" onClick={onAdd} aria-haspopup={tab==='recipes'?'menu':undefined} aria-expanded={tab==='recipes'?addOpen:undefined} style={{opacity:addOpen?0:1,transform:addOpen?'scale(.5)':undefined}} aria-label={tab==='recipes'?'レシピを追加':'買い物を追加'}><HapticTouch/><Plus size={23}/></button>}</div>}</DockContent></div></div>;
 }
 export {Pencil,ClipboardList};
