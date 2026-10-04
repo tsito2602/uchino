@@ -607,3 +607,7 @@ h2 { font-size: 20px; font-weight: 650; letter-spacing: -.025em; line-height: 1.
 .color-picker:disabled { opacity: .5; }
 .color-picker:disabled .color-swatch { cursor: default; }
 @media (prefers-reduced-motion: reduce) { .color-swatch > span, .swatch-check { transition: none; } }
+/* A recipe's panel takes on a breath of its photo's colour. */
+.card-panel-frame[data-toned] .card-panel-glass { background: color-mix(in srgb, var(--photo-tone) 13%, var(--panel-tint)); }
+.card-panel-frame[data-toned] .card-panel > .card-panel-header { background: color-mix(in srgb, var(--photo-tone) 11%, var(--panel-header-tint)); }
+.card-panel-frame[data-toned] .card-panel-header h2 { color: color-mix(in srgb, var(--photo-tone) 26%, var(--ink)); }

@@ -22,7 +22,7 @@ export function CookReference({kind,label}:{kind:'step'|'group';label:string}){
 // the chosen servings, and the screen kept awake. A step that says "1を加え"
 // or "Aを加える" shows what 1 and A are. Steps move from the dock or with a
 // sideways swipe.
-export function CookMode({recipe,servings,step,onStep}:{recipe:Recipe;servings:number;step:number;onStep:(step:number)=>void}){
+export function CookMode({recipe,servings,step,resumed,onStep}:{recipe:Recipe;servings:number;step:number;resumed?:number;onStep:(step:number)=>void}){
   const text=recipe.steps[step]??'',total=recipe.steps.length;
   const usage=stepUsage(recipe.ingredients,recipe.steps,step);
   useWakeLock();
@@ -32,6 +32,7 @@ export function CookMode({recipe,servings,step,onStep}:{recipe:Recipe;servings:n
   return <div className="cook-mode"
     onTouchStart={event=>{const t=event.touches[0];swipe.current=event.touches.length===1?{x:t.clientX,y:t.clientY}:null;}}
     onTouchEnd={event=>{const start=swipe.current,t=event.changedTouches[0];swipe.current=null;if(!start||!t)return;const dx=t.clientX-start.x,dy=t.clientY-start.y;if(Math.abs(dx)<56||Math.abs(dx)<Math.abs(dy)*1.4)return;const next=step+(dx<0?1:-1);if(next>=0&&next<total)onStep(next);}}>
+    {resumed!==undefined&&resumed===step&&<p className="cook-resumed"><span>手順{step+1}から再開しました</span><button type="button" onClick={()=>onStep(0)}>最初から</button></p>}
     <div className="cook-step" key={step}>
       <p className="cook-step-text">{splitReferences(text,usage).map((part,index)=>part.reference?<CookReference key={index} {...part.reference}/>:<StepText key={index} text={part.text} label={`手順${step+1}`}/>)}</p>
       {shown&&<section className="cook-uses" aria-label="この手順で使う材料">
