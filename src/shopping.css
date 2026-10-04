@@ -50,3 +50,4 @@
 .shopping-aisle span { display: block; padding: 22px 2px 6px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; }
 .shopping-list > .shopping-aisle:first-child span { padding-top: 6px; }
 .shopping-sources { flex-basis: 100%; overflow: hidden; color: var(--muted); font-size: 11px; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.shopping-entry{margin-inline:-10px;padding-inline:10px}
