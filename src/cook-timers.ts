@@ -55,15 +55,29 @@ export function useNow(active:boolean){
 export const formatClock=(ms:number)=>{const total=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(total/3600),m=Math.floor(total%3600/60),s=total%60;return h?`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`${m}:${String(s).padStart(2,'0')}`;};
 
 // "10分", "1時間半", "30秒", "5〜6分" (the shorter end, so nothing overcooks).
-const TIME=/(\d+(?:\.\d+)?)(?:\s*[〜~～\-－]\s*\d+(?:\.\d+)?)?\s*(時間|分|秒)(半)?/g;
+// Units written back to back in falling order ("1分30秒", "1時間30分") are one
+// duration, so they make one timer rather than two.
+const NUM='[0-9０-９]+(?:[.．][0-9０-９]+)?',SEG=`(${NUM})(?:\\s*[〜~～\\-－]\\s*${NUM})?\\s*(時間|分|秒)(半)?`;
+const TIME=new RegExp(`${SEG}(?:\\s*${SEG})*`,'g'),PART=new RegExp(SEG,'g');
+const UNIT={時間:3600,分:60,秒:1} as const;
+const number=(text:string)=>Number(text.replace(/[０-９．]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xfee0)));
 export type StepPart={text:string;seconds?:number};
 export function splitStepTimes(step:string):StepPart[]{
   const parts:StepPart[]=[];let last=0;
+  const push=(index:number,text:string,seconds:number)=>{
+    if(!(seconds>=5&&seconds<=12*3600))return;
+    if(index>last)parts.push({text:step.slice(last,index)});
+    parts.push({text,seconds});last=index+text.length;
+  };
   for(const match of step.matchAll(TIME)){
-    const value=Number(match[1]),unit=match[2],seconds=Math.round(value*(unit==='時間'?3600:unit==='分'?60:1)+(match[3]?unit==='時間'?1800:unit==='分'?30:0:0));
-    if(!(seconds>=5&&seconds<=12*3600))continue;
-    if(match.index>last)parts.push({text:step.slice(last,match.index)});
-    parts.push({text:match[0],seconds});last=match.index+match[0].length;
+    // Group the pieces of a run while each unit is smaller than the one before.
+    let group:{index:number;end:number;seconds:number;unit:number}|null=null;
+    for(const piece of match[0].matchAll(PART)){
+      const unit=UNIT[piece[2] as keyof typeof UNIT],seconds=number(piece[1])*unit+(piece[3]?unit/2:0),index=match.index+piece.index,end=index+piece[0].length;
+      if(group&&unit<group.unit&&!/半/.test(step.slice(group.index,group.end)))group={index:group.index,end,seconds:group.seconds+seconds,unit};
+      else{if(group)push(group.index,step.slice(group.index,group.end),Math.round(group.seconds));group={index,end,seconds,unit};}
+    }
+    if(group)push(group.index,step.slice(group.index,group.end),Math.round(group.seconds));
   }
   if(last<step.length)parts.push({text:step.slice(last)});
   return parts;
