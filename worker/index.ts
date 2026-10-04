@@ -7,7 +7,7 @@ import type {ImportEvent,ImportPhase} from '../src/import-model';
 import {authRoutes,sessionUser,type AuthBindings,type AuthUser} from './auth';
 import {validateRecord,type Kind,type Recipe} from '../src/domain';
 import {photoReference} from '../src/photo-ref';
-import {storeRecipePhotos,PhotoStorageFailure,type PhotoBindings} from './recipe-photos';
+import {storeRecipePhotos,adoptLegacyPhoto,PhotoStorageFailure,type PhotoBindings} from './recipe-photos';
 import {importUrl,importAI,aiConfigured,type ImportBindings} from './import';
 import {importFailurePayload} from './import-errors';
 import {embeddedAssets} from './generated-assets';
@@ -36,7 +36,9 @@ app.get('/api/photos/:owner/:file',async c=>{
   if(!await photoMembership(c.env.DB,reference.owner,user.id))return c.notFound();
   if(!c.env.RECIPE_PHOTOS)return c.json({error:'写真の保存先が設定されていません。'},503);
   try{
-    const photo=await c.env.RECIPE_PHOTOS.get(reference.key);if(!photo)return c.notFound();
+    let photo=await c.env.RECIPE_PHOTOS.get(reference.key);
+    if(!photo&&await adoptLegacyPhoto(c.env.RECIPE_PHOTOS,c.env.LEGACY_RECIPE_PHOTOS,reference.key))photo=await c.env.RECIPE_PHOTOS.get(reference.key);
+    if(!photo)return c.notFound();
     c.header('Content-Type','image/jpeg');c.header('Content-Length',String(photo.size));c.header('ETag',photo.httpEtag);
     return c.body(photo.body);
   }catch{return c.json({error:'写真を取得できませんでした。'},503);}
@@ -71,7 +73,7 @@ app.put('/api/data/:kind/:id',async c=>{
   if(previous&&previous.edit_id===input.editId)return c.json({revision:previous.revision,...(c.env.RECIPE_PHOTOS?{data:JSON.parse(previous.data)}:{})});
   if((previous?.revision??0)!==input.revision)return c.json({error:'他の端末で変更されています。'},409);
   if(kind==='recipe'){
-    try{data=await storeRecipePhotos(c.env.RECIPE_PHOTOS,user,data as Recipe,previous?JSON.parse(previous.data):undefined);}
+    try{data=await storeRecipePhotos(c.env.RECIPE_PHOTOS,user,data as Recipe,previous?JSON.parse(previous.data):undefined,c.env.LEGACY_RECIPE_PHOTOS);}
     catch(error){if(error instanceof PhotoStorageFailure)return c.json({error:error.message,code:error.code},error.code==='photo_reference_invalid'?400:503);throw error;}
   }
   const reply=(revision:number)=>c.json({revision,...(c.env.RECIPE_PHOTOS?{data}:{})});

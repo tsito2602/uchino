@@ -47,3 +47,18 @@ test('a stale migration does not overwrite other-device edits or start unnecessa
   const result=await backend.put(original,1,'stale-migrate');assert.equal(result.status,409);assert.equal(backend.calls.put,0);assert.equal(backend.record(original.id).data.title,'Edited on another device');
  }finally{backend.database.close();}
 });
+
+test('photos left in the previous environment\'s bucket are copied over on first use',async()=>{
+ const backend=await r2Backend();try{
+  const {data}=await (await backend.put(recipe())).json();
+  const legacy=new Map(backend.objects);backend.objects.clear();
+  backend.env.LEGACY_RECIPE_PHOTOS={async get(key){const bytes=legacy.get(key);return bytes?{size:bytes.length,async arrayBuffer(){return bytes;}}:null;}};
+  const image=await backend.request(data.photo);assert.equal(image.status,200);
+  assert.deepEqual(Buffer.from(await image.arrayBuffer()),legacy.get(data.photo.replace('/api/photos/','')));
+  assert.equal(backend.objects.size,1,'Viewing copies just that photo');
+  assert.equal((await backend.put({...data,id:'reuses-legacy'})).status,200,'References to not-yet-copied photos stay valid');
+  assert.equal(backend.objects.size,2);
+  const missing=data.photo.replace(/[a-f0-9]{64}\.jpg$/,'0'.repeat(64)+'.jpg');
+  assert.equal((await backend.request(missing)).status,404);assert.equal((await backend.put({...data,id:'missing',photo:missing})).status,400);
+ }finally{backend.database.close();}
+});

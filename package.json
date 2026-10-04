@@ -14,7 +14,9 @@
     "setup:staging": "node scripts/setup-staging.mjs",
     "db:staging": "wrangler d1 migrations apply uchino-staging --remote --config wrangler.staging.jsonc",
     "deploy:staging": "npm run check && wrangler deploy --config wrangler.staging.jsonc --keep-vars",
-    "deploy:staging:initial": "npm run check && npm run setup:staging && npm run db:staging && wrangler deploy --config wrangler.staging.jsonc --keep-vars"
+    "deploy:staging:initial": "npm run check && npm run setup:staging && npm run db:staging && wrangler deploy --config wrangler.staging.jsonc --keep-vars",
+    "db:production": "wrangler d1 migrations apply uchino --remote --config wrangler.production.jsonc",
+    "deploy:production": "npm run check && wrangler deploy --config wrangler.production.jsonc --keep-vars"
   },
   "dependencies": {
     "border-beam": "1.4.1",

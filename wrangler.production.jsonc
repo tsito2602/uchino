@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "uchino",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "ai": { "binding": "AI" },
+  "r2_buckets": [
+    { "binding": "RECIPE_PHOTOS", "bucket_name": "uchino-recipe-photos" },
+    // Read-only source for photos copied over from staging; see docs/PRODUCTION.md.
+    { "binding": "LEGACY_RECIPE_PHOTOS", "bucket_name": "uchino-staging-recipe-photos" }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "uchino",
+      "database_id": "42e2808a-521b-46c3-a35e-ba1b8d95254c",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": { "APP_ENV": "production", "AI_IMPORT_PROVIDER": "cloudflare", "AI_GATEWAY_ID": "uchino" },
+  "observability": { "enabled": true }
+}
