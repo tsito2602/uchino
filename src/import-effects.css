@@ -310,9 +310,10 @@
 .import-bubble-items{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
 .import-bubble-items li{max-width:100%;padding:4px 12px;border-radius:99px;font-family:var(--recipe-title-font);font-size:12px;line-height:1.5;font-weight:700;color:var(--ink);background:var(--liquid);overflow-wrap:anywhere;opacity:0}
 .import-bubble-items li[data-landed]{opacity:1}
+.import-bubble-card [data-emerge]{transform-origin:50% 100%;will-change:transform}
 .import-bubble-steps{display:grid;gap:9px;width:100%;margin:0;padding:0;list-style:none}
 .import-bubble-steps li{display:flex;align-items:center;gap:9px}
-.import-bubble-steps b{display:grid;place-items:center;flex:none;width:19px;height:19px;border-radius:50%;font-size:10px;font-weight:800;color:var(--ink);background:var(--soft);animation:import-bubble-pop 380ms cubic-bezier(.22,.72,.18,1) calc(var(--i) * 140ms) both}
+.import-bubble-steps b{display:grid;place-items:center;flex:none;width:19px;height:19px;border-radius:50%;font-size:10px;font-weight:800;color:var(--ink);background:var(--soft)}
 .import-bubble-steps i{width:var(--w);height:8px;border-radius:4px;background:var(--soft);transform-origin:left;animation:import-bubble-line 520ms cubic-bezier(.22,.72,.18,1) calc(var(--i) * 140ms + 120ms) both}
 @keyframes import-bubble-card-in{0%{opacity:0;transform:translateY(14px) scale(.94)}100%{opacity:1;transform:none}}
 @keyframes import-bubble-float{50%{transform:translateY(-6px)}}

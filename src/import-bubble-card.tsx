@@ -28,40 +28,55 @@ export function ImportBubbleCard({progress}:{progress:ImportProgress}) {
   const allIn=!!recipe&&ingredients.length===total;
   const done=allIn&&(phase==='checking'||phase==='photos');
   const shown=ingredients.slice(0,limit),extra=ingredients.length-shown.length;
-  const pills=shown.length+(extra>0?1:0);
-  const level=done?0:recipe&&total?1-.75*Math.min(1,ingredients.length/total):1;
+    const level=done?0:recipe&&total?1-.75*Math.min(1,ingredients.length/total):1;
   const card=useRef<HTMLDivElement>(null),rising=useRef<HTMLDivElement>(null),items=useRef<HTMLUListElement>(null);
-  const sent=useRef(0),surfacePath=useRef<SVGPathElement>(null),levelRef=useRef(level),targetRef=useRef(level);
+  const surfacePath=useRef<SVGPathElement>(null),levelRef=useRef(level),targetRef=useRef(level);
   targetRef.current=level;
   const [landed,setLanded]=useState(0);
   const filter=`import-goo-${useId().replace(/[^a-zA-Z0-9]/g,'')}`;
   useEffect(()=>{if(done)haptic();},[done]);
   useLayoutEffect(()=>{
-    if(!recipe){sent.current=0;setLanded(0);}
+    if(!recipe)setLanded(0);
   },[recipe]);
-  // Launch a bubble for every pill that has not risen yet.
+  // Every pill, label and step row is pulled straight up out of the liquid
+  // below its own place: a drop of liquid lifts it (the goo filter keeps the
+  // neck joined to the surface), it stretches as it rises and lands with a
+  // jelly wobble.
   useLayoutEffect(()=>{
-    const host=card.current,layer=rising.current,list=items.current;
-    if(!host||!layer||!list)return;
-    if(reduced||!layer.animate){sent.current=pills;setLanded(pills);return;}
-    const box=host.getBoundingClientRect();
-    const surface=host.clientHeight-levelRef.current*depth;
-    for(let i=sent.current;i<pills;i++){
-      const li=list.children[i] as HTMLElement|undefined;if(!li)break;
-      const r=li.getBoundingClientRect(),w=r.width,h=r.height;
-      const x=r.left-box.left-host.clientLeft+w/2,y=r.top-box.top-host.clientTop+h/2;
-      const bubble=document.createElement('i');layer.appendChild(bubble);
-      const start=Math.max(20,Math.min(host.clientWidth-20,x+(i%2?10:-10)));
-      const motion=bubble.animate([
-        {transform:`translate(${start-11}px,${surface-6}px)`,width:'22px',height:'22px'},
-        {transform:`translate(${x-w/2}px,${y-h/2}px)`,width:`${w}px`,height:`${h}px`},
-      ],{duration:720,easing:'cubic-bezier(0.2,0.8,0.3,1)',fill:'forwards'});
-      const index=i;
-      motion.onfinish=()=>{bubble.remove();setLanded(value=>Math.max(value,index+1));};
-      motion.oncancel=()=>bubble.remove();
-    }
-    sent.current=Math.max(sent.current,pills);
-  },[pills,reduced]);
+    const host=card.current,layer=rising.current;
+    if(!host)return;
+    const fresh=[...host.querySelectorAll<HTMLElement>('[data-emerge]:not([data-emerged])')];
+    if(!fresh.length)return;
+    const pillsList=items.current?[...items.current.children]:[];
+    const land=(el:HTMLElement)=>{const index=pillsList.indexOf(el);if(index>=0)setLanded(value=>Math.max(value,index+1));};
+    if(reduced||!layer||!host.animate){for(const el of fresh){el.dataset.emerged='';land(el);}return;}
+    const box=host.getBoundingClientRect(),surface=host.clientHeight-levelRef.current*depth;
+    fresh.forEach((el,order)=>{
+      el.dataset.emerged='';
+      const r=el.getBoundingClientRect(),y=r.top-box.top-host.clientTop,x=r.left-box.left-host.clientLeft;
+      const rise=Math.max(24,surface-y-r.height/2),delay=order*70;
+      const frames=(base:string)=>[
+        {transform:`${base} translateY(${rise}px) scale(.3,.42)`,opacity:0},
+        {transform:`${base} translateY(${rise*.55}px) scale(.62,.9)`,opacity:1,offset:.18},
+        {transform:`${base} translateY(-7px) scale(.86,1.16)`,offset:.56},
+        {transform:`${base} translateY(0) scale(1.14,.86)`,offset:.7},
+        {transform:`${base} scale(.95,1.06)`,offset:.82},
+        {transform:`${base} scale(1.03,.98)`,offset:.92},
+        {transform:`${base} scale(1)`,opacity:1},
+      ];
+      const timing={duration:920,delay,easing:'cubic-bezier(.3,.7,.4,1)'};
+      el.animate(frames(''),{...timing,fill:'backwards'}).onfinish=()=>land(el);
+      el.style.opacity='1';
+      // Pills are liquid themselves: a drop the same shape lifts each one, merging
+      // into the wave at the start so it reads as pulled out of it.
+      if(!pillsList.includes(el))return;
+      const drop=document.createElement('i');layer.appendChild(drop);
+      Object.assign(drop.style,{width:`${r.width}px`,height:`${r.height}px`,opacity:'0',transformOrigin:'50% 100%'});
+      const lift=frames(`translate(${x}px,${y}px)`);
+      const motion=drop.animate([...lift.slice(0,3).map(f=>({...f,opacity:1})),{...lift[3],opacity:0},{...lift[3],opacity:0,offset:1}],{...timing,fill:'forwards'});
+      motion.onfinish=motion.oncancel=()=>drop.remove();
+    });
+  });
   // The liquid is a wave: two sines that drift against each other. The level
   // eases toward its target, and the swell calms as the liquid drains.
   useEffect(()=>{
@@ -98,13 +113,13 @@ export function ImportBubbleCard({progress}:{progress:ImportProgress}) {
       </div>}
       <strong className="import-bubble-title">{recipe?recipe.title.slice(0,typed):''}{(!recipe||typed<recipe.title.length)&&<i className="import-bubble-caret"/>}</strong>
       {recipe&&<>
-        {shown.length>0&&<span className="import-bubble-label">材料</span>}
+        {shown.length>0&&<span className="import-bubble-label" data-emerge="">材料</span>}
         <ul ref={items} className="import-bubble-items">
-          {shown.map((item,i)=><li key={i} data-landed={i<landed||undefined}>{item.name}</li>)}
-          {extra>0&&<li key="more" data-landed={limit<landed||undefined}>ほか{extra}品</li>}
+          {shown.map((item,i)=><li key={i} data-emerge="" data-landed={i<landed||undefined}>{item.name}</li>)}
+          {extra>0&&<li key="more" data-emerge="" data-landed={limit<landed||undefined}>ほか{extra}品</li>}
         </ul>
-        {allIn&&recipe.steps.length>0&&<><span className="import-bubble-label">作り方</span>
-          <ol className="import-bubble-steps">{recipe.steps.slice(0,3).map((_,i)=><li key={i} style={{'--i':i,'--w':stepWidths[i]} as CSSProperties}><b>{i+1}</b><i/></li>)}</ol></>}
+        {allIn&&recipe.steps.length>0&&<><span className="import-bubble-label" data-emerge="">作り方</span>
+          <ol className="import-bubble-steps">{recipe.steps.slice(0,3).map((_,i)=><li key={i} data-emerge="" style={{'--i':i,'--w':stepWidths[i]} as CSSProperties}><b>{i+1}</b><i/></li>)}</ol></>}
       </>}
     </div>
   </div>;
