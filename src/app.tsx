@@ -35,7 +35,6 @@ import {CookCount,CookMode,CookProgress} from './cook-mode';
 import {clearStep,saveStep,savedStep} from './cook-progress';
 import {mergeQuantity,sameItem} from './shopping-merge';
 import {useRecipePeek} from './recipe-peek';
-import {usePageCollapse} from './page-collapse';
 import {FloatingStatus} from './cook-timers-view';
 import {PartnerPresence,usePartnerPresence} from './partner-presence';
 import {useRouteTransition} from './kondo-route-motion';
@@ -96,7 +95,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
   const today=todayKey();
   // While a panel is open the grid keeps its order; a recipe marked 「今日つくる」
   // moves to the front once the panel has gone, where the move can be seen.
-  const peek=useRecipePeek();usePageCollapse();
+  const peek=useRecipePeek();
   const frozenOrder=useRef<string[]|null>(null);
   const sortedRecipes=store.rows.filter(r=>r.kind==='recipe').map(r=>r.data as Recipe).sort((a,b)=>Number(cookingToday(b,today))-Number(cookingToday(a,today))||b.createdAt.localeCompare(a.createdAt));
   if(!view)frozenOrder.current=null;else frozenOrder.current??=sortedRecipes.map(r=>r.id);
@@ -225,7 +224,6 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
         onLogout={()=>void canLeave().then(allowed=>allowed?session.logout():undefined).catch(e=>store.setError(e.message))}/>}
       </div>
     </main>
-    <div className="page-compact" aria-hidden="true"><span>{tab==='recipes'?(spaces.space?.name||'レシピ'):tab==='shopping'?'買い物メモ':'設定'}</span></div>
     <FloatingViewport>
     {spaceControls.button}
     {spaceControls.panel}
