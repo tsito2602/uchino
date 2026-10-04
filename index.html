@@ -1,2 +1,30 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/><meta id="app-theme-color" name="theme-color" content="#f5f3ee"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-title" content="uchino"/><meta name="description" content="うちのレシピを、ひとつに。"/><link rel="icon" href="/icon.svg" type="image/svg+xml"/><link rel="apple-touch-icon" href="/apple-touch-icon-v2.png"/><link rel="manifest" href="/manifest.webmanifest"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&amp;display=swap"/><title>uchino</title><script type="module" src="/src/theme-init.ts"></script></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>
+<html lang="ja"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/><meta id="app-theme-color" name="theme-color" content="#f5f3ee"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-title" content="uchino"/><meta name="description" content="うちのレシピを、ひとつに。"/><link rel="icon" href="/icon.svg" type="image/svg+xml"/><link rel="apple-touch-icon" href="/apple-touch-icon-v2.png"/><link rel="manifest" href="/manifest.webmanifest"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&amp;display=swap"/><title>uchino</title><style>
+/* Inline so the very first paint, even offline, is the launch animation (as kondo and uchiwake). */
+#initial-boot{--boot-ink:#26221e;position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#f5f3ee;color:var(--boot-ink);animation:boot-failsafe 0s 8s forwards}
+@media (prefers-color-scheme:dark){:root:not([data-brand-theme=light]) #initial-boot{--boot-ink:#efefec;background:#131313}}
+:root[data-brand-theme=dark] #initial-boot{--boot-ink:#efefec;background:#131313}
+.boot-brand{display:grid;justify-items:center;gap:26px;transform:translateY(-4vh)}
+.boot-symbol{width:118px;height:137px;overflow:visible;fill:currentColor}
+.boot-trace{stroke-dasharray:1000;stroke-dashoffset:1000;animation:boot-draw 560ms cubic-bezier(.45,.05,.25,1) 200ms both}
+.boot-lid{transform-box:fill-box;transform-origin:50% 100%;animation:boot-lid 760ms 640ms both}
+.boot-name{display:flex;align-items:flex-end;gap:.07em;height:30px;font-size:30px;line-height:1}
+.boot-name span{display:block;height:1em;animation:boot-letter 320ms cubic-bezier(.22,1,.36,1) both;animation-delay:calc(1120ms + var(--letter) * 60ms)}
+.boot-name svg{display:block;height:100%;width:auto;fill:none;stroke:currentColor;stroke-width:18;stroke-linecap:round;stroke-linejoin:round}
+#initial-boot.boot-leaving{animation:boot-leave 260ms ease-out both}
+@keyframes boot-draw{to{stroke-dashoffset:0}}
+@keyframes boot-lid{0%{opacity:0;transform:translateY(-70px) rotate(-12deg);animation-timing-function:cubic-bezier(.55,0,.75,.4)}38%{opacity:1;transform:translateY(0) rotate(5deg) scaleY(.9);animation-timing-function:ease-out}58%{transform:translateY(-8px) rotate(-3deg)}78%{transform:translateY(0) rotate(1.5deg)}100%{opacity:1;transform:none}}
+@keyframes boot-letter{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+@keyframes boot-leave{to{opacity:0;visibility:hidden}}
+@keyframes boot-failsafe{to{visibility:hidden;pointer-events:none}}
+@media (prefers-reduced-motion:reduce){#initial-boot,#initial-boot *{animation:none!important}.boot-trace{stroke-dashoffset:0}}
+</style><script type="module" src="/src/theme-init.ts"></script></head><body><div id="initial-boot" role="status" aria-label="uchinoを読み込み中"><div class="boot-brand" aria-hidden="true">
+<svg class="boot-symbol" viewBox="290 160 490 570" xmlns="http://www.w3.org/2000/svg"><defs><mask id="boot-body-mask" maskUnits="userSpaceOnUse" x="200" y="300" width="650" height="480"><path class="boot-trace" d="M325 416C420 414 520 414 600 420C690 425 745 480 742 545C738 620 660 680 560 686C470 692 380 665 350 610C335 580 335 540 340 505" pathLength="1000" fill="none" stroke="#fff" stroke-width="150" stroke-linecap="round" stroke-linejoin="round"/></mask></defs><path mask="url(#boot-body-mask)" d="M360 375C412 373 508 375 563 377C649 380 699 396 737 447C774 497 773 553 753 592C722 654 652 686 578 696C505 706 434 689 388 657C346 627 320 582 318 538C317 515 320 505 333 504L353 504C374 504 373 521 376 539C380 565 391 579 414 585C461 598 535 594 565 581C600 566 616 541 616 513C616 484 603 464 576 458C546 450 441 455 397 457L359 458C326 459 319 437 319 413C319 388 331 375 360 375Z"/><path class="boot-lid" d="M320 300C324 269 352 243 390 240C432 235 476 242 510 249L512 232C482 223 484 190 504 182C514 177 524 181 549 187L574 192C605 200 602 230 582 239L566 240L563 256C614 270 656 283 686 303C723 327 729 355 709 366C700 372 691 370 677 367L345 313C329 311 320 308 320 300Z"/></svg>
+<strong class="boot-name" aria-label="uchino">
+<span style="--letter:0"><svg viewBox="0 0 74 102"><path d="M12 38V64A25 25 0 0 0 62 64M62 38V90"/></svg></span>
+<span style="--letter:1"><svg viewBox="0 0 70 102"><path d="M55.7 45.6A26 26 0 1 0 55.7 82.4"/></svg></span>
+<span style="--letter:2"><svg viewBox="0 0 74 102"><path d="M12 12V90M12 64A25 25 0 0 1 62 64V90"/></svg></span>
+<span style="--letter:3"><svg viewBox="0 0 36 102"><path d="M18 40V90M18 14V14.5"/></svg></span>
+<span style="--letter:4"><svg viewBox="0 0 74 102"><path d="M12 90V64A25 25 0 0 1 62 64V90M12 64V38"/></svg></span>
+<span style="--letter:5"><svg viewBox="0 0 74 102"><circle cx="37" cy="64" r="26"/></svg></span>
+</strong></div></div><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>

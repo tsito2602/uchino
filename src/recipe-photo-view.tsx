@@ -1,6 +1,7 @@
-import {useState,type CSSProperties} from 'react';
+import {useLayoutEffect,useRef,useState,type CSSProperties} from 'react';
 import {recipePhoto,type Recipe} from './domain';
 import {RecipeImage} from './recipe-image';
+import {photoTone,rememberTone} from './photo-tone';
 
 // Recipes without a photo get a cover of their own: a washi-dyed field per
 // category and the dish's first character, placed by a hash of its title.
@@ -16,6 +17,10 @@ export function RecipeCover({recipe}:{recipe:Pick<Recipe,'title'|'category'>}) {
   return <div className="recipe-cover" style={style}><span className="recipe-cover-glyph">{glyph}</span></div>;
 }
 export function RecipePhoto({recipe,priority=false}:{recipe:Recipe;priority?:boolean}) {
-  const src=recipePhoto(recipe),[failed,setFailed]=useState('');
-  return <div className="recipe-photo" aria-hidden="true">{src&&failed!==src?<RecipeImage src={src} alt="" loading={priority?'eager':'lazy'} decoding="async" onError={()=>setFailed(src)}/>:<RecipeCover recipe={recipe}/>}</div>;
+  const src=recipePhoto(recipe),[failed,setFailed]=useState(''),[loaded,setLoaded]=useState(''),mounted=useRef(0);
+  useLayoutEffect(()=>{mounted.current=performance.now();},[src]);
+  const photo=src&&failed!==src;
+  // A picture that arrives within a frame (already cached) just appears; a slow
+  // one resolves from its remembered tone through a soft blur.
+  return <div className="recipe-photo" aria-hidden="true" style={photo?{'--photo-tone':photoTone(src)} as CSSProperties:undefined}>{photo?<RecipeImage src={src} alt="" loading={priority?'eager':'lazy'} decoding="async" data-loaded={loaded===src?(performance.now()-mounted.current<80?'instant':'true'):undefined} onLoad={event=>{rememberTone(src,event.currentTarget);setLoaded(src);}} onError={()=>setFailed(src)}/>:<RecipeCover recipe={recipe}/>}</div>;
 }

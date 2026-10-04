@@ -81,6 +81,16 @@ spacesRoutes.use('/:id/*',async(c,next)=>{
  const space=await membership(c.env.DB!,c.req.param('id')!,c.get('user').id);if(!space)return fail('レシピ帳が見つかりません',404);c.set('space',space);await next();
 });
 spacesRoutes.get('/:id/details',async c=>c.json({space:publicSpace(c.get('space')),members:await membersFor(c.env.DB!,c.get('space').id)}));
+// Who else in the book is doing something right now (only shopping, for now).
+// Each open client reports every few seconds; silence for 20s means gone.
+spacesRoutes.post('/:id/presence',async c=>{
+ const space=c.get('space'),user=c.get('user'),db=c.env.DB!,now=Date.now();
+ const input=await readBody(c.req.raw,1024).catch(()=>null),activity=input?.activity==='shopping'?'shopping':'';
+ if(activity)await db.prepare('INSERT INTO recipe_space_presence(space_id,user_id,activity,updated_at) VALUES (?,?,?,?) ON CONFLICT(space_id,user_id) DO UPDATE SET activity=excluded.activity,updated_at=excluded.updated_at').bind(space.id,user.id,activity,now).run();
+ else await db.prepare('DELETE FROM recipe_space_presence WHERE space_id=? AND user_id=?').bind(space.id,user.id).run();
+ const result=await db.prepare(`SELECT COALESCE(NULLIF(p.display_name,''),NULLIF(m.name,''),'メンバー') name,r.activity FROM recipe_space_presence r JOIN recipe_space_members m ON m.space_id=r.space_id AND m.user_id=r.user_id AND m.active=1 LEFT JOIN user_profiles p ON p.user_id=r.user_id WHERE r.space_id=? AND r.user_id<>? AND r.updated_at>?`).bind(space.id,user.id,now-20000).all<{name:string;activity:string}>();
+ return c.json({active:result.results});
+});
 spacesRoutes.post('/:id/invites',async c=>{
  const space=c.get('space'),user=c.get('user');if(space.owner_id!==user.id)return fail('招待できるのは作成者だけです',403);
  const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',code=[...crypto.getRandomValues(new Uint8Array(12))].map(b=>alphabet[b%32]).join(''),expires=Date.now()+48*60*60*1000;
