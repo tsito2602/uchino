@@ -1,3 +1,4 @@
+import {haptic} from './haptics';
 import {SegmentSelection} from './segment-selection';
 import { useSyncExternalStore,type CSSProperties } from 'react';
 import { Monitor, Sun, Moon, Paintbrush } from 'lucide-react';
@@ -19,7 +20,7 @@ export function AppearanceSettings() {
         { value: 'dark', label: 'ダーク', accessibleLabel: 'ダーク', icon: Moon },
       ] as const).map(({ value, label, accessibleLabel, icon: Icon }) =>
         <button type="button" key={value} aria-label={accessibleLabel}
-          aria-pressed={preference === value} onClick={() => setThemePreference(value)}>
+          aria-pressed={preference === value} onClick={() => {if (preference !== value) haptic(); setThemePreference(value);}}>
           <Icon size={20} aria-hidden="true"/>{label}
         </button>)}
     </div>

@@ -112,3 +112,19 @@
    half of the 31.5px heading - half of the 44px button). */
 .space-switcher{top:calc(env(safe-area-inset-top) + 34px)}
 @media(min-width:760px){.space-switcher{top:calc(env(safe-area-inset-top) + 52px)}}
+
+/* Saved recipe landing, partner arrivals and the shared detail photo. */
+.landing-ghost,.landing-dissolve,.photo-ghost{position:fixed;z-index:400;margin:0;pointer-events:none;box-sizing:border-box}
+.landing-ghost{overflow:hidden;box-shadow:0 18px 40px #0000002e}
+.landing-ghost>.landing-face{position:absolute;inset:0;width:100%!important;height:100%!important;margin:0;transform:none!important;animation:none!important}
+.landing-dissolve{animation:none!important}
+.photo-ghost{overflow:hidden;aspect-ratio:auto!important;animation:none!important;transform:none!important}
+.photo-ghost img,.photo-ghost .recipe-cover{width:100%;height:100%;object-fit:cover}
+.card-panel .recipe-detail .ingredient-row,.card-panel .recipe-detail .ingredient-group{animation:page-rise 560ms cubic-bezier(.22,.72,.18,1) 220ms both}
+.card-panel .recipe-detail .ingredient-list>:nth-child(2){animation-delay:265ms}.card-panel .recipe-detail .ingredient-list>:nth-child(3){animation-delay:310ms}.card-panel .recipe-detail .ingredient-list>:nth-child(4){animation-delay:355ms}.card-panel .recipe-detail .ingredient-list>:nth-child(5){animation-delay:400ms}.card-panel .recipe-detail .ingredient-list>:nth-child(6){animation-delay:445ms}.card-panel .recipe-detail .ingredient-list>:nth-child(7){animation-delay:490ms}.card-panel .recipe-detail .ingredient-list>:nth-child(n+8){animation-delay:535ms}
+.once-card{margin:0 0 18px;animation:page-rise 640ms cubic-bezier(.22,.72,.18,1) 200ms both}
+.once-card p{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.6}
+@media(prefers-reduced-motion:reduce){.card-panel .recipe-detail .ingredient-row,.card-panel .recipe-detail .ingredient-group,.once-card{animation:none}}
+.once-card-actions{display:grid;grid-template-columns:1fr;gap:8px}
+.once-card-actions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:100%}
+.once-card-actions .once-card-later{width:auto;justify-self:center;height:36px;border:0;background:none;-webkit-backdrop-filter:none;backdrop-filter:none;color:var(--muted);font-weight:500;font-size:13px}
