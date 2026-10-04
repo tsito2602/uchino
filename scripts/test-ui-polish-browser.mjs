@@ -7,7 +7,7 @@ const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH
 await mkdir('test-results',{recursive:true});let failed=false;
 try{
  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block'}),errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://127.0.0.1:8787');await page.getByRole('button',{name:'この端末で使う',exact:true}).click();await page.getByRole('button',{name:'サンプルを見てみる',exact:true}).click();await page.locator('.recipe-row').nth(2).waitFor();
+ await page.goto('http://127.0.0.1:8787');await page.evaluate(()=>localStorage.setItem('uchino-device-mode','true'));await page.reload();await page.getByRole('button',{name:'サンプルを見てみる',exact:true}).click();await page.locator('.recipe-row').nth(2).waitFor();
  assert.ok(!(await page.locator('.recipe-list').innerText()).includes('人分'));
  await page.locator('.recipe-open').first().click();await page.waitForTimeout(650);
  const panel=page.getByRole('dialog'),nav=page.getByRole('navigation',{name:'操作',exact:true});
