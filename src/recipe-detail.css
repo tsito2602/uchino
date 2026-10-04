@@ -11,8 +11,13 @@
 .ingredient-row[data-checked]:before{opacity:1}
 .ingredient-row:has(input:focus-visible){outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
 .ingredient-list[data-selecting]{cursor:crosshair}
-.ingredient-selection-hint{line-height:1.7;margin-top:16px}
-@media(prefers-reduced-motion:reduce){.ingredient-row,.ingredient-row:before{transition:none}}
+.ingredient-teach .ingredient-row:nth-of-type(-n+3):not([data-checked]):before{animation:teach-trace 1500ms cubic-bezier(.22,.72,.18,1) 900ms both}
+.ingredient-teach .ingredient-row:nth-of-type(2):before{animation-delay:1040ms}.ingredient-teach .ingredient-row:nth-of-type(3):before{animation-delay:1180ms}
+.ingredient-teach .ingredient-row:nth-of-type(-n+3):not([data-checked])>.glass-checkbox{animation:teach-swell 1500ms cubic-bezier(.22,.72,.18,1) 900ms both}
+.ingredient-teach .ingredient-row:nth-of-type(2)>.glass-checkbox{animation-delay:1040ms}.ingredient-teach .ingredient-row:nth-of-type(3)>.glass-checkbox{animation-delay:1180ms}
+@keyframes teach-trace{0%{opacity:0;transform:scaleX(.96)}22%{opacity:1;transform:none}58%{opacity:1}100%{opacity:0}}
+@keyframes teach-swell{0%,100%{transform:none}22%{transform:scale(1.08,1.12)}48%{transform:none}}
+@media(prefers-reduced-motion:reduce){.ingredient-row,.ingredient-row:before{transition:none}.ingredient-teach .ingredient-row:before,.ingredient-teach .glass-checkbox{animation:none!important}}
 
 .context-action-icon{display:grid;place-items:center;animation:action-icon-appear 240ms ease-out}
 .context-action-count{transform:scale(1);transition:transform 320ms cubic-bezier(.34,1.56,.64,1);transform-origin:center}
