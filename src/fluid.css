@@ -12,9 +12,14 @@
 .shopping-row.done .shopping-check,.card-panel .shopping-row.done .shopping-check{background:transparent;border-color:transparent;color:var(--paper);animation:none}
 .shopping-row.done .shopping-check svg{animation:check-appear 220ms ease-out 200ms both}
 .shopping-row.done strong{text-decoration:none}
-.shopping-item-copy strong{position:relative}
-.shopping-item-copy strong:after{content:'';position:absolute;left:-26px;top:50%;width:0;height:24px;margin-top:-12px;border-radius:99px;background:var(--ink);pointer-events:none;transition:left 260ms cubic-bezier(.45,0,.2,1),width 300ms cubic-bezier(.5,0,.6,1) 120ms,height 300ms ease-in 120ms,margin-top 300ms ease-in 120ms}
-.shopping-row.done .shopping-item-copy strong:after{left:-3px;width:calc(100% + 6px);height:2px;margin-top:-1px;transition:left 420ms cubic-bezier(.45,0,.2,1) 300ms,width 520ms cubic-bezier(.22,.72,.18,1) 160ms,height 360ms cubic-bezier(.22,.72,.18,1) 160ms,margin-top 360ms cubic-bezier(.22,.72,.18,1) 160ms}
+/* A ticked row: ink spreads from the circle across the row as a pale wash and
+   the words sink into it. Unticking drains it back into the circle. */
+.shopping-row{isolation:isolate}
+.shopping-row::before{content:'';position:absolute;z-index:-1;inset:6px -10px;border-radius:18px;background:color-mix(in srgb,var(--ink) 7%,transparent);clip-path:circle(0 at 24px 50%);transition:clip-path 360ms ease-in;pointer-events:none}
+.shopping-row.done::before{clip-path:circle(160% at 24px 50%);transition:clip-path 760ms cubic-bezier(.22,.72,.18,1) 120ms}
+.shopping-item-copy strong,.shopping-quantity,.shopping-sources{transition:color 400ms}
+.shopping-row.done .shopping-item-copy strong{color:var(--muted)}
+.shopping-row.done :is(.shopping-quantity,.shopping-sources){color:color-mix(in srgb,var(--muted) 60%,transparent)}
 
 .glass-checkbox:before{content:'';position:absolute;inset:0;z-index:-1;border-radius:50%;background:var(--ink);transform:scale(0);transition:transform 360ms cubic-bezier(.22,.72,.18,1)}
 .glass-checkbox[data-checked]:before{transform:scale(1);transition-duration:520ms}
@@ -25,7 +30,7 @@
 .glass-checkbox-ring{border-radius:50%}
 .glass-checkbox[data-checked]{animation:none}
 
-@media(prefers-reduced-motion:reduce){:is(.shopping-check,.glass-checkbox),:is(.shopping-check,.glass-checkbox):before,.shopping-check:after,.shopping-item-copy strong:after{transition:none}.shopping-row.done .shopping-check svg{animation:none}}
+@media(prefers-reduced-motion:reduce){:is(.shopping-check,.glass-checkbox),:is(.shopping-check,.glass-checkbox):before,.shopping-check:after,.shopping-row::before,.shopping-item-copy :is(strong,span,small){transition:none}.shopping-row.done .shopping-check svg{animation:none}}
 
 /* Glass chips: the category label is frosted glass like the dock, on the
    recipe cards (top left, opposite the heart) and under the detail hero. */

@@ -10,6 +10,7 @@ import {NumberReel} from './servings-count';
 import {PhraseText} from './phrase-text';
 import {useRecipeImport} from './recipe-import';
 import {useEffect,useLayoutEffect,useState,useRef} from 'react';
+import {AnimatePresence,motion,useReducedMotion} from 'motion/react';
 import {cancelLanding,dissolve,holdLanding,playLanding} from './recipe-landing';
 import {useGridFlip} from './grid-flip';
 import {closePhoto,rememberCardPhoto} from './shared-photo';
@@ -96,7 +97,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
   const today=todayKey();
   // While a panel is open the grid keeps its order; a recipe marked 「今日つくる」
   // moves to the front once the panel has gone, where the move can be seen.
-  const peek=useRecipePeek();
+  const peek=useRecipePeek(),reducedMotion=useReducedMotion();
   const frozenOrder=useRef<string[]|null>(null);
   const sortedRecipes=store.rows.filter(r=>r.kind==='recipe').map(r=>r.data as Recipe).sort((a,b)=>Number(cookingToday(b,today))-Number(cookingToday(a,today))||b.createdAt.localeCompare(a.createdAt));
   if(!view)frozenOrder.current=null;else frozenOrder.current??=sortedRecipes.map(r=>r.id);
@@ -259,7 +260,9 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
       {view.kind==='shopping-finish'&&<div className="shopping-finish-summary"><h3>未購入のもの</h3><p>未購入のものを次の買い物に残しますか？<br/>購入済みのものはリストから消えます。</p><ul className="shopping-finish-items" aria-label="未購入のもの">{shopping.filter(item=>!item.done).map(item=><li key={item.id}>{[item.name,item.quantity].filter(Boolean).join(' ')}</li>)}</ul>{formError&&<p className="form-error" role="alert">{formError}</p>}</div>}
 
     </Panel>}
-    {notice&&<div className="uchino-toast" role="status"><Check size={17}/><span className="toast-text">{notice}</span>{tab!=='shopping'&&<button type="button" className="toast-action" onClick={showShopping}><HapticTouch/>メモを見る</button>}</div>}
+    <AnimatePresence>{notice&&<motion.div key="add-toast" className="uchino-toast add-toast" role="status" style={{x:'-50%',transformOrigin:'50% 100%'}}
+      initial={reducedMotion?{opacity:0,x:'-50%'}:{opacity:0,x:'-50%',y:22,scale:.86,filter:'blur(8px)'}} animate={{opacity:1,x:'-50%',y:0,scale:1,filter:'blur(0px)',transition:reducedMotion?{duration:0}:{type:'spring',stiffness:420,damping:26,opacity:{duration:.2},filter:{duration:.32}}}}
+      exit={reducedMotion?{opacity:0,transition:{duration:0}}:{opacity:0,y:14,scale:.94,filter:'blur(6px)',transition:{duration:.26,ease:[.4,0,1,1]}}}><Check size={17}/><span className="toast-text">{notice}</span>{tab!=='shopping'&&<button type="button" className="toast-action" onClick={showShopping}><HapticTouch/>メモを見る</button>}</motion.div>}</AnimatePresence>
     {!view&&formError&&<div className="uchino-toast" role="alert">{formError}<button onClick={()=>setFormError('')} aria-label="閉じる">×</button></div>}
     </FloatingViewport>
   </>;
