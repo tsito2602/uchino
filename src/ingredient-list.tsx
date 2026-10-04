@@ -5,11 +5,15 @@ import {GlassCheckbox} from './glass-checkbox';
 import {IngredientAmountView} from './ingredient-amount-view';
 
 type Props={recipe:Recipe;servings:number;checked:string[];onChange:Dispatch<SetStateAction<string[]>>;disabled?:boolean};
-type Gesture={id:number;touch:boolean;x:number;y:number;startX:number;startY:number;last:number;active:boolean};
+type Gesture={id:number;touch:boolean;x:number;y:number;startX:number;startY:number;origin:number;last:number;active:boolean};
 
 export function IngredientList({recipe,servings,checked,onChange,disabled=false}:Props){
   const root=useRef<HTMLDivElement>(null);
   const latest=useRef({onChange,disabled});latest.current={onChange,disabled};
+  // A held finger released on the row it selected lets the tap through, so the
+  // native switch toggles under the finger and iPhone ticks; that tap's own
+  // toggle is then swallowed, keeping the row selected.
+  const echo=useRef({index:-1,until:0});
   useEffect(()=>{
     const element=root.current;if(!element)return;
     const list:HTMLDivElement=element;
@@ -59,8 +63,8 @@ export function IngredientList({recipe,servings,checked,onChange,disabled=false}
     function start(id:number,touch:boolean,x:number,y:number,target:EventTarget|null){
       if(gesture||latest.current.disabled)return;
       const index=indexOf(target);if(index<0)return;
-      suppressUntil=0;
-      gesture={id,touch,x,y,startX:x,startY:y,last:-1,active:false};
+      suppressUntil=0;echo.current.index=-1;
+      gesture={id,touch,x,y,startX:x,startY:y,origin:index,last:-1,active:false};
       timer=window.setTimeout(()=>{
         if(!gesture||latest.current.disabled)return;
         gesture.active=true;list.dataset.selecting='true';paint(index);
@@ -85,6 +89,9 @@ export function IngredientList({recipe,servings,checked,onChange,disabled=false}
     };
     const touchEnd=(event:TouchEvent)=>{
       if(!gesture?.touch||!Array.from(event.changedTouches).some(touch=>touch.identifier===gesture!.id))return;
+      if(gesture.active&&gesture.last===gesture.origin&&Math.hypot(gesture.x-gesture.startX,gesture.y-gesture.startY)<=8){
+        echo.current={index:gesture.origin,until:Date.now()+800};stop();suppressUntil=0;return;
+      }
       if(gesture.active&&event.cancelable)event.preventDefault();stop();
     };
     const pointerDown=(event:PointerEvent)=>{if(event.pointerType!=='touch'&&event.button===0&&event.isPrimary)start(event.pointerId,false,event.clientX,event.clientY,event.target);};
@@ -113,5 +120,5 @@ export function IngredientList({recipe,servings,checked,onChange,disabled=false}
       window.removeEventListener('blur',stop);document.removeEventListener('keydown',keyDown);
     };
   },[recipe.id]);
-  return <div className="ingredient-list" ref={root} role="group" aria-label="材料を選択">{recipe.ingredients.map((ingredient,index)=><Fragment key={index}>{ingredient.group!==recipe.ingredients[index-1]?.group&&(ingredient.group||recipe.ingredients[index-1]?.group)&&<h4 className="ingredient-group">{ingredient.group||'その他の材料'}</h4>}<label className="ingredient-row" data-ingredient-index={index} data-checked={checked.includes(String(index))||undefined} key={index}><GlassCheckbox disabled={disabled} checked={checked.includes(String(index))} onChange={event=>{const select=event.target.checked;onChange(current=>select?[...new Set([...current,String(index)])]:current.filter(id=>id!==String(index)));}}/><span>{ingredient.name}</span><IngredientAmountView ingredient={ingredient} base={recipe.servings} servings={servings}/></label></Fragment>)}</div>;
+  return <div className="ingredient-list" ref={root} role="group" aria-label="材料を選択">{recipe.ingredients.map((ingredient,index)=><Fragment key={index}>{ingredient.group!==recipe.ingredients[index-1]?.group&&(ingredient.group||recipe.ingredients[index-1]?.group)&&<h4 className="ingredient-group">{ingredient.group||'その他の材料'}</h4>}<label className="ingredient-row" data-ingredient-index={index} data-checked={checked.includes(String(index))||undefined} key={index}><GlassCheckbox disabled={disabled} checked={checked.includes(String(index))} onChange={event=>{if(echo.current.index===index&&Date.now()<echo.current.until){echo.current.index=-1;return;}const select=event.target.checked;onChange(current=>select?[...new Set([...current,String(index)])]:current.filter(id=>id!==String(index)));}}/><span>{ingredient.name}</span><IngredientAmountView ingredient={ingredient} base={recipe.servings} servings={servings}/></label></Fragment>)}</div>;
 }

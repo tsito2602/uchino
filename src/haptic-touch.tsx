@@ -1,6 +1,6 @@
 import {useLayoutEffect,useRef} from 'react';
 
-const ios=typeof navigator!=='undefined'&&(/iP(hone|ad|od)/.test(navigator.userAgent)||navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform));
+export const ios=typeof navigator!=='undefined'&&(/iP(hone|ad|od)/.test(navigator.userAgent)||navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform));
 // iOS has no vibration API and plays its system tick only when a finger itself
 // toggles a native switch. Controls that tick on iPhone carry an invisible
 // switch over their surface. The tap toggles it first, and only then is the
