@@ -1,0 +1,88 @@
+/* Detail dock: servings sit by the back button, 作る fills the space between. */
+.context-recipe .context-servings{margin-left:0}
+.context-extra{display:flex;flex:1;min-width:0}
+.context-extra.context-compact{flex:0 0 var(--dock-height)}
+.context-extra button{gap:7px;font-size:14px;font-weight:650}
+.context-extra button:disabled{opacity:.3}
+.context-extra+.context-primary.context-compact{margin-left:0}
+
+/* Times inside a step start a timer. */
+.step-timer{display:inline-flex;align-items:center;gap:3px;margin:0 2px;padding:1px 9px 1px 7px;border:1px solid color-mix(in srgb,var(--ink) 16%,transparent);border-radius:999px;background:color-mix(in srgb,var(--ink) 5%,transparent);color:var(--ink);font:inherit;font-weight:650;line-height:1.5;vertical-align:baseline;-webkit-tap-highlight-color:transparent;transition:transform 160ms cubic-bezier(.22,.72,.18,1),background 160ms}
+.step-timer:active{transform:scale(.94);background:color-mix(in srgb,var(--ink) 11%,transparent)}
+.step-timer svg{flex:none;opacity:.7}
+
+/* Cooking mode. */
+.cook-mode{display:flex;flex-direction:column;gap:24px;min-height:100%;padding-bottom:24px;touch-action:pan-y}
+.cook-panel .card-panel-header{align-items:center}
+.cook-count{display:flex;align-items:baseline;gap:2px;margin:0;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cook-count strong{font-family:var(--recipe-title-font);font-size:22px;font-weight:650;line-height:1;color:var(--ink)}
+.cook-count span{font-size:13px}
+.cook-progress{display:flex;gap:5px;padding:0 var(--panel-pad,22px) 12px;background:var(--panel-header-tint)}
+.cook-progress span{flex:1;height:4px;border-radius:4px;background:color-mix(in srgb,var(--ink) 12%,transparent);overflow:hidden;position:relative}
+.cook-progress span::after{content:"";position:absolute;inset:0;border-radius:inherit;background:var(--ink);transform:scaleX(0);transform-origin:left;transition:transform 520ms cubic-bezier(.22,.72,.18,1)}
+.cook-progress span[data-state]::after{transform:scaleX(1)}
+.cook-progress span[data-state=current]::after{opacity:.55}
+.cook-resumed{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;padding:8px 8px 8px 16px;border-radius:999px;font-size:13px;color:var(--muted);background:color-mix(in srgb,var(--ink) 5%,transparent);animation:status-in 460ms cubic-bezier(.22,.72,.18,1) both}
+.cook-resumed button{padding:6px 12px;border:0;border-radius:999px;font:inherit;font-weight:650;color:var(--ink);background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.cook-step{display:flex;flex-direction:column;gap:22px;animation:cook-step-in 460ms cubic-bezier(.22,.72,.18,1) both}
+@keyframes cook-step-in{from{opacity:0;transform:translateY(14px);filter:blur(5px)}to{opacity:1;transform:none;filter:none}}
+.cook-step-text{margin:0;font-size:23px;line-height:1.75;letter-spacing:.01em;color:var(--ink);overflow-wrap:anywhere}
+.cook-step-text .step-timer{padding:2px 12px 2px 9px}
+.cook-step-text .step-timer svg{width:18px;height:18px}
+.cook-uses{padding:16px 18px;border-radius:22px;background:color-mix(in srgb,var(--ink) 4%,transparent)}
+.cook-uses h3{margin:0 0 8px;font-size:12px;font-weight:600;color:var(--muted)}
+.cook-uses ul{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.cook-uses li{display:flex;justify-content:space-between;align-items:baseline;gap:14px;font-size:16px}
+/* "1" and "A" in a step are badges; the same badge heads what they stand for below. */
+.cook-ref{display:inline-grid;place-items:center;min-width:1.45em;height:1.45em;margin:0 .12em;padding:0 .3em;border-radius:999px;font-size:.78em;font-weight:750;line-height:1;vertical-align:.12em;color:var(--paper);background:var(--ink)}
+.cook-ref[data-kind=group]{border-radius:.42em;color:var(--ink);background:color-mix(in srgb,var(--ink) 12%,transparent)}
+.cook-uses-ref{margin-top:14px;padding-top:12px;border-top:1px solid color-mix(in srgb,var(--ink) 8%,transparent)}
+.cook-uses h3+.cook-uses-ref{margin-top:0;padding-top:0;border-top:0}
+.cook-uses h4{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:13px;font-weight:650;color:var(--ink)}
+.cook-uses h4 .cook-ref{font-size:12px;margin:0}
+.cook-ref-jump{margin-left:auto;padding:4px 10px;border:0;border-radius:999px;font:inherit;font-size:12px;color:var(--muted);background:color-mix(in srgb,var(--ink) 6%,transparent)}
+.cook-ref-text{margin:0;font-size:14px;line-height:1.6;color:var(--muted)}
+/* Previous and next share the dock evenly while cooking. */
+.context-cook :is(.context-extra,.context-primary){flex:1 1 0}
+.cook-step-photo{display:block;width:100%;border-radius:20px;object-fit:cover;max-height:42vh}
+
+/* Above the dock, within thumb reach: timers and the partner's presence. */
+.floating-status{position:fixed;left:50%;bottom:calc(var(--dock-safe-bottom) + var(--dock-bottom-gap) + var(--dock-height) + 12px);z-index:49;display:grid;justify-items:center;gap:8px;width:min(calc(100vw - 2 * var(--page-side-gap)),420px);transform:translateX(-50%);pointer-events:none}
+.cook-timer,.partner-presence{display:flex;align-items:center;gap:10px;max-width:100%;min-height:44px;padding:5px 6px 5px 8px;border-radius:999px;background:#ffffffc7;color:var(--ink);box-shadow:0 8px 26px #26221e17,inset 0 0 0 .5px #26221e10;-webkit-backdrop-filter:blur(24px) saturate(1.18);backdrop-filter:blur(24px) saturate(1.18);pointer-events:auto;animation:status-in 460ms cubic-bezier(.22,.72,.18,1) both}
+:root[data-brand-theme='dark'] :is(.cook-timer,.partner-presence){background:#2a2a29c7;box-shadow:0 8px 26px #00000047,inset 0 0 0 .5px #ffffff14}
+@keyframes status-in{from{opacity:0;transform:translateY(10px) scale(.94);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+.cook-timer-ring{--progress:0;position:relative;display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:50%;background:conic-gradient(var(--ink) calc(var(--progress) * 360deg),color-mix(in srgb,var(--ink) 12%,transparent) 0)}
+.cook-timer-ring::before{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--paper)}
+.cook-timer-ring svg{position:relative}
+.cook-timer-label{min-width:0;overflow:hidden;font-size:12px;color:var(--muted);text-overflow:ellipsis;white-space:nowrap}
+.cook-timer strong{font-size:17px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.cook-timer button{display:grid;place-items:center;flex:none;width:34px;height:34px;border:0;border-radius:50%;background:transparent;color:var(--muted)}
+.cook-timer[data-done]{animation:status-in 460ms cubic-bezier(.22,.72,.18,1) both,timer-ring 1100ms ease-in-out 460ms infinite}
+@keyframes timer-ring{0%,100%{transform:none}10%{transform:rotate(-3deg) scale(1.03)}20%{transform:rotate(3deg) scale(1.03)}30%{transform:rotate(-2deg)}40%{transform:none}}
+@media(prefers-reduced-motion:reduce){.cook-step,.cook-timer,.partner-presence,.cook-timer[data-done]{animation:none}.cook-progress span::after{transition:none}}
+
+/* 今日つくる: marked from the detail, shown on the card for both partners. */
+.recipe-row .recipe-today{position:absolute;left:12px;top:42px;z-index:2;display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 9px;border-radius:99px;background:#fffffff0;color:#26221e;font-size:10px;font-weight:700;line-height:1;box-shadow:0 2px 10px #0000001f;animation:status-in 420ms cubic-bezier(.22,.72,.18,1) both}
+.recipe-today-toggle{display:inline-flex;align-items:center;gap:5px;height:28px;margin-left:auto;padding:0 12px;border:1px solid color-mix(in srgb,var(--ink) 18%,transparent);border-radius:99px;background:transparent;color:var(--ink);font-size:12px;font-weight:650;transition:background 220ms,color 220ms,transform 160ms cubic-bezier(.22,.72,.18,1)}
+.recipe-today-toggle:active{transform:scale(.95)}
+.recipe-today-toggle[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:var(--on-brand)}
+@media(prefers-reduced-motion:reduce){.recipe-row .recipe-today{animation:none}}
+.partner-presence{gap:9px;padding:5px 16px 5px 14px;font-size:13px;font-weight:600}
+.partner-presence-dot{position:relative;width:8px;height:8px;border-radius:50%;background:var(--ink)}
+.partner-presence-dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1.5px solid var(--ink);opacity:0;animation:presence-pulse 1800ms ease-out infinite}
+@keyframes presence-pulse{0%{opacity:.6;transform:scale(.5)}100%{opacity:0;transform:scale(1.6)}}
+@media(prefers-reduced-motion:reduce){.partner-presence-dot::after{animation:none}}
+
+/* Photos resolve out of their own remembered tone. */
+.recipe-photo:has(>img){background:var(--photo-tone,var(--soft))}
+.recipe-photo>img{opacity:0;filter:blur(14px);transform:scale(1.06)}
+.recipe-photo>img[data-loaded]{opacity:1;filter:none;transform:none;transition:opacity 420ms ease-out,filter 640ms cubic-bezier(.22,.72,.18,1),transform 760ms cubic-bezier(.22,.72,.18,1)}
+.recipe-photo>img[data-loaded=instant]{transition:none}
+@media(prefers-reduced-motion:reduce){.recipe-photo>img{filter:none;transform:none}.recipe-photo>img[data-loaded]{transition:opacity 200ms}}
+/* The dock keeps 44px serving buttons at every width; 作る gives way first. */
+.context-dock.context-recipe{gap:8px}
+.context-recipe .context-servings{grid-template-columns:44px 52px 44px;padding-inline:2px}
+.context-recipe .context-extra button{gap:5px;padding:0 4px}
+@media(max-width:380px){.context-recipe .context-extra button span{display:none}}
+@media(max-width:369px){.context-recipe .context-servings{grid-template-columns:44px 30px 44px}.context-recipe .context-servings small{display:none}}
+.card-panel-frame[data-toned] .cook-progress{background:color-mix(in srgb,var(--photo-tone) 11%,var(--panel-header-tint))}
