@@ -17,12 +17,14 @@ export function useSpaceControls({controller,userId,disabled,onSelect}:{controll
   const afterExit=useRef<()=>void>(()=>{}),inFlight=useRef(false);
   const owner=space?.owner_id===userId,blocked=busy||closing;
   const run=async(action:()=>Promise<void>)=>{if(inFlight.current||closing)return;inFlight.current=true;setBusy(true);setError('');try{await action();}catch(e){setError(e instanceof Error?e.message:String(e));}finally{inFlight.current=false;setBusy(false);}};
-  const open=(next:View)=>{setError('');setClosing(false);setView(next);};
+  // Opened straight from the recipe list, invite and join close back to it.
+  const direct=useRef(false);
+  const open=(next:View)=>{if(next==='menu'||next==='settings')direct.current=false;setError('');setClosing(false);setView(next);};
   const dismiss=(next:View|null=null,action?:()=>void)=>{if(inFlight.current)return;afterExit.current=()=>{setView(next);setClosing(false);setError('');action?.();};setClosing(true);};
   const transition=(next:View,action?:()=>void)=>dismiss(next,action);
   const loadMembers=async()=>{if(!space)return;const data=await api<{members:SpaceMember[]}>(`/${space.id}/details`);setMembers(data.members);};
   const openSettings=()=>{if(!space)return;setName(space.name);setMembers([]);open('settings');void run(loadMembers);};
-  const back=()=>{if(blocked)return;if(view==='join'&&preview){setPreview(null);return;}dismiss(!space||view==='menu'||view==='settings'?null:view==='invite'?'settings':'menu');};
+  const back=()=>{if(blocked)return;if(view==='join'&&preview){setPreview(null);return;}dismiss(!space||view==='menu'||view==='settings'||direct.current?null:view==='invite'?'settings':'menu');};
   const inviteText=invite&&space?invitationText(space,invite,location.origin):'';
   const copy=()=>void run(async()=>{await navigator.clipboard.writeText(inviteText);setCopied(true);});
   const issueInvite=async()=>{if(!space)return;setInvite(await api<SpaceInvite>(`/${space.id}/invites`,{method:'POST',body:'{}'}));setCopied(false);};
@@ -66,5 +68,5 @@ export function useSpaceControls({controller,userId,disabled,onSelect}:{controll
     {view==='join'&&<form className="form" onSubmit={e=>{e.preventDefault();if(!blocked&&code.trim())join();}}><label className="field">招待コード<input placeholder="XXXX-XXXX-XXXX" maxLength={64} autoCapitalize="characters" autoComplete="off" spellCheck={false} value={code} disabled={blocked} onChange={e=>{setCode(e.target.value);setPreview(null);try{sessionStorage.setItem('uchino-invite-code',e.target.value);}catch{}}}/></label>{preview&&<div className="space-join-preview"><strong>{preview.name}</strong>{preview.inviter&&<p>{preview.inviter}さんからの招待</p>}<p className="subtle">レシピ・写真・買い物リストを一緒に閲覧・編集できます。</p></div>}</form>}
     {view==='invite'&&<div className="space-invite">{invite?<><p>「{space?.name}」への招待コード</p><strong>{invite.code}</strong><small>1人用 · {new Date(invite.expires_at).toLocaleString('ja-JP')}まで</small><p className="subtle">招待文をLINEなどで相手に送ってください。<br/>参加した人は、このレシピ帳のすべてのレシピを閲覧・編集できます。</p>{typeof navigator.share==='function'&&<button className="secondary" disabled={blocked} onClick={copy}><Copy size={17}/>{copied?'コピーしました':'招待文をコピー'}</button>}</>:<p className="subtle" role="status">招待コードを作成しています…</p>}</div>}
   </Panel>}</>}</>:null;
-  return {button,panel,context,openSettings,isOpen:!!view,openCreate:(source:HTMLElement)=>{setOrigin(panelOrigin(source));setName('うちのレシピ');open('create');},openJoin:(source:HTMLElement)=>{setOrigin(panelOrigin(source));setPreview(null);open('join');}};
+  return {button,panel,context,openSettings,isOpen:!!view,openInvite:(source:HTMLElement)=>{setOrigin(panelOrigin(source));direct.current=true;void run(async()=>{await issueInvite();open('invite');});},openCreate:(source:HTMLElement)=>{setOrigin(panelOrigin(source));setName('うちのレシピ');open('create');},openJoin:(source:HTMLElement)=>{setOrigin(panelOrigin(source));direct.current=Boolean(space);setPreview(null);open('join');}};
 }
