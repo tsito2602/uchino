@@ -1,3 +1,4 @@
+import {HapticTouch} from './haptic-touch';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ChevronDown, Keyboard } from 'lucide-react';
 import { panelEditor } from './panel-focus';
@@ -16,6 +17,6 @@ export function PanelBackButton({onBack}:{onBack:()=>void}) {
     onPointerDown={event=>{pressedEditor.current=editor;if(editor)event.preventDefault();}}
     onPointerCancel={()=>{pressedEditor.current=null;}}
     onClick={()=>{const target=pressedEditor.current??editor;pressedEditor.current=null;if(target){target.blur();setEditor(null);}else onBack();}}>
-    {editor?<span className="keyboard-dismiss-icon" aria-hidden="true"><Keyboard size={20}/><ChevronDown size={12}/></span>:<ArrowLeft size={22}/>}
+    <HapticTouch/>{editor?<span className="keyboard-dismiss-icon" aria-hidden="true"><Keyboard size={20}/><ChevronDown size={12}/></span>:<ArrowLeft size={22}/>}
   </button>;
 }

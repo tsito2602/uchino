@@ -1,3 +1,5 @@
+import {HapticTouch} from './haptic-touch';
+import {haptic} from './haptics';
 import { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { LucideIcon } from 'lucide-react';
@@ -68,10 +70,10 @@ export function FuseAddMenu({options,closing,onClose,onSelect,onExited}:{options
     return()=>{active=false;clearTimeout(timer);};
   },[closing]);
   return createPortal(<div className="fuse-add-overlay" ref={root}>
-    <div className="fuse-add-veil" onClick={onClose}/>
+    <div className="fuse-add-veil" onClick={()=>{haptic();onClose();}}><HapticTouch/></div>
     <div className="fuse-add-options" role="menu" aria-label="追加する項目">{options.map(option=>{
       const Icon=option.icon;
-      return <button key={option.id} role="menuitem" onClick={()=>onSelect(option)}><span>{option.label}</span><Icon size={25} strokeWidth={1.8}/></button>;
+      return <button key={option.id} role="menuitem" onClick={()=>{haptic();onSelect(option);}}><HapticTouch/><span>{option.label}</span><Icon size={25} strokeWidth={1.8}/></button>;
     })}</div>
   </div>,document.body);
 }
