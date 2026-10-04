@@ -80,3 +80,4 @@ html{scrollbar-gutter:stable}body{min-width:320px}button,input,textarea,select{f
 .uchino-toast .toast-action{position:relative;margin:-6px -9px -6px 4px;padding:0 14px;min-height:34px;border-radius:999px;background:var(--ink);color:var(--paper);font-size:12px;font-weight:700;white-space:nowrap}
 .uchino-toast .toast-text{white-space:nowrap}
 .add-toast{animation:none}.add-toast>svg path{stroke-dasharray:24;stroke-dashoffset:24;animation:toast-tick 380ms cubic-bezier(.22,.72,.18,1) 200ms forwards}@keyframes toast-tick{to{stroke-dashoffset:0}}@media(prefers-reduced-motion:reduce){.add-toast>svg path{animation:none;stroke-dashoffset:0}}
+.empty-state .primary{border-radius:999px;padding-inline:24px}
