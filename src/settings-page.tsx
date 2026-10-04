@@ -8,6 +8,7 @@ import {Check} from 'lucide-react';
 import type {DataMode} from './data-mode';
 import {Brand,type Session} from './auth';
 import {AppearanceSettings} from './appearance-settings';
+import {APP_VERSION} from './version';
 
 type Props={onSpaceSettings:()=>void;session:Session;staging:boolean;pending:number;updateReady:boolean;dataMode:DataMode;changingData:boolean;onDataMode:(mode:DataMode)=>void;onSync:()=>Promise<void>;onUpdate:()=>void;onLogout:()=>void};
 export function SettingsPage({onSpaceSettings,session,staging,pending,updateReady,dataMode,changingData,onDataMode,onSync,onUpdate,onLogout}:Props){
@@ -43,7 +44,7 @@ export function SettingsPage({onSpaceSettings,session,staging,pending,updateRead
       {pending>0&&<p className="subtle">変更の同期が終わると更新できます。</p>}
     </section>
     <button className="settings-add-card settings-logout" onClick={onLogout}><LogOut size={17}/>{session.local?'ログイン画面に戻る':'ログアウト'}</button>
-    <footer className="settings-app-info"><Brand small/>{staging&&<small>staging</small>}</footer>
+    <footer className="settings-app-info"><Brand small/><small>バージョン {APP_VERSION}{staging?' · staging':''}</small></footer>
   </div>;
 }
 
