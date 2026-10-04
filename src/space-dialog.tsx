@@ -24,7 +24,10 @@ export function SpaceDialog({title,children,onClose,closing,onExited}:{title:str
    const chrome=node.querySelectorAll<HTMLElement>('.space-options hr');
    chrome.forEach(element=>animations.current.push(element.animate([{opacity:0},{opacity:1}],timing)));
   }
-  buttons[0]?.focus({preventScroll:true});
+  // Only a keyboard opening moves focus onto the first book; after a tap the
+  // dialog itself takes focus so no ring lights up around the book's name.
+  const keyboardOpen=!!previous?.matches(':focus-visible')&&!previous.classList.contains('haptic-touch');
+  (keyboardOpen?buttons[0]:node.querySelector<HTMLElement>('.space-menu'))?.focus({preventScroll:true});
   const keyboard=(event:KeyboardEvent)=>{
    if(event.key==='Escape'){event.preventDefault();close.current();return;}
    const index=buttons.indexOf(document.activeElement as HTMLButtonElement);
@@ -47,5 +50,5 @@ export function SpaceDialog({title,children,onClose,closing,onExited}:{title:str
   const timer=window.setTimeout(finish,450);
   return()=>{active=false;clearTimeout(timer);};
  },[closing]);
- return createPortal(<div className="space-overlay" ref={root}><div className="space-veil" onClick={onClose}/><section className="space-dialog space-menu" role="dialog" aria-modal="true" aria-label={title}>{children}</section></div>,document.body);
+ return createPortal(<div className="space-overlay" ref={root}><div className="space-veil" onClick={onClose}/><section className="space-dialog space-menu" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>{children}</section></div>,document.body);
 }
