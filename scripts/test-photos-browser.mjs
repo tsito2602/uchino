@@ -9,7 +9,7 @@ let failed=false;
 try{
  const errors=[],context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1});
  const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
- await page.goto('http://127.0.0.1:8787');await page.getByRole('button',{name:'この端末で使う',exact:true}).click();
+ await page.goto('http://127.0.0.1:8787');await page.evaluate(()=>localStorage.setItem('uchino-device-mode','true'));await page.reload();
  await page.getByRole('button',{name:'サンプルを見てみる',exact:true}).click();await page.locator('.recipe-row').nth(2).waitFor();
  await page.waitForFunction(()=>[...document.querySelectorAll('.recipe-photo img')].every(image=>image.naturalWidth>0));
  await page.locator('.uchino-toast').waitFor({state:'detached'});

@@ -10,7 +10,7 @@ try{
  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
  await page.addInitScript(()=>{const vv=new EventTarget();Object.assign(vv,{height:844,offsetTop:0,scale:1});window.testViewport=vv;Object.defineProperty(window,'visualViewport',{value:vv});});
  const keyboard=async height=>{await page.evaluate(height=>{window.testViewport.height=height;window.testViewport.dispatchEvent(new Event('resize'));},height);await page.waitForTimeout(100);};
- await page.goto('http://127.0.0.1:8787');await page.getByRole('button',{name:'この端末で使う',exact:true}).click();await page.getByRole('button',{name:'買い物',exact:true}).click();
+ await page.goto('http://127.0.0.1:8787');await page.evaluate(()=>localStorage.setItem('uchino-device-mode','true'));await page.reload();await page.getByRole('button',{name:'買い物',exact:true}).click();
  const finish=page.getByRole('button',{name:'この買い物を終了する',exact:true});
  assert.equal(await finish.count(),0);
  const navWidths=new Map();for(const width of [320,360,390]){await page.setViewportSize({width,height:844});navWidths.set(width,(await page.getByRole('navigation',{name:'メインメニュー'}).boundingBox()).width);}

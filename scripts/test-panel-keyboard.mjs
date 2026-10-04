@@ -12,7 +12,7 @@ try{
   const viewport=new EventTarget();Object.assign(viewport,{height:844,offsetTop:0,scale:1});
   window.testViewport=viewport;Object.defineProperty(window,'visualViewport',{value:viewport});
  });
- await page.goto('http://127.0.0.1:8787');await page.getByRole('button',{name:'この端末で使う',exact:true}).click();
+ await page.goto('http://127.0.0.1:8787');await page.evaluate(()=>localStorage.setItem('uchino-device-mode','true'));await page.reload();
  await page.emulateMedia({reducedMotion:'reduce'});
  const keyboard=async height=>{await page.evaluate(height=>{window.testViewport.height=height;window.testViewport.dispatchEvent(new Event('resize'));},height);await page.waitForTimeout(80);};
  const close=async()=>{

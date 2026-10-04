@@ -10,7 +10,7 @@ let failed=false;
 try{
  const errors=[];const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1});const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{const native=window.visualViewport;const viewport=new EventTarget();Object.assign(viewport,{height:innerHeight,offsetTop:0,scale:1});native?.addEventListener('resize',()=>{viewport.height=native.height;viewport.offsetTop=native.offsetTop;viewport.dispatchEvent(new Event('resize'));});window.testViewport=viewport;Object.defineProperty(window,'visualViewport',{configurable:true,value:viewport});});
- await page.goto('http://127.0.0.1:8787');await page.getByRole('button',{name:'この端末で使う',exact:true}).click();
+ await page.goto('http://127.0.0.1:8787');await page.evaluate(()=>localStorage.setItem('uchino-device-mode','true'));await page.reload();
  // Check the cancelable gesture itself: Chromium does not reproduce iOS root panning.
  const touchMove=async(selector,dy,count=1)=>page.locator(selector).evaluate((target,{dy,count})=>{
   const touches=Array.from({length:count},(_,identifier)=>new Touch({identifier,target,clientX:150+identifier*40,clientY:220}));

@@ -25,7 +25,7 @@ app.use('*',async(c,next)=>{
 });
 app.onError((_error,c)=>c.json({error:'処理できませんでした。時間をおいて再試行してください。'},500));
 app.get('/api/health',c=>c.json({ok:true,app:'uchino',environment:c.env.APP_ENV??'local',version:'0.1.0'}));
-app.get('/api/config',c=>c.json({ai:aiConfigured(c.env),demoImport:c.env.APP_ENV==='staging',photoStorage:c.env.RECIPE_PHOTOS?'r2':'inline'}));
+app.get('/api/config',c=>c.json({environment:c.env.APP_ENV??'local',ai:aiConfigured(c.env),demoImport:c.env.APP_ENV==='staging',photoStorage:c.env.RECIPE_PHOTOS?'r2':'inline'}));
 app.route('/api/auth',authRoutes);
 app.route('/api/spaces',spacesRoutes);
 app.get('/api/photos/:owner/:file',async c=>{

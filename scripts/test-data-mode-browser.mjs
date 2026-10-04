@@ -17,7 +17,7 @@ async function addShopping(page,name){await tab(page,'買い物メモ');await pa
 let failed=false;
 try{
  const errors=[],context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,serviceWorkers:'block'}),page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
- await page.goto('http://127.0.0.1:8787');await page.getByRole('button',{name:'この端末で使う',exact:true}).click();
+ await page.goto('http://127.0.0.1:8787');await page.evaluate(()=>localStorage.setItem('uchino-device-mode','true'));await page.reload();
  await page.getByRole('heading',{name:'レシピを保存しよう',exact:true}).waitFor();
  await mode(page,'デモデータ');await tab(page,'レシピ');await page.locator('.recipe-row').nth(2).waitFor();
  await page.waitForFunction(()=>[...document.querySelectorAll('.recipe-photo img')].every(image=>image.naturalWidth>0));
@@ -48,7 +48,7 @@ try{
  const stored=await readRows(page);assert.ok(stored.filter(row=>row.key.startsWith('demo-')).every(row=>!row.pending));assert.equal(stored.filter(row=>row.key.startsWith('guest:recipe:')&&!row.deleted).length,1);
  await mode(page,'デモデータ');
  // Legacy samples move atomically while user-created recipes stay real.
- const legacyContext=await browser.newContext({serviceWorkers:'block'}),legacyPage=await legacyContext.newPage();legacyPage.on('pageerror',error=>errors.push(error.message));await legacyPage.goto('http://127.0.0.1:8787');await legacyPage.getByRole('button',{name:'この端末で使う',exact:true}).waitFor();
+ const legacyContext=await browser.newContext({serviceWorkers:'block'}),legacyPage=await legacyContext.newPage();legacyPage.on('pageerror',error=>errors.push(error.message));await legacyPage.goto('http://127.0.0.1:8787');await legacyPage.locator('.login').waitFor();
  const editedSample={...recipe('sample-ginger','編集したしょうが焼き'),memo:'自分の分量に編集済み'};
  await seed(legacyPage,[row('guest','recipe',editedSample),row('guest','recipe',recipe('my-recipe','自分のレシピ'))],{'uchino-device-mode':'true','test-migration-failure':'true'});
  await legacyPage.addInitScript(()=>{const remove=IDBObjectStore.prototype.delete;IDBObjectStore.prototype.delete=function(key){if(key==='guest:recipe:sample-ginger'&&localStorage.getItem('test-migration-failure')){localStorage.removeItem('test-migration-failure');throw new Error('テスト：移動先の保存後に失敗');}return remove.call(this,key);};});
