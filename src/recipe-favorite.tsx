@@ -1,3 +1,4 @@
+import {HapticTouch} from './haptic-touch';
 import {useRef,useState} from 'react';
 import {haptic} from './haptics';
 import {Heart} from 'lucide-react';
@@ -12,6 +13,7 @@ export function RecipeFavorite({recipe,onToggle}:{recipe:Recipe;onToggle:()=>voi
   return <button type="button" className="recipe-favorite" aria-pressed={recipe.favorite}
     aria-label={`${recipe.title}を${recipe.favorite?'お気に入りから外す':'お気に入りに追加'}`}
     onClick={()=>{haptic();setMotion({id:++sequence.current,favorite:!recipe.favorite});onToggle();}}>
+    <HapticTouch/>
     <span key={motion?.id??0} className="recipe-favorite-heart" data-motion={animate}
       onAnimationEnd={event=>{if(event.target===event.currentTarget)setMotion(null);}}>
       <Heart size={18}/>

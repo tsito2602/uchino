@@ -1,3 +1,4 @@
+import {HapticTouch} from './haptic-touch';
 import {useRef,type PointerEvent as ReactPointerEvent} from 'react';
 import {AnimatePresence,motion,useIsPresent,useReducedMotion} from 'motion/react';
 import {haptic} from './haptics';
@@ -72,7 +73,7 @@ function ShoppingEntry({item,index,disabled,onToggle,onRemove}:{item:ShoppingIte
         <button type="button" className="shopping-item-toggle" role="checkbox" aria-checked={item.done} disabled={disabled}
           aria-label={`${[item.name,item.quantity].filter(Boolean).join(' ')}を${item.done?'未購入に戻す':'購入済みにする'}`}
           onClick={event=>{if(swipe.swiped.current){event.preventDefault();return;}haptic();onToggle(item);}}>
-          <span className="shopping-check" aria-hidden="true">{item.done&&<Check size={15}/>}</span>
+          <HapticTouch disabled={disabled}/><span className="shopping-check" aria-hidden="true">{item.done&&<Check size={15}/>}</span>
           <span className="shopping-item-copy"><strong>{item.name}</strong>{item.quantity&&<span className="shopping-quantity">{item.quantity}</span>}</span>
         </button>
         <button type="button" className="shopping-remove" aria-label={`${item.name}を削除`} disabled={disabled} onClick={()=>onRemove(item)}><Trash2 size={16}/></button>

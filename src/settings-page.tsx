@@ -1,3 +1,4 @@
+import {HapticTouch} from './haptic-touch';
 import {haptic} from './haptics';
 import {SegmentSelection} from './segment-selection';
 import {UsersRound,ChevronRight} from 'lucide-react';
@@ -26,8 +27,8 @@ export function SettingsPage({onSpaceSettings,session,pending,updateReady,dataMo
       <h2 className="section-heading"><Database size={20} aria-hidden="true"/>表示するデータ</h2>
       <div className="appearance-control data-mode-control" role="group" aria-label="表示するデータ" style={{'--appearance-index':dataMode==='demo'?1:0} as CSSProperties}>
         <SegmentSelection index={dataMode==='demo'?1:0}/>
-        <button type="button" aria-pressed={dataMode==='real'} disabled={changingData} onClick={()=>{if(dataMode!=='real')haptic();onDataMode('real');}}><Database size={20} aria-hidden="true"/>実データ</button>
-        <button type="button" aria-pressed={dataMode==='demo'} disabled={changingData} onClick={()=>{if(dataMode!=='demo')haptic();onDataMode('demo');}}><Sparkles size={20} aria-hidden="true"/>デモデータ</button>
+        <button type="button" aria-pressed={dataMode==='real'} disabled={changingData} onClick={()=>{if(dataMode!=='real')haptic();onDataMode('real');}}>{dataMode!=='real'&&<HapticTouch disabled={changingData}/>}<Database size={20} aria-hidden="true"/>実データ</button>
+        <button type="button" aria-pressed={dataMode==='demo'} disabled={changingData} onClick={()=>{if(dataMode!=='demo')haptic();onDataMode('demo');}}>{dataMode!=='demo'&&<HapticTouch disabled={changingData}/>}<Sparkles size={20} aria-hidden="true"/>デモデータ</button>
       </div>
       <p className="subtle">{dataMode==='demo'?'写真付きのサンプルで試せます。デモでの編集や買い物メモは実データと別に、この端末に保存します。':'自分で保存したレシピと買い物メモを表示します。デモと切り替えても、それぞれのデータは残ります。'}</p>
     </section>
