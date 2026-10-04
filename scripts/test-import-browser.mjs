@@ -11,7 +11,7 @@ try {
  const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,serviceWorkers:'block'});
  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
  await page.addInitScript(()=>{const vv=new EventTarget();Object.assign(vv,{height:innerHeight,offsetTop:0,scale:1});window.testViewport=vv;Object.defineProperty(window,'visualViewport',{value:vv});});
- await page.goto('http://127.0.0.1:8787');await page.getByRole('button',{name:'この端末で使う',exact:true}).click();
+ await page.goto('http://127.0.0.1:8787');await page.evaluate(()=>localStorage.setItem('uchino-device-mode','true'));await page.reload();
  await page.getByRole('button',{name:'サンプルを見てみる',exact:true}).click();await page.locator('.recipe-row').nth(2).waitFor();
  const openImport=async()=>{await page.locator('.dock-add').click();await page.getByRole('menuitem',{name:'URLから取り込む',exact:true}).click();await page.getByRole('dialog').waitFor();};
  await openImport();await page.getByRole('button',{name:'デモで試す',exact:true}).click();

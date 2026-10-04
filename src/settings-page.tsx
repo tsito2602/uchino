@@ -9,8 +9,8 @@ import type {DataMode} from './data-mode';
 import {Brand,type Session} from './auth';
 import {AppearanceSettings} from './appearance-settings';
 
-type Props={onSpaceSettings:()=>void;session:Session;pending:number;updateReady:boolean;dataMode:DataMode;changingData:boolean;onDataMode:(mode:DataMode)=>void;onSync:()=>Promise<void>;onUpdate:()=>void;onLogout:()=>void};
-export function SettingsPage({onSpaceSettings,session,pending,updateReady,dataMode,changingData,onDataMode,onSync,onUpdate,onLogout}:Props){
+type Props={onSpaceSettings:()=>void;session:Session;staging:boolean;pending:number;updateReady:boolean;dataMode:DataMode;changingData:boolean;onDataMode:(mode:DataMode)=>void;onSync:()=>Promise<void>;onUpdate:()=>void;onLogout:()=>void};
+export function SettingsPage({onSpaceSettings,session,staging,pending,updateReady,dataMode,changingData,onDataMode,onSync,onUpdate,onLogout}:Props){
   // Like the appearance switch, the face moves the moment it is tapped; the
   // data swaps underneath it (see SegmentSelection's memory).
   const [target,setTarget]=useState(dataMode);
@@ -43,7 +43,7 @@ export function SettingsPage({onSpaceSettings,session,pending,updateReady,dataMo
       {pending>0&&<p className="subtle">変更の同期が終わると更新できます。</p>}
     </section>
     <button className="settings-add-card settings-logout" onClick={onLogout}><LogOut size={17}/>{session.local?'ログイン画面に戻る':'ログアウト'}</button>
-    <footer className="settings-app-info"><Brand small/><small>バージョン 0.1.0 · staging</small></footer>
+    <footer className="settings-app-info"><Brand small/>{staging&&<small>staging</small>}</footer>
   </div>;
 }
 

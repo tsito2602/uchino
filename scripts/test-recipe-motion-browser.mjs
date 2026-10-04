@@ -9,7 +9,7 @@ let failed=false;
 try{
  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block'}),errors=[];
  page.on('pageerror',error=>errors.push(error.message));
- await page.goto('http://127.0.0.1:8787');await page.getByRole('button',{name:'この端末で使う',exact:true}).click();await page.getByRole('button',{name:'サンプルを見てみる',exact:true}).click();await page.locator('.recipe-row').nth(2).waitFor();
+ await page.goto('http://127.0.0.1:8787');await page.evaluate(()=>localStorage.setItem('uchino-device-mode','true'));await page.reload();await page.getByRole('button',{name:'サンプルを見てみる',exact:true}).click();await page.locator('.recipe-row').nth(2).waitFor();
  assert.equal(await page.locator('.recipe-row .recipe-category>svg').count(),3);
  await page.locator('.recipe-photo img').evaluateAll(images=>Promise.all(images.map(image=>image.decode())));
  // Pause the reveal: the photo and the glass must have exactly the same clip.

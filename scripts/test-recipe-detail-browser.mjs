@@ -9,7 +9,7 @@ let failed=false;
 try{
  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1,serviceWorkers:'block'}),page=await context.newPage(),errors=[];
  page.on('pageerror',error=>errors.push(error.message));
- await page.goto('http://127.0.0.1:8787');await page.getByRole('button',{name:'この端末で使う',exact:true}).click();await page.getByRole('button',{name:'サンプルを見てみる',exact:true}).click();await page.locator('.recipe-row').nth(2).waitFor();
+ await page.goto('http://127.0.0.1:8787');await page.evaluate(()=>localStorage.setItem('uchino-device-mode','true'));await page.reload();await page.getByRole('button',{name:'サンプルを見てみる',exact:true}).click();await page.locator('.recipe-row').nth(2).waitFor();
  await page.waitForFunction(()=>[...document.querySelectorAll('.recipe-photo img')].every(image=>image.naturalWidth>0));
  assert.equal(await page.locator('.recipe-photo img').count(),3);await page.locator('.recipe-photo img').evaluateAll(images=>Promise.all(images.map(image=>image.decode())));await page.waitForTimeout(150);await page.screenshot({path:'test-results/recipe-sharp-cards.png'});
  assert.equal(await page.locator('.recipe-row-copy').first().evaluate(el=>getComputedStyle(el,'::before').backdropFilter),'none','Card photos stay sharp behind text');

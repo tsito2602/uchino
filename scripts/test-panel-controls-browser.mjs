@@ -7,7 +7,7 @@ const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH
 await mkdir('test-results',{recursive:true});let failed=false;
 try{
  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block'}),errors=[];page.on('pageerror',error=>errors.push(error.message));
- await page.goto('http://127.0.0.1:8787');await page.getByRole('button',{name:'この端末で使う',exact:true}).click();await page.getByRole('button',{name:'サンプルを見てみる',exact:true}).click();await page.locator('.recipe-row').nth(2).waitFor();
+ await page.goto('http://127.0.0.1:8787');await page.evaluate(()=>localStorage.setItem('uchino-device-mode','true'));await page.reload();await page.getByRole('button',{name:'サンプルを見てみる',exact:true}).click();await page.locator('.recipe-row').nth(2).waitFor();
  await page.locator('.recipe-open').first().click();await page.waitForTimeout(650);
  const header=page.locator('.card-panel-header'),favorite=header.locator('.recipe-favorite'),nav=page.getByRole('navigation',{name:'操作',exact:true});
  assert.equal(await favorite.count(),1);const f=await favorite.boundingBox(),h=await header.boundingBox();assert.ok(Math.abs(h.x+h.width-f.x-f.width-12)<1&&f.width>=44&&f.height>=44,'Favorite stays at the header right edge with a full touch target');
