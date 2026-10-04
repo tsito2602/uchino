@@ -1,3 +1,4 @@
+import {HapticTouch} from './haptic-touch';
 import {useEffect,useRef} from 'react';
 import {useReducedMotion} from 'motion/react';
 import {Undo2} from 'lucide-react';
@@ -16,7 +17,7 @@ export function ShoppingUndoAction({expiresAt,onUndo,disabled}:ShoppingUndoProps
     return()=>animation?.cancel();
   },[expiresAt,reduced]);
   return <div className="dock-month shopping-undo">
-    <button type="button" onClick={onUndo} disabled={disabled} aria-label="元に戻す">
+    <button type="button" onClick={onUndo} disabled={disabled} aria-label="元に戻す"><HapticTouch disabled={disabled}/>
       <span ref={fill} className="shopping-undo-fill" aria-hidden="true"/>
       <span className="shopping-undo-label"><Undo2 size={18}/><span>元に戻す</span></span>
     </button>

@@ -1,3 +1,4 @@
+import {HapticTouch} from './haptic-touch';
 import {haptic} from './haptics';
 import {SegmentSelection} from './segment-selection';
 import { useSyncExternalStore,type CSSProperties } from 'react';
@@ -21,7 +22,7 @@ export function AppearanceSettings() {
       ] as const).map(({ value, label, accessibleLabel, icon: Icon }) =>
         <button type="button" key={value} aria-label={accessibleLabel}
           aria-pressed={preference === value} onClick={() => {if (preference !== value) haptic(); setThemePreference(value);}}>
-          <Icon size={20} aria-hidden="true"/>{label}
+          {preference !== value && <HapticTouch/>}<Icon size={20} aria-hidden="true"/>{label}
         </button>)}
     </div>
   </section>;
