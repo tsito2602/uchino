@@ -88,11 +88,25 @@
 /* Switching tabs: the old page fades away (kondo-route-motion) while the new
    one rises into place. After finishing a shopping list, the empty state rises
    the same way once the rows have collapsed. */
-#main-content.route-page-enter{animation:page-arrive 560ms cubic-bezier(.22,.72,.18,1) both}
-@keyframes page-arrive{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.route-page-enter :is(.page-top h1,.page-count,.data-mode-badge,.empty-state),.route-page-enter>:is(.subtle,.notice,.form-error),.route-page-enter :is(.recipe-list,.shopping-list,.settings-page)>*{animation:page-rise 640ms cubic-bezier(.22,.72,.18,1) both}
+.route-page-enter .page-top h1{animation-delay:50ms}
+.route-page-enter :is(.page-count,.data-mode-badge){animation-delay:100ms}
+.route-page-enter .empty-state,.route-page-enter>:is(.subtle,.notice,.form-error){animation-delay:140ms}
+.route-page-enter :is(.recipe-list,.shopping-list,.settings-page)>:nth-child(1){animation-delay:140ms}
+.route-page-enter :is(.recipe-list,.shopping-list,.settings-page)>:nth-child(2){animation-delay:185ms}
+.route-page-enter :is(.recipe-list,.shopping-list,.settings-page)>:nth-child(3){animation-delay:230ms}
+.route-page-enter :is(.recipe-list,.shopping-list,.settings-page)>:nth-child(4){animation-delay:275ms}
+.route-page-enter :is(.recipe-list,.shopping-list,.settings-page)>:nth-child(5){animation-delay:320ms}
+.route-page-enter :is(.recipe-list,.shopping-list,.settings-page)>:nth-child(6){animation-delay:365ms}
+.route-page-enter :is(.recipe-list,.shopping-list,.settings-page)>:nth-child(7){animation-delay:410ms}
+.route-page-enter :is(.recipe-list,.shopping-list,.settings-page)>:nth-child(n+8){animation-delay:455ms}
+@keyframes page-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+/* Recipe cards come up from slightly further and smaller, so the grid settles like a stack. */
+.route-page-enter .recipe-list>*{animation-name:card-rise;animation-duration:720ms}
+@keyframes card-rise{from{opacity:0;transform:translateY(18px) scale(.965)}to{opacity:1;transform:none}}
 .empty-state.empty-state-arriving{animation:empty-arrive 820ms cubic-bezier(.22,.72,.18,1) 380ms both}
 @keyframes empty-arrive{from{opacity:0;transform:translateY(14px) scale(.98);filter:blur(6px)}to{opacity:1;transform:none;filter:blur(0)}}
-@media(prefers-reduced-motion:reduce){#main-content.route-page-enter,.empty-state.empty-state-arriving{animation:none}}
+@media(prefers-reduced-motion:reduce){.route-page-enter *,.empty-state.empty-state-arriving{animation:none!important}}
 
 /* The recipe-book button sits on the page heading's line (40px shell padding +
    half of the 31.5px heading - half of the 44px button). */
