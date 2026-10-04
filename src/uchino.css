@@ -77,3 +77,5 @@ html{scrollbar-gutter:stable}body{min-width:320px}button,input,textarea,select{f
 :is(.icon-button,.row-icon,.text-action,.import-manual,.clipboard-link-actions button,.recipe-favorite,.shopping-check){transition:transform 140ms cubic-bezier(.2,.8,.2,1)}
 :is(.icon-button,.row-icon,.text-action,.import-manual,.clipboard-link-actions button,.recipe-favorite):active:not(:disabled),.shopping-item-toggle:active:not(:disabled) .shopping-check{transform:scale(.94)}
 @media(prefers-reduced-motion:reduce){:is(.icon-button,.row-icon,.text-action,.import-manual,.clipboard-link-actions button,.recipe-favorite,.shopping-check){transition:none}}
+.uchino-toast .toast-action{position:relative;margin:-6px -9px -6px 4px;padding:0 14px;min-height:34px;border-radius:999px;background:var(--ink);color:var(--paper);font-size:12px;font-weight:700;white-space:nowrap}
+.uchino-toast .toast-text{white-space:nowrap}

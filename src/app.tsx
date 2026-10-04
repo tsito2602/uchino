@@ -35,6 +35,7 @@ import {CookCount,CookMode,CookProgress} from './cook-mode';
 import {clearStep,saveStep,savedStep} from './cook-progress';
 import {mergeQuantity,sameItem} from './shopping-merge';
 import {useRecipePeek} from './recipe-peek';
+import {HapticTouch} from './haptic-touch';
 import {FloatingStatus} from './cook-timers-view';
 import {PartnerPresence,usePartnerPresence} from './partner-presence';
 import {useRouteTransition} from './kondo-route-motion';
@@ -150,7 +151,17 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
   function open(next:View){shoppingComposing.current=false;setFormError('');setClosing(false);setView(next);}
   function close(){if(busy||photoBusy)return;setClosing(true);}
   function changeTab(next:Tab){if(next===tab)return;const order=['recipes','shopping','settings'];transitionRoute(Math.sign(order.indexOf(next)-order.indexOf(tab)),()=>{onTab(next);window.scrollTo({top:0,behavior:'instant'});});}
+  // The toast after adding ingredients leads to the list: the open panels fold
+  // away first, then the page changes to 買い物メモ.
+  const toShopping=useRef(false);
+  function showShopping(){
+    setNotice('');
+    if(view){toShopping.current=true;setClosing(true);return;}
+    changeTab('shopping');
+  }
+  useEffect(()=>{if(!view&&toShopping.current){toShopping.current=false;changeTab('shopping');}});
   function exitPanel(){
+    if(toShopping.current){setView(null);setClosing(false);return;}
     // Manual entry is a child of the import panel: going back returns to it, and
     // saving folds the import panel away too so the recipe can land.
     if(view?.kind==='edit'&&view.fromImport){const saved=recipes.some(recipe=>recipe.id===view.draft.id);setView({kind:'import'});setClosing(saved);return;}
@@ -158,7 +169,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
   async function run(action:()=>Promise<void>){if(busy)return;setBusy(true);try{await action();}catch(e){setFormError(e instanceof Error?e.message:'処理できませんでした。');}finally{setBusy(false);}}
   const saveRecipe=()=>void run(async()=>{if(view?.kind!=='edit'||photoBusy)return;const form=document.getElementById('recipe-form') as HTMLFormElement|null;if(!form?.reportValidity())return;const record=validateRecord('recipe',view.draft);if(!record)throw new Error('材料・手順・人数などの入力内容を確認してください。');haptic();if(view.isNew)beginLanding(record.id);try{await store.save('recipe',record);}catch(cause){abortLanding();throw cause;}setClosing(true);});
   async function removeRecipe(){const saved=view?.kind==='edit'&&!view.isNew?recipes.find(recipe=>recipe.id===view.draft.id):undefined;if(!saved||busy||!confirm(`「${saved.title}」を削除しますか？`))return;await run(async()=>{await store.save('recipe',saved,true);setClosing(true);});}
-  async function addIngredients(){if(!detail||busy)return;haptic();await run(async()=>{const selected=detail.ingredients.filter((_,i)=>checked.includes(String(i)));const unbought=shopping.filter(item=>!item.done);for(const ingredient of selected){const quantity=formatIngredientAmount(ingredient,detail.servings,servings),same=unbought.find(item=>sameItem(item.name,ingredient.name));if(same){const merged={...same,quantity:mergeQuantity(same.quantity,quantity).slice(0,100),recipes:[...new Set([...(same.recipes??[]),detail.title])].slice(-6)};unbought[unbought.indexOf(same)]=merged;await store.save('shopping',merged);continue;}const item={id:crypto.randomUUID(),name:ingredient.name,quantity,done:false,createdAt:new Date().toISOString(),recipes:[detail.title]};unbought.push(item);await store.save('shopping',item);}setNotice(`${selected.length}件を買い物メモに追加しました`);setChecked([]);});}
+  async function addIngredients(){if(!detail||busy)return;haptic();await run(async()=>{const selected=detail.ingredients.filter((_,i)=>checked.includes(String(i)));const unbought=shopping.filter(item=>!item.done);for(const ingredient of selected){const quantity=formatIngredientAmount(ingredient,detail.servings,servings),same=unbought.find(item=>sameItem(item.name,ingredient.name));if(same){const merged={...same,quantity:mergeQuantity(same.quantity,quantity).slice(0,100),recipes:[...new Set([...(same.recipes??[]),detail.title])].slice(-6)};unbought[unbought.indexOf(same)]=merged;await store.save('shopping',merged);continue;}const item={id:crypto.randomUUID(),name:ingredient.name,quantity,done:false,createdAt:new Date().toISOString(),recipes:[detail.title]};unbought.push(item);await store.save('shopping',item);}setNotice(`${selected.length}件をメモに追加しました`);setChecked([]);});}
   async function addShopping(){
     if(busy||shoppingInFlight.current||shoppingComposing.current)return;
     const form=document.getElementById('shopping-form') as HTMLFormElement|null;if(!form?.reportValidity())return;
@@ -248,7 +259,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
       {view.kind==='shopping-finish'&&<div className="shopping-finish-summary"><h3>未購入のもの</h3><p>未購入のものを次の買い物に残しますか？<br/>購入済みのものはリストから消えます。</p><ul className="shopping-finish-items" aria-label="未購入のもの">{shopping.filter(item=>!item.done).map(item=><li key={item.id}>{[item.name,item.quantity].filter(Boolean).join(' ')}</li>)}</ul>{formError&&<p className="form-error" role="alert">{formError}</p>}</div>}
 
     </Panel>}
-    {notice&&<div className="uchino-toast" role="status"><Check size={17}/>{notice}</div>}
+    {notice&&<div className="uchino-toast" role="status"><Check size={17}/><span className="toast-text">{notice}</span>{tab!=='shopping'&&<button type="button" className="toast-action" onClick={showShopping}><HapticTouch/>メモを見る</button>}</div>}
     {!view&&formError&&<div className="uchino-toast" role="alert">{formError}<button onClick={()=>setFormError('')} aria-label="閉じる">×</button></div>}
     </FloatingViewport>
   </>;
