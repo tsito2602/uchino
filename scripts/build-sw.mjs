@@ -5,7 +5,7 @@ const photos=(await readdir('dist/recipe-photos')).map(v=>`/recipe-photos/${v}`)
 const hash=createHash('sha256').update(await readFile('dist/index.html'));
 for(const photo of photos)hash.update(await readFile(`dist${photo}`));
 const version=hash.digest('hex').slice(0,12);
-const urls=['/','/index.html','/icon.svg','/logo.svg','/apple-touch-icon-v2.png','/icon-v2-192.png','/icon-v2-512.png','/manifest.webmanifest',...assets.map(v=>`/assets/${v}`),...photos];
+const urls=['/','/index.html','/icon.svg','/logo.svg','/apple-touch-icon-v3.png','/icon-v3-192.png','/icon-v3-512.png','/manifest.webmanifest',...assets.map(v=>`/assets/${v}`),...photos];
 await writeFile('dist/sw.js',`const CACHE='uchino-${version}';const FILES=${JSON.stringify(urls)};
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('uchino-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));

@@ -15,7 +15,7 @@ const logo=svg(`<g fill="#000000">${paths}</g>`);
 const icon=svg(`<g fill="#ffffff" stroke="#ffffff" stroke-width="${46/scale}" stroke-linejoin="round">${paths}</g><g fill="#000000">${paths}</g>`);
 await writeFile('public/logo.svg',logo);
 await writeFile('public/icon.svg',icon);
-for(const [name,size] of [['apple-touch-icon-v2',180],['icon-v2-192',192],['icon-v2-512',512],['icon-192',192],['icon-512',512]]){
+for(const [name,size] of [['apple-touch-icon-v3',180],['icon-v3-192',192],['icon-v3-512',512],['icon-192',192],['icon-512',512]]){
  await sharp(Buffer.from(icon),{density:384}).resize(size,size).png({compressionLevel:9,palette:false}).toFile(`public/${name}.png`);
 }
 console.log('Centered icon and transparent white outline generated.');
