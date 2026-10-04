@@ -130,3 +130,4 @@
 .once-card-actions .once-card-later{width:auto;justify-self:center;height:36px;border:0;background:none;-webkit-backdrop-filter:none;backdrop-filter:none;color:var(--muted);font-weight:500;font-size:13px}
 .haptic-touch{position:absolute;inset:0;z-index:2;width:100%;height:100%;margin:0;padding:0;border:0;border-radius:inherit;opacity:0;-webkit-appearance:none;appearance:none;background:none;cursor:inherit;-webkit-tap-highlight-color:transparent}
 .haptic-touch:disabled{pointer-events:none}
+:disabled>.haptic-touch{display:none}

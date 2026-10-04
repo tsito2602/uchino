@@ -134,7 +134,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
   },[view?.kind]);
   function open(next:View){shoppingComposing.current=false;setFormError('');setClosing(false);setView(next);}
   function close(){if(busy||photoBusy)return;setClosing(true);}
-  function changeTab(next:Tab){if(next===tab)return;const order=['recipes','shopping','settings'];transitionRoute(Math.sign(order.indexOf(next)-order.indexOf(tab)),()=>{onTab(next);window.scrollTo({top:0,behavior:'instant'});});}
+  function changeTab(next:Tab){if(next===tab)return;haptic();const order=['recipes','shopping','settings'];transitionRoute(Math.sign(order.indexOf(next)-order.indexOf(tab)),()=>{onTab(next);window.scrollTo({top:0,behavior:'instant'});});}
   function exitPanel(){setView(current=>current?.kind==='edit'&&current.parent&&recipes.some(recipe=>recipe.id===current.parent!.id)?current.parent:null);setClosing(false);}
   async function run(action:()=>Promise<void>){if(busy)return;setBusy(true);try{await action();}catch(e){setFormError(e instanceof Error?e.message:'処理できませんでした。');}finally{setBusy(false);}}
   const saveRecipe=()=>void run(async()=>{if(view?.kind!=='edit'||photoBusy)return;const form=document.getElementById('recipe-form') as HTMLFormElement|null;if(!form?.reportValidity())return;const record=validateRecord('recipe',view.draft);if(!record)throw new Error('材料・手順・人数などの入力内容を確認してください。');haptic();if(view.isNew)beginLanding(record.id);try{await store.save('recipe',record);}catch(cause){abortLanding();throw cause;}setClosing(true);});
