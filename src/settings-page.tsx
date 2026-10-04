@@ -11,6 +11,11 @@ import {AppearanceSettings} from './appearance-settings';
 
 type Props={onSpaceSettings:()=>void;session:Session;pending:number;updateReady:boolean;dataMode:DataMode;changingData:boolean;onDataMode:(mode:DataMode)=>void;onSync:()=>Promise<void>;onUpdate:()=>void;onLogout:()=>void};
 export function SettingsPage({onSpaceSettings,session,pending,updateReady,dataMode,changingData,onDataMode,onSync,onUpdate,onLogout}:Props){
+  // Like the appearance switch, the face moves the moment it is tapped; the
+  // data swaps underneath it (see SegmentSelection's memory).
+  const [target,setTarget]=useState(dataMode);
+  useEffect(()=>{if(!changingData)setTarget(dataMode);},[changingData,dataMode]);
+  const choose=(mode:DataMode)=>{if(target===mode||changingData)return;haptic();setTarget(mode);onDataMode(mode);};
   return <div className="settings-page">
     <section className="section settings-section">
       <h2 className="section-heading">{session.local?<Smartphone size={20}/>:<UserRound size={20}/>}アカウント・保存先</h2>
@@ -25,10 +30,10 @@ export function SettingsPage({onSpaceSettings,session,pending,updateReady,dataMo
     <AppearanceSettings/>
     <section className="section settings-section">
       <h2 className="section-heading"><Database size={20} aria-hidden="true"/>表示するデータ</h2>
-      <div className="appearance-control data-mode-control" role="group" aria-label="表示するデータ" style={{'--appearance-index':dataMode==='demo'?1:0} as CSSProperties}>
-        <SegmentSelection index={dataMode==='demo'?1:0}/>
-        <button type="button" aria-pressed={dataMode==='real'} disabled={changingData} onClick={()=>{if(dataMode!=='real')haptic();onDataMode('real');}}>{dataMode!=='real'&&<HapticTouch/>}<Database size={20} aria-hidden="true"/>実データ</button>
-        <button type="button" aria-pressed={dataMode==='demo'} disabled={changingData} onClick={()=>{if(dataMode!=='demo')haptic();onDataMode('demo');}}>{dataMode!=='demo'&&<HapticTouch/>}<Sparkles size={20} aria-hidden="true"/>デモデータ</button>
+      <div className="appearance-control data-mode-control" role="group" aria-label="表示するデータ" style={{'--appearance-index':target==='demo'?1:0} as CSSProperties}>
+        <SegmentSelection index={target==='demo'?1:0} memory="data-mode"/>
+        <button type="button" aria-pressed={target==='real'} onClick={()=>choose('real')}>{target!=='real'&&<HapticTouch/>}<Database size={20} aria-hidden="true"/>実データ</button>
+        <button type="button" aria-pressed={target==='demo'} onClick={()=>choose('demo')}>{target!=='demo'&&<HapticTouch/>}<Sparkles size={20} aria-hidden="true"/>デモデータ</button>
       </div>
       <p className="subtle">{dataMode==='demo'?'写真付きのサンプルで試せます。デモでの編集や買い物メモは実データと別に、この端末に保存します。':'自分で保存したレシピと買い物メモを表示します。デモと切り替えても、それぞれのデータは残ります。'}</p>
     </section>

@@ -13,7 +13,7 @@ import {ClipboardLink} from './clipboard-link';
 import {ImportPhaseStatus,ImportProcessing,type ImportProgress} from './import-progress';
 
 type Mode='url'|'image'|'text';
-type Props={active:boolean;mode:Mode;ai:boolean;allowDemo:boolean;local:boolean;closing:boolean;onClose:()=>void;onExited:()=>void;onManual:()=>void;onSave:(recipe:Recipe)=>Promise<void>};
+type Props={active:boolean;suspended?:boolean;mode:Mode;ai:boolean;allowDemo:boolean;local:boolean;closing:boolean;onClose:()=>void;onExited:()=>void;onManual:()=>void;onSave:(recipe:Recipe)=>Promise<void>};
 export function useRecipeImport(props:Props) {
   const [mode,setMode]=useState<Mode>(props.mode),[demo,setDemo]=useState(false),[value,setValue]=useState(''),[image,setImage]=useState(''),[imageName,setImageName]=useState('');
   const [error,setError]=useState(''),[progress,setProgress]=useState<ImportProgress|null>(null),[result,setResult]=useState<ImportResult|null>(null),[source,setSource]=useState<ImportSource|null>(null),[acknowledged,setAcknowledged]=useState<string[]>([]),[saving,setSaving]=useState(false),[photoBusy,setPhotoBusy]=useState(false);
@@ -79,7 +79,7 @@ export function useRecipeImport(props:Props) {
   }
   const disabled=props.closing||!!progress||saving||photoBusy||(!result&&!demo&&(props.local||(mode!=='url'&&!props.ai)||(mode==='image'?!image:!value.trim())));
   const context:DockContext={key:'import',haptic:true,label:'取り込みの操作',back,action:()=>void(result?save():start()),actionLabel:progress?'読み取っています…':saving?'保存しています…':result?(result.demo?'サンプルとして保存':'確認して保存'):demo?'デモで読み取る':'読み取る',icon:Check,disabled:disabled||!!remaining,commit:true,appearance:progress?'breathing':result?undefined:'studio'};
-  const panel=props.active?<Panel title={result?'取り込み内容を確認':'レシピを取り込む'} icon={result?Check:BookOpen} closing={props.closing} onClose={back} onExited={props.onExited} processing={!!progress} status={progress?<ImportPhaseStatus progress={progress}/>:undefined}>
+  const panel=props.active?<Panel title={result?'取り込み内容を確認':'レシピを取り込む'} icon={result?Check:BookOpen} suspended={props.suspended} closing={!props.suspended&&props.closing} onClose={back} onExited={props.onExited} processing={!!progress} status={progress?<ImportPhaseStatus progress={progress}/>:undefined}>
     {progress?<ImportProcessing progress={progress}/>:result&&source?<ImportReview onPhotoBusyChange={setPhotoBusy} onRemoveItem={removeItem} result={result} source={source} onChange={recipe=>setResult({...result,recipe})} onSubmit={()=>void save()} error={error} acknowledged={acknowledged} onAcknowledge={setAcknowledged}/>:<div className="import-form">
       {props.allowDemo&&<div className="import-mode" role="group" aria-label="取り込み方法"><button aria-pressed={!demo} onClick={()=>{setDemo(false);setError('');}}>レシピを読み取る</button><button aria-pressed={demo} onClick={()=>{setDemo(true);setError('');}}>デモで試す</button></div>}
       {demo?<div className="import-demo-sample"><span className="import-demo-badge"><Sparkles size={13}/>デモ · staging限定</span><h3>レシピメモを読み取る</h3><p>読み取りから内容の確認・修正までを体験できます。</p><div className="import-sample-paper"><FileText size={24}/><strong>鶏肉ときのこのクリーム煮</strong><div><span>鶏もも肉</span><b>250 g</b></div><div><span>しめじ</span><b>1/2 パック</b></div><div><span>牛乳</span><b>200 ml</b></div><div><span>バター</span><b>？</b></div></div><small>保存するまでレシピは追加されません。</small></div>:<>
