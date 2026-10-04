@@ -189,7 +189,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
   return <>
     <main className="shell">
       <div id="main-content">
-      <header className="screen-page-top page-top"><div><h1 className={`page-heading${tab==='recipes'?' recipe-book-title':''}`}><PageIcon aria-hidden="true"/>{tab==='recipes'?(spaces.space?.name||'レシピ'):tab==='shopping'?'買い物メモ':'設定'}</h1>{tab!=='settings'&&<p className="page-count">{tab==='recipes'?<><NumberReel value={bookCount}/>件のレシピ</>:<><NumberReel value={shopping.filter(i=>!i.done).length}/>件の買うもの</>}</p>}</div>{dataMode==='demo'&&<span className="data-mode-badge">デモ</span>}</header>
+      <header className="screen-page-top page-top"><div><h1 className={`page-heading${tab==='recipes'?' recipe-book-title':''}`}><PageIcon aria-hidden="true"/>{tab==='recipes'?(spaces.space?.name||'レシピ'):tab==='shopping'?'買い物メモ':'設定'}</h1>{(tab!=='settings'||dataMode==='demo')&&<div className="page-meta">{tab!=='settings'&&<p className="page-count">{tab==='recipes'?<><NumberReel value={bookCount}/>件のレシピ</>:<><NumberReel value={shopping.filter(i=>!i.done).length}/>件の買うもの</>}</p>}{dataMode==='demo'&&<span className="data-mode-badge">デモ</span>}</div>}</div></header>
       {spaces.error&&<p className="subtle" role="status">レシピ帳の更新に失敗しました。通信が戻ると再試行します。</p>}
       {store.error&&<div className="notice" role="alert"><span>{store.error}</span><button aria-label="通知を閉じる" onClick={()=>store.setError('')}>×</button></div>}
       {!store.ready&&!store.error&&<p className="subtle" role="status">読み込んでいます…</p>}

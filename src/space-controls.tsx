@@ -1,6 +1,7 @@
 import {useRef,useState} from 'react';
 import {UsersRound,UserRoundPlus,Plus,KeyRound,Settings,Check,Copy,Share2,RefreshCw,LogOut,Trash2} from 'lucide-react';
 import {SpaceDialog} from './space-dialog';
+import {HapticTouch} from './haptic-touch';
 import {Panel} from './panel';
 import {panelOrigin,type PanelOrigin} from './use-panel-morph';
 import type {DockContext} from './dock';
@@ -50,17 +51,17 @@ export function useSpaceControls({controller,userId,disabled,onSelect}:{controll
     if(view==='settings')context={...context,...(owner&&name.trim()!==space?.name?{action:saveName,actionLabel:'保存',actionDisabled:!name.trim(),icon:Check}:{}),...(owner&&!space?.is_home?{remove:removeSpace,removeLabel:'レシピ帳を削除'}:{})};
     if(view==='invite')context={...context,action:()=>{if(typeof navigator.share==='function')void navigator.share({text:inviteText}).catch(e=>{if(e.name!=='AbortError')setError('共有できませんでした。招待文をコピーしてください。');});else copy();},actionLabel:typeof navigator.share==='function'?'共有':copied?'コピーしました':'招待文をコピー',actionDisabled:!invite,icon:typeof navigator.share==='function'?Share2:Copy,secondary:{label:'別の招待コードを作る',text:'再発行',icon:RefreshCw,action:()=>void run(issueInvite)}};
   }
-  const button=space?<button type="button" className="space-switcher" disabled={disabled||!!view} aria-label={`レシピ帳を切り替え：${space.name}`} title={space.name} aria-haspopup="dialog" aria-expanded={!!view} onClick={()=>open('menu')}>{<UsersRound size={23}/>}</button>:null;
+  const button=space?<button type="button" className="space-switcher" disabled={disabled||!!view} aria-label={`レシピ帳を切り替え：${space.name}`} title={space.name} aria-haspopup="dialog" aria-expanded={!!view} onClick={()=>open('menu')}><HapticTouch/>{<UsersRound size={23}/>}</button>:null;
   const settingsContent=<div className="space-management"><form onSubmit={e=>{e.preventDefault();if(owner&&!blocked&&name.trim())saveName();}}><label className="field">レシピ帳名<input value={name} maxLength={40} disabled={!owner||blocked} onChange={e=>setName(e.target.value)}/></label></form><h3><UsersRound size={19}/>メンバー</h3>
       <div className="space-members">{members.filter(member=>member.active).map(member=><div className="space-member" key={member.user_id}><span className="space-member-avatar">{member.avatarUrl?<img src={member.avatarUrl} referrerPolicy="no-referrer" alt=""/>:member.name.slice(0,1)}</span><span>{member.name}{member.user_id===userId?'（あなた）':''}<small>{member.user_id===space?.owner_id?'作成者':'メンバー'}</small></span>{owner&&member.user_id!==userId&&<button disabled={blocked} aria-label={`${member.name}をメンバーから外す`} onClick={()=>removeMember(member)}><Trash2 size={18}/></button>}</div>)}</div>
       <p className="subtle">メンバー全員がレシピと買い物リストを編集できます。</p>
       {owner?<button className="secondary space-invite-button" disabled={blocked} onClick={event=>{setOrigin(panelOrigin(event.currentTarget));void run(async()=>{await issueInvite();open('invite');});}}><UserRoundPlus size={18}/>メンバーを招待</button>:<button className="text-action space-leave" disabled={blocked} onClick={leave}><LogOut size={18}/>レシピ帳から退出</button>}
     </div>;
   const panel=view&&(space||view==='create'||view==='join')?<>{view==='menu'?<SpaceDialog title="レシピ帳" closing={closing} onClose={()=>dismiss()} onExited={()=>afterExit.current()}><div className="space-options">
-    {spaces.map(s=><button key={s.id} aria-current={s.id===space?.id?'true':undefined} onClick={()=>{void run(async()=>{await onSelect(s.id);setView(null);});}}><span className="space-option-name">{s.name}<small>{`${s.member_count}人で共有`}{s.owner_id!==userId?' · 参加中':''}</small></span>{<UsersRound size={24} fill={s.id===space?.id?'currentColor':'none'}/>}</button>)}
-    <hr/><button onClick={event=>{setOrigin(panelOrigin(event.currentTarget));transition('create',()=>setName('うちのレシピ'));}}><span>レシピ帳を作成</span><Plus size={24}/></button>
-    <button onClick={event=>{setOrigin(panelOrigin(event.currentTarget));transition('join',()=>setPreview(null));}}><span>招待コードで参加</span><KeyRound size={23}/></button>
-    <button onClick={()=>dismiss(null,openSettings)}><span>このレシピ帳の設定</span><Settings size={23}/></button>
+    {spaces.map(s=><button key={s.id} aria-current={s.id===space?.id?'true':undefined} onClick={()=>{void run(async()=>{await onSelect(s.id);setView(null);});}}><HapticTouch/><span className="space-option-name">{s.name}<small>{`${s.member_count}人で共有`}{s.owner_id!==userId?' · 参加中':''}</small></span>{<UsersRound size={24} fill={s.id===space?.id?'currentColor':'none'}/>}</button>)}
+    <hr/><button onClick={event=>{setOrigin(panelOrigin(event.currentTarget));transition('create',()=>setName('うちのレシピ'));}}><HapticTouch/><span>レシピ帳を作成</span><Plus size={24}/></button>
+    <button onClick={event=>{setOrigin(panelOrigin(event.currentTarget));transition('join',()=>setPreview(null));}}><HapticTouch/><span>招待コードで参加</span><KeyRound size={23}/></button>
+    <button onClick={()=>dismiss(null,openSettings)}><HapticTouch/><span>このレシピ帳の設定</span><Settings size={23}/></button>
     {error&&<p className="form-error" role="alert">{error}</p>}
   </div></SpaceDialog>:<>{(view==='settings'||view==='invite')&&<Panel key="settings" className="recipe-space-panel recipe-book-settings-panel" title="レシピ帳の設定" icon={Settings} suspended={view==='invite'} closing={view==='settings'&&closing} onClose={back} onExited={()=>afterExit.current()}>{error&&view==='settings'&&<p className="form-error" role="alert">{error}</p>}{settingsContent}</Panel>}{view!=='settings'&&<Panel origin={origin} key={view} className="recipe-space-panel" title={view==='create'?(space?'レシピ帳を作成':'レシピ帳を作る'):view==='join'?(space?'招待コードで参加':'レシピ帳に参加する'):view==='invite'?'メンバーを招待':'レシピ帳の設定'} icon={view==='create'?Plus:view==='join'?KeyRound:view==='invite'?UserRoundPlus:Settings} closing={closing} onClose={back} onExited={()=>afterExit.current()}>
     {error&&<p className="form-error" role="alert">{error}</p>}

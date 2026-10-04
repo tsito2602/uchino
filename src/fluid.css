@@ -108,10 +108,19 @@
 @keyframes empty-arrive{from{opacity:0;transform:translateY(14px) scale(.98);filter:blur(6px)}to{opacity:1;transform:none;filter:blur(0)}}
 @media(prefers-reduced-motion:reduce){.route-page-enter *,.empty-state.empty-state-arriving{animation:none!important}}
 
-/* The recipe-book button sits on the page heading's line (40px shell padding +
-   half of the 31.5px heading - half of the 44px button). */
-.space-switcher{top:calc(env(safe-area-inset-top) + 34px)}
-@media(min-width:760px){.space-switcher{top:calc(env(safe-area-inset-top) + 52px)}}
+/* On the phone the heading starts just below the status bar, and the
+   recipe-book button sits centred on the heading's line (half of the 32px
+   heading minus half of the 44px button) in the same glass as the dock. The
+   demo badge rides on the count line so it never slides under that button. */
+:root{--page-top-gap:max(calc(env(safe-area-inset-top) + 10px),28px)}
+.shell{padding-top:0}
+.page-top.screen-page-top{padding-top:var(--page-top-gap)}
+.space-switcher{top:calc(var(--page-top-gap) - 6px);right:max(var(--page-side-gap),calc((100vw - 680px)/2));background:#ffffffc2!important;box-shadow:0 6px 22px #26221e12,inset 0 0 0 .5px #26221e0d;-webkit-backdrop-filter:blur(24px) saturate(1.18);backdrop-filter:blur(24px) saturate(1.18)}
+:root[data-brand-theme='dark'] .space-switcher{background:#2a2a29c2!important;box-shadow:0 6px 22px #00000040,inset 0 0 0 .5px #ffffff14}
+.page-meta{display:flex;align-items:center;gap:8px;margin-top:6px}
+.page-meta .page-count{margin-top:0}
+.page-meta .data-mode-badge{align-self:center;padding:2px 9px;font-size:11px;line-height:1.5}
+@media(min-width:760px){:root{--page-top-gap:calc(env(safe-area-inset-top) + 58px)}}
 
 /* Saved recipe landing, partner arrivals and the shared detail photo. */
 .landing-ghost,.landing-dissolve,.photo-ghost{position:fixed;z-index:400;margin:0;pointer-events:none;box-sizing:border-box}
