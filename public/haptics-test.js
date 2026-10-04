@@ -17,6 +17,8 @@ document.getElementById('b').onclick=()=>{fresh(document.head);log('B');};
 document.getElementById('c').onclick=()=>{fresh(document.body);log('C');};
 document.getElementById('d').onclick=()=>{fresh(document.head);setTimeout(()=>fresh(document.head),90);log('D');};
 document.getElementById('e').onclick=()=>{log('E vibrate='+(typeof navigator.vibrate==='function'?navigator.vibrate(12):'なし'));};
+for(const id of ['g','h','i','j'])document.getElementById(id).addEventListener('click',()=>log(id.toUpperCase()));
+document.querySelector('#k input').addEventListener('change',()=>{log('K ボタンの処理');document.getElementById('k').animate([{transform:'scale(1.03)'},{transform:'none'}],{duration:300});});
 log(navigator.userAgent);
 log('standalone='+(matchMedia('(display-mode: standalone)').matches||navigator.standalone===true));
 log('vibrate='+typeof navigator.vibrate);
