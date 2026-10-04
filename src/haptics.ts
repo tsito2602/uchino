@@ -4,7 +4,7 @@
 // iOS only honours this during a tap, so ticks after async work stay silent.
 export function haptic(){
   try{
-    if(typeof navigator.vibrate==='function'){navigator.vibrate(8);return;}
+    if(typeof navigator.vibrate==='function'){navigator.vibrate(12);return;}
     if(!/iP(hone|ad|od)/.test(navigator.userAgent)&&!(navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform)))return;
     const label=document.createElement('label'),input=document.createElement('input');
     input.type='checkbox';input.setAttribute('switch','');
