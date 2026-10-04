@@ -5,6 +5,8 @@ import {haptic} from './haptics';
 const stepWidths=['82%','66%','74%'];
 const depth=64;
 const limit=12;
+// Emerging: the swell peaks at PEAK, the drop flies for FLIGHT, then the wobble.
+const PEAK=240,FLIGHT=460,EMERGE=1300,SWELL=20;
 
 function useTyped(text:string,reduced:boolean){
   const [count,setCount]=useState(0);
@@ -30,7 +32,7 @@ export function ImportBubbleCard({progress}:{progress:ImportProgress}) {
   const shown=ingredients.slice(0,limit),extra=ingredients.length-shown.length;
     const level=done?0:recipe&&total?1-.75*Math.min(1,ingredients.length/total):1;
   const card=useRef<HTMLDivElement>(null),rising=useRef<HTMLDivElement>(null),items=useRef<HTMLUListElement>(null);
-  const surfacePath=useRef<SVGPathElement>(null),levelRef=useRef(level),targetRef=useRef(level);
+  const bumps=useRef<{x:number;at:number}[]>([]),surfacePath=useRef<SVGPathElement>(null),levelRef=useRef(level),targetRef=useRef(level);
   targetRef.current=level;
   const [landed,setLanded]=useState(0);
   const filter=`import-goo-${useId().replace(/[^a-zA-Z0-9]/g,'')}`;
@@ -38,10 +40,10 @@ export function ImportBubbleCard({progress}:{progress:ImportProgress}) {
   useLayoutEffect(()=>{
     if(!recipe)setLanded(0);
   },[recipe]);
-  // Every pill, label and step row is pulled straight up out of the liquid
-  // below its own place: a drop of liquid lifts it (the goo filter keeps the
-  // neck joined to the surface), it stretches as it rises and lands with a
-  // jelly wobble.
+  // Every pill, label and step row comes out of the liquid itself: the wave
+  // swells into a peak below its place, a drop pulls away from the peak (the goo
+  // filter keeps them joined at first), flies up and becomes the element, which
+  // lands with a jelly wobble.
   useLayoutEffect(()=>{
     const host=card.current,layer=rising.current;
     if(!host)return;
@@ -50,30 +52,38 @@ export function ImportBubbleCard({progress}:{progress:ImportProgress}) {
     const pillsList=items.current?[...items.current.children]:[];
     const land=(el:HTMLElement)=>{const index=pillsList.indexOf(el);if(index>=0)setLanded(value=>Math.max(value,index+1));};
     if(reduced||!layer||!host.animate){for(const el of fresh){el.dataset.emerged='';land(el);}return;}
-    const box=host.getBoundingClientRect(),surface=host.clientHeight-levelRef.current*depth;
+    const box=host.getBoundingClientRect(),surface=host.clientHeight-levelRef.current*depth,now=performance.now();
     fresh.forEach((el,order)=>{
       el.dataset.emerged='';
       const r=el.getBoundingClientRect(),y=r.top-box.top-host.clientTop,x=r.left-box.left-host.clientLeft;
-      const rise=Math.max(24,surface-y-r.height/2),delay=order*70;
-      const frames=(base:string)=>[
-        {transform:`${base} translateY(${rise}px) scale(.3,.42)`,opacity:0},
-        {transform:`${base} translateY(${rise*.55}px) scale(.62,.9)`,opacity:1,offset:.18},
-        {transform:`${base} translateY(-7px) scale(.86,1.16)`,offset:.56},
-        {transform:`${base} translateY(0) scale(1.14,.86)`,offset:.7},
-        {transform:`${base} scale(.95,1.06)`,offset:.82},
-        {transform:`${base} scale(1.03,.98)`,offset:.92},
-        {transform:`${base} scale(1)`,opacity:1},
-      ];
-      const timing={duration:920,delay,easing:'cubic-bezier(.3,.7,.4,1)'};
-      el.animate(frames(''),{...timing,fill:'backwards'}).onfinish=()=>land(el);
+      const pill=pillsList.includes(el),w=pill?r.width:Math.min(r.width,r.height+6),h=r.height;
+      const cx=x+w/2,delay=order*90;
+      bumps.current.push({x:cx,at:now+delay});
+      const total=EMERGE,landAt=(PEAK+FLIGHT)/total;
       el.style.opacity='1';
-      // Pills are liquid themselves: a drop the same shape lifts each one, merging
-      // into the wave at the start so it reads as pulled out of it.
-      if(!pillsList.includes(el))return;
+      el.animate([
+        {opacity:0,transform:'scale(.6,.5)'},
+        {opacity:0,transform:'scale(.6,.5)',offset:landAt-.02},
+        {opacity:1,transform:'scale(1.16,.8)',offset:landAt},
+        {transform:'scale(.93,1.08)',offset:landAt+(1-landAt)*.3},
+        {transform:'scale(1.04,.97)',offset:landAt+(1-landAt)*.58},
+        {transform:'scale(.99,1.01)',offset:landAt+(1-landAt)*.8},
+        {opacity:1,transform:'none'},
+      ],{duration:total,delay,easing:'linear',fill:'backwards'}).onfinish=()=>land(el);
+      // The drop: born at the peak of the swell, stretched as it leaves, the
+      // element's own size by the time it arrives.
       const drop=document.createElement('i');layer.appendChild(drop);
-      Object.assign(drop.style,{width:`${r.width}px`,height:`${r.height}px`,opacity:'0',transformOrigin:'50% 100%'});
-      const lift=frames(`translate(${x}px,${y}px)`);
-      const motion=drop.animate([...lift.slice(0,3).map(f=>({...f,opacity:1})),{...lift[3],opacity:0},{...lift[3],opacity:0,offset:1}],{...timing,fill:'forwards'});
+      const seed=14,top=surface-SWELL;
+      drop.style.opacity='0';
+      const at=(px:number,py:number,dw:number,dh:number)=>({transform:`translate(${px}px,${py}px)`,width:`${dw}px`,height:`${dh}px`});
+      const motion=drop.animate([
+        {opacity:0,...at(cx-seed/2,top+4,seed,seed)},
+        {opacity:1,...at(cx-seed/2,top-2,seed,seed),offset:PEAK/total*.7},
+        {opacity:1,...at(cx-seed*.4,top-seed*1.3,seed*.8,seed*1.5),offset:PEAK/total,easing:'cubic-bezier(.25,.75,.3,1)'},
+        {opacity:1,...at(x,y,w,h),offset:landAt},
+        {opacity:0,...at(x,y,w,h),offset:Math.min(1,landAt+.06)},
+        {opacity:0,...at(x,y,w,h)},
+      ],{duration:total,delay,fill:'forwards'});
       motion.onfinish=motion.oncancel=()=>drop.remove();
     });
   });
@@ -87,9 +97,12 @@ export function ImportBubbleCard({progress}:{progress:ImportProgress}) {
       levelRef.current+=(targetRef.current-levelRef.current)*.06;
       const level=levelRef.current,swell=Math.min(1,level*2.4),top=h-level*depth;
       let d=`M -10 ${h+10} L -10 ${top.toFixed(1)}`;
-      for(let x=-10;x<=w+10;x+=8){const y=top+swell*(7*Math.sin(x/42+t*2.4)+4*Math.sin(x/19-t*3.3));d+=` L ${x} ${y.toFixed(1)}`;}
+      // Each swell rises to a peak, lets the drop go and settles back with a dip.
+      bumps.current=bumps.current.filter(b=>now-b.at<PEAK+700);
+      const lift=bumps.current.map(b=>{const a=(now-b.at)/PEAK;return {x:b.x,h:a<0?0:a<1?SWELL*Math.sin(a*Math.PI/2):SWELL*Math.cos(Math.min(3,(a-1)*2.2))*Math.exp(-(a-1)*1.6)};});
+      for(let x=-10;x<=w+10;x+=6){let y=top+swell*(7*Math.sin(x/42+t*2.4)+4*Math.sin(x/19-t*3.3));for(const b of lift)y-=b.h*Math.exp(-(((x-b.x)/16)**2));d+=` L ${x} ${y.toFixed(1)}`;}
       path.setAttribute('d',`${d} L ${w+10} ${h+10} Z`);
-      if(level>.002||targetRef.current>0)frame=requestAnimationFrame(draw);
+      if(level>.002||targetRef.current>0||bumps.current.length)frame=requestAnimationFrame(draw);
       else path.setAttribute('d','');
     };
     frame=requestAnimationFrame(draw);
