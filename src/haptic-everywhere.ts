@@ -16,7 +16,7 @@ function equip(host:HTMLElement){
   let pressed=false;
   input.addEventListener('click',event=>{event.stopPropagation();pressed=true;});
   input.addEventListener('change',()=>{if(!pressed)return;pressed=false;host.click();});
-  if(getComputedStyle(host).position==='static')host.style.position='relative';
+  host.setAttribute('data-haptic-host','');
   host.appendChild(input);
 }
 
