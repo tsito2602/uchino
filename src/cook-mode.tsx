@@ -3,13 +3,14 @@ import type {Recipe} from './domain';
 import {IngredientAmountView} from './ingredient-amount-view';
 import {RecipeImage} from './recipe-image';
 import {StepText} from './step-text';
+import {stepIngredients} from './step-ingredients';
 
 // Cooking, one step at a time: large type, the ingredients this step uses at
 // the chosen servings, and the screen kept awake. Steps move from the dock or
 // with a sideways swipe.
 export function CookMode({recipe,servings,step,onStep}:{recipe:Recipe;servings:number;step:number;onStep:(step:number)=>void}){
   const text=recipe.steps[step]??'',total=recipe.steps.length;
-  const used=recipe.ingredients.filter(ingredient=>ingredient.name.length>0&&text.includes(ingredient.name));
+  const used=stepIngredients(recipe.ingredients,recipe.steps,step).map(index=>recipe.ingredients[index]);
   useWakeLock();
   const swipe=useRef<{x:number;y:number}|null>(null);
   return <div className="cook-mode"
