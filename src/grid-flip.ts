@@ -19,7 +19,7 @@ export function useGridFlip(list:RefObject<HTMLElement|null>,ids:string[],{conte
     previous.current={context,ids};cells.current=next;
     if(!root||!before||before.context!==context||!before.ids.length||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
     const kept=ids.filter(id=>old.has(id));
-    if(!kept.length||kept.length===ids.length&&ids.length===before.ids.length)return;
+    if(!kept.length||ids.join('|')===before.ids.join('|'))return;
     const viewport=window.innerHeight;let moved=0;
     for(const row of rows){
       const id=row.dataset.recipeId!,to=next.get(id)!,from=old.get(id);
