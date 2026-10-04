@@ -146,3 +146,4 @@
 .haptic-touch:disabled{pointer-events:none}
 :disabled>.haptic-touch{display:none}
 .fuse-add-options:focus{outline:none}
+img:not([src]){visibility:hidden}

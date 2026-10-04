@@ -7,7 +7,7 @@ export function finishBoot(){
   if(matchMedia('(prefers-reduced-motion: reduce)').matches){screen.remove();return;}
   let done=false;
   const leave=()=>{if(done)return;done=true;requestAnimationFrame(()=>{screen.classList.add('boot-leaving');window.setTimeout(()=>screen.remove(),LEAVE);});};
-  const last=[...screen.querySelectorAll('.boot-name span')].pop(),animation=last?.getAnimations?.()[0];
+  const last=[...screen.querySelectorAll('.boot-name [data-letter]')].pop(),animation=last?.getAnimations?.()[0];
   if(animation)void animation.finished.then(()=>window.setTimeout(leave,HOLD),leave);
   else window.setTimeout(leave,Math.max(0,2100-performance.now()));
   window.setTimeout(leave,LIMIT);
