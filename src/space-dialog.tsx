@@ -2,6 +2,8 @@ import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { animatePanelBackground } from './kondo-panel-motion';
 import { lockOverlayBackground } from './overlay-lock';
+import { openedByKeyboard } from './focus-intent';
+import { HapticTouch } from './haptic-touch';
 
 // Match FuseAddMenu's timing and reverse dismissal, anchored at the top right.
 export function SpaceDialog({title,children,onClose,closing,onExited}:{title:string;children:ReactNode;onClose:()=>void;closing:boolean;onExited:()=>void}) {
@@ -24,10 +26,7 @@ export function SpaceDialog({title,children,onClose,closing,onExited}:{title:str
    const chrome=node.querySelectorAll<HTMLElement>('.space-options hr');
    chrome.forEach(element=>animations.current.push(element.animate([{opacity:0},{opacity:1}],timing)));
   }
-  // Only a keyboard opening moves focus onto the first book; after a tap the
-  // dialog itself takes focus so no ring lights up around the book's name.
-  const keyboardOpen=!!previous?.matches(':focus-visible')&&!previous.classList.contains('haptic-touch');
-  (keyboardOpen?buttons[0]:node.querySelector<HTMLElement>('.space-menu'))?.focus({preventScroll:true});
+  (openedByKeyboard()?buttons[0]:node.querySelector<HTMLElement>('.space-menu'))?.focus({preventScroll:true});
   const keyboard=(event:KeyboardEvent)=>{
    if(event.key==='Escape'){event.preventDefault();close.current();return;}
    const index=buttons.indexOf(document.activeElement as HTMLButtonElement);
@@ -50,5 +49,5 @@ export function SpaceDialog({title,children,onClose,closing,onExited}:{title:str
   const timer=window.setTimeout(finish,450);
   return()=>{active=false;clearTimeout(timer);};
  },[closing]);
- return createPortal(<div className="space-overlay" ref={root}><div className="space-veil" onClick={onClose}/><section className="space-dialog space-menu" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>{children}</section></div>,document.body);
+ return createPortal(<div className="space-overlay" ref={root}><div className="space-veil" onClick={onClose}><HapticTouch/></div><section className="space-dialog space-menu" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>{children}</section></div>,document.body);
 }

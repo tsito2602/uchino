@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import type { LucideIcon } from 'lucide-react';
 import { animatePanelBackground } from './kondo-panel-motion';
 import { lockOverlayBackground } from './overlay-lock';
+import {openedByKeyboard} from './focus-intent';
 
 export type AddOption={id:string;label:string;icon:LucideIcon;onClick:()=>void};
 
@@ -38,7 +39,7 @@ export function FuseAddMenu({options,closing,onClose,onSelect,onExited}:{options
         ],{...timing,delay:(buttons.length-1-index)*25}));
       });
     }
-    buttons[0]?.focus({preventScroll:true});
+    (openedByKeyboard()?buttons[0]:node.querySelector<HTMLElement>('[role="menu"]')??node)?.focus({preventScroll:true});
     const keydown=(event:KeyboardEvent)=>{
       if(event.key==='Escape'){event.preventDefault();onClose();return;}
       const index=buttons.indexOf(document.activeElement as HTMLButtonElement);
@@ -70,7 +71,7 @@ export function FuseAddMenu({options,closing,onClose,onSelect,onExited}:{options
   },[closing]);
   return createPortal(<div className="fuse-add-overlay" ref={root}>
     <div className="fuse-add-veil" onClick={onClose}><HapticTouch/></div>
-    <div className="fuse-add-options" role="menu" aria-label="追加する項目">{options.map(option=>{
+    <div className="fuse-add-options" role="menu" aria-label="追加する項目" tabIndex={-1}>{options.map(option=>{
       const Icon=option.icon;
       return <button key={option.id} role="menuitem" onClick={()=>onSelect(option)}><HapticTouch/><span>{option.label}</span><Icon size={25} strokeWidth={1.8}/></button>;
     })}</div>
