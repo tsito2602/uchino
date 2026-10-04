@@ -4,6 +4,7 @@ import {AnimatePresence,motion,useIsPresent,useReducedMotion} from 'motion/react
 import {haptic} from './haptics';
 import {Check,Trash2} from 'lucide-react';
 import type {ShoppingItem} from './domain';
+import {aisleOf,aisles} from './shopping-aisle';
 
 const RELEASE='cubic-bezier(0.22,0.72,0.18,1)',REMOVE_AT=96;
 type ItemActions={disabled?:boolean;onToggle:(item:ShoppingItem)=>void;onRemove:(item:ShoppingItem)=>void};
@@ -74,17 +75,33 @@ function ShoppingEntry({item,index,disabled,onToggle,onRemove}:{item:ShoppingIte
           aria-label={`${[item.name,item.quantity].filter(Boolean).join(' ')}を${item.done?'未購入に戻す':'購入済みにする'}`}
           onClick={event=>{if(swipe.swiped.current){event.preventDefault();return;}haptic();onToggle(item);}}>
           <HapticTouch/><span className="shopping-check" aria-hidden="true">{item.done&&<Check size={15}/>}</span>
-          <span className="shopping-item-copy"><strong>{item.name}</strong>{item.quantity&&<span className="shopping-quantity">{item.quantity}</span>}</span>
+          <span className="shopping-item-copy"><strong>{item.name}</strong>{item.quantity&&<span className="shopping-quantity">{item.quantity}</span>}{item.recipes&&item.recipes.length>0&&<small className="shopping-sources">{item.recipes.join('・')}</small>}</span>
         </button>
         <button type="button" className="shopping-remove" aria-label={`${item.name}を削除`} disabled={disabled} onClick={()=>onRemove(item)}><Trash2 size={16}/></button>
       </div>
     </div>
   </motion.div>;
 }
-export function ShoppingList({items,label='今回の買い物',...actions}:{items:ShoppingItem[];label?:string}&ItemActions) {
+// Store order: on the list page, rows follow the aisles of a supermarket and a
+// thin label marks where each aisle starts. Labels are siblings of the rows so
+// the list stays flat for the row motion.
+function AisleLabel({name,index}:{name:string;index:number}){
+  const reduced=useReducedMotion();
+  return <motion.div className="shopping-aisle" aria-hidden="true"
+    initial={reduced?false:{height:0,opacity:0}} animate={{height:'auto',opacity:1}}
+    exit={{height:0,opacity:0,transition:{duration:reduced?0:.5,ease:[.22,.72,.18,1],delay:reduced?0:Math.min(index,8)*.045}}}
+    transition={{duration:reduced?0:.32,ease:[.22,1,.36,1]}}><span>{name}</span></motion.div>;
+}
+export function ShoppingList({items,label='今回の買い物',grouped=false,...actions}:{items:ShoppingItem[];label?:string;grouped?:boolean}&ItemActions) {
+  const rows:({kind:'aisle';name:string}|{kind:'item';item:ShoppingItem})[]=[];
+  if(grouped){
+    const order=items.map(item=>({item,aisle:aisleOf(item.name)})).sort((a,b)=>a.aisle-b.aisle);
+    let last:number=-1;
+    for(const {item,aisle} of order){if(aisle!==last){rows.push({kind:'aisle',name:aisles[aisle]});last=aisle;}rows.push({kind:'item',item});}
+  }else rows.push(...items.map(item=>({kind:'item' as const,item})));
   return <div className="shopping-list" role="list" aria-label={label}>
     <AnimatePresence initial={false}>
-      {items.map((item,index)=><ShoppingEntry key={item.id} item={item} index={index} {...actions}/>)}
+      {rows.map((row,index)=>row.kind==='aisle'?<AisleLabel key={`aisle-${row.name}`} name={row.name} index={index}/>:<ShoppingEntry key={row.item.id} item={row.item} index={index} {...actions}/>)}
     </AnimatePresence>
   </div>;
 }

@@ -29,7 +29,7 @@ export function recipePhoto(recipe:Recipe):string {
   if(recipe.title==='鶏肉ときのこのクリーム煮'&&recipe.memo.startsWith('デモ用レシピ。'))return demoPhotos.chicken;
   return '';
 }
-export type ShoppingItem = {id:string;name:string;quantity:string;done:boolean;createdAt:string};
+export type ShoppingItem = {id:string;name:string;quantity:string;done:boolean;createdAt:string;recipes?:string[]};
 export type Kind = 'recipe'|'shopping';
 export type RecordData = Recipe|ShoppingItem;
 export function newRecipe():Recipe { return {id:crypto.randomUUID(),title:'',category:'主菜',servings:2,minutes:null,ingredients:[{name:'',quantity:'',unit:''}],steps:[''],memo:'',sourceUrl:'',favorite:false,createdAt:new Date().toISOString(),photo:''}; }
@@ -70,7 +70,9 @@ export function validateRecord(kind:Kind,value:unknown):RecordData|null {
   if(!id||!/^[a-zA-Z0-9_-]+$/.test(id)||!createdAt||!Number.isFinite(Date.parse(createdAt)))return null;
   if(kind==='shopping'){
     const name=text(v.name,200),quantity=text(v.quantity,100);
-    return name&&quantity!==null&&typeof v.done==='boolean'?{id,name,quantity,done:v.done,createdAt}:null;
+    if(v.recipes!==undefined&&(!Array.isArray(v.recipes)||v.recipes.length>6||v.recipes.some(r=>!text(r,200))))return null;
+    const recipes=(v.recipes as string[]|undefined)?.map(r=>r.trim());
+    return name&&quantity!==null&&typeof v.done==='boolean'?{id,name,quantity,done:v.done,createdAt,...(recipes?.length?{recipes}:{})}:null;
   }
   const title=text(v.title,200),memo=text(v.memo,10000),sourceUrl=text(v.sourceUrl,2048);
   if(v.photo!==undefined&&!validRecipePhoto(v.photo))return null;

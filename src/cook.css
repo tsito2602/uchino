@@ -22,6 +22,8 @@
 .cook-progress span::after{content:"";position:absolute;inset:0;border-radius:inherit;background:var(--ink);transform:scaleX(0);transform-origin:left;transition:transform 520ms cubic-bezier(.22,.72,.18,1)}
 .cook-progress span[data-state]::after{transform:scaleX(1)}
 .cook-progress span[data-state=current]::after{opacity:.55}
+.cook-resumed{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;padding:8px 8px 8px 16px;border-radius:999px;font-size:13px;color:var(--muted);background:color-mix(in srgb,var(--ink) 5%,transparent);animation:status-in 460ms cubic-bezier(.22,.72,.18,1) both}
+.cook-resumed button{padding:6px 12px;border:0;border-radius:999px;font:inherit;font-weight:650;color:var(--ink);background:color-mix(in srgb,var(--ink) 8%,transparent)}
 .cook-step{display:flex;flex-direction:column;gap:22px;animation:cook-step-in 460ms cubic-bezier(.22,.72,.18,1) both}
 @keyframes cook-step-in{from{opacity:0;transform:translateY(14px);filter:blur(5px)}to{opacity:1;transform:none;filter:none}}
 .cook-step-text{margin:0;font-size:23px;line-height:1.75;letter-spacing:.01em;color:var(--ink);overflow-wrap:anywhere}
@@ -83,4 +85,4 @@
 .context-recipe .context-extra button{gap:5px;padding:0 4px}
 @media(max-width:380px){.context-recipe .context-extra button span{display:none}}
 @media(max-width:369px){.context-recipe .context-servings{grid-template-columns:44px 30px 44px}.context-recipe .context-servings small{display:none}}
-}
+.card-panel-frame[data-toned] .cook-progress{background:color-mix(in srgb,var(--photo-tone) 11%,var(--panel-header-tint))}
