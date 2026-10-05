@@ -23,6 +23,7 @@ import {photoTone} from './photo-tone';
 import {formatIngredientAmount} from './ingredient-amount';
 import {useRecords,synchronize,prepareData,rows} from './storage';
 import {demoScope,getDataMode,rememberDataMode,type DataMode} from './data-mode';
+import {demoDataAvailable,loadConfig} from './app-config';
 import {Dock,type Tab,type DockContext} from './dock';
 import {Panel} from './panel';
 import {FloatingViewport} from './floating-viewport';
@@ -57,8 +58,9 @@ export function App({session}:{session:Session}){
 }
 function ScopedApp({session,realScope,spaces,onReady}:{onReady:()=>void;session:Session;realScope:string;spaces:SpacesController}){
   const [mode,setMode]=useState<DataMode|null>(null),[tab,setTab]=useState<Tab>('recipes'),[error,setError]=useState(''),[attempt,setAttempt]=useState(0);
-  useEffect(()=>{let active=true;setError('');void prepareData(realScope).then(async legacy=>{
-    const selected=getDataMode(realScope)??(legacy?'demo':'real');
+  useEffect(()=>{let active=true;setError('');void Promise.all([prepareData(realScope),loadConfig()]).then(async ([legacy,config])=>{
+    // Outside staging nobody can switch, so a remembered demo choice falls back to real data.
+    const selected=demoDataAvailable(config)?getDataMode(realScope)??(legacy?'demo':'real'):'real';
     if(selected==='demo')await prepareData(demoScope(realScope));
     if(active){rememberDataMode(realScope,selected);setMode(selected);}
   }).catch(cause=>{if(active)setError(cause.message);});return()=>{active=false;};},[realScope,attempt]);
@@ -138,7 +140,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
     const timer=setInterval(()=>{if(document.visibilityState==='visible'&&navigator.onLine)void synchronize(realScope).catch(()=>{});},6000);
     return()=>clearInterval(timer);
   },[session.local,dataMode,tab,realScope]);
-  useEffect(()=>{void fetch('/api/config').then(r=>r.json() as Promise<{environment?:string;ai:boolean;demoImport:boolean}>).then(v=>{setAI(!!v.ai);setAllowDemo(v.demoImport===true);setStaging(v.environment==='staging');}).catch(()=>{});},[]);
+  useEffect(()=>{void loadConfig().then(v=>{setAI(!!v.ai);setAllowDemo(v.demoImport===true);setStaging(v.environment==='staging');});},[]);
   useEffect(()=>{if(!notice||shoppingUndo?.message===notice)return;const timer=setTimeout(()=>setNotice(''),4500);return()=>clearTimeout(timer);},[notice,shoppingUndo]);
   useEffect(()=>{if(!shoppingUndo)return;const timer=setTimeout(()=>{setShoppingUndo(null);setNotice(current=>current===shoppingUndo.message?'':current);},Math.max(0,shoppingUndo.expiresAt-Date.now()));return()=>clearTimeout(timer);},[shoppingUndo]);
   useEffect(()=>{
@@ -227,7 +229,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
       {!store.ready&&!store.error&&<p className="subtle" role="status">読み込んでいます…</p>}
       {tab==='recipes'&&<>
         {offerInvite&&spaces.space&&!session.local&&dataMode==='real'&&spaces.space.owner_id===session.user.id&&spaces.space.member_count===1&&<PartnerOffer spaceId={spaces.space.id} onInvite={source=>spaceControls.openInvite(source)} onJoin={source=>spaceControls.openJoin(source)}/>}
-        {listed.length?<div className="recipe-list" ref={recipeList}>{listed.map(recipe=><article className="recipe-row" key={recipe.id} data-recipe-id={recipe.id}><button className="recipe-open" {...peek.bind(recipe)} onClick={e=>{if(peek.swallow())return;rememberCardPhoto(e.currentTarget);setServings(recipe.servings);setChecked([]);open({kind:'detail',id:recipe.id,origin:panelOrigin(e.currentTarget)});}}><RecipePhoto recipe={recipe}/><span className="recipe-category"><RecipeCategoryIcon category={recipe.category}/>{recipe.category}</span>{cookingToday(recipe,today)&&<span className="recipe-today"><CookingPot size={11} strokeWidth={2.4} aria-hidden="true"/>今日つくる</span>}<div className="recipe-row-copy"><h2><PhraseText text={recipe.title}/></h2>{recipe.minutes&&<p><span><Clock size={13}/>{recipe.minutes}分</span></p>}</div></button><RecipeFavorite recipe={recipe} onToggle={()=>void store.save('recipe',{...recipe,favorite:!recipe.favorite}).catch(e=>store.setError(e.message))}/></article>)}</div>:store.ready&&<div className="empty-state">{bookCount?<Search size={36} strokeWidth={1.4} aria-hidden="true"/>:<RiceBowl className="empty-recipe-symbol" size={44} strokeWidth={1.4} aria-hidden="true"/>}<h2>{bookCount?'レシピが見つかりません':'また作りたい、をここに。'}</h2><p>{bookCount?'検索条件を変えてみてください。':'お気に入りの一品から、レシピ帳を育てよう。'}</p>{bookCount>0&&filterCount>0&&<button className="primary" onClick={()=>{setQuery('');setSelectedCategories([]);setFavorites(false);}}><RotateCcw size={18}/>条件をはずす</button>}{!bookCount&&<><button className="primary" onClick={()=>setMenuPhase('open')}><Plus size={18}/>レシピを追加</button>{dataMode==='real'&&<button className="text-action" disabled={busy} onClick={()=>void selectDataMode('demo')}>サンプルを見てみる</button>}</>}</div>}</>}
+        {listed.length?<div className="recipe-list" ref={recipeList}>{listed.map(recipe=><article className="recipe-row" key={recipe.id} data-recipe-id={recipe.id}><button className="recipe-open" {...peek.bind(recipe)} onClick={e=>{if(peek.swallow())return;rememberCardPhoto(e.currentTarget);setServings(recipe.servings);setChecked([]);open({kind:'detail',id:recipe.id,origin:panelOrigin(e.currentTarget)});}}><RecipePhoto recipe={recipe}/><span className="recipe-category"><RecipeCategoryIcon category={recipe.category}/>{recipe.category}</span>{cookingToday(recipe,today)&&<span className="recipe-today"><CookingPot size={11} strokeWidth={2.4} aria-hidden="true"/>今日つくる</span>}<div className="recipe-row-copy"><h2><PhraseText text={recipe.title}/></h2>{recipe.minutes&&<p><span><Clock size={13}/>{recipe.minutes}分</span></p>}</div></button><RecipeFavorite recipe={recipe} onToggle={()=>void store.save('recipe',{...recipe,favorite:!recipe.favorite}).catch(e=>store.setError(e.message))}/></article>)}</div>:store.ready&&<div className="empty-state">{bookCount?<Search size={36} strokeWidth={1.4} aria-hidden="true"/>:<RiceBowl className="empty-recipe-symbol" size={44} strokeWidth={1.4} aria-hidden="true"/>}<h2>{bookCount?'レシピが見つかりません':'また作りたい、をここに。'}</h2><p>{bookCount?'検索条件を変えてみてください。':'お気に入りの一品から、レシピ帳を育てよう。'}</p>{bookCount>0&&filterCount>0&&<button className="primary" onClick={()=>{setQuery('');setSelectedCategories([]);setFavorites(false);}}><RotateCcw size={18}/>条件をはずす</button>}{!bookCount&&<><button className="primary" onClick={()=>setMenuPhase('open')}><Plus size={18}/>レシピを追加</button>{staging&&dataMode==='real'&&<button className="text-action" disabled={busy} onClick={()=>void selectDataMode('demo')}>サンプルを見てみる</button>}</>}</div>}</>}
       {tab==='shopping'&&<>{shoppingList('今回の買い物',true)}{!shopping.length&&<div className={`empty-state${shoppingEmptied?' empty-state-arriving':''}`} onAnimationEnd={event=>{if(event.target===event.currentTarget)setShoppingEmptied(false);}}><ShoppingBasket size={40} strokeWidth={1.4} aria-hidden="true"/><h2>買うものをまとめよう</h2><p>レシピの材料からも追加できます。</p><button className="primary" onClick={()=>open({kind:'shopping'})}><Plus size={18}/>買うものを追加</button></div>}</>}
       {tab==='settings'&&formError&&<p className="form-error" role="alert">{formError}</p>}
       {tab==='settings'&&<SettingsPage onSpaceSettings={spaceControls.openSettings} session={session} staging={staging} pending={pending} updateReady={updateReady} dataMode={dataMode} changingData={busy} onDataMode={mode=>void selectDataMode(mode)}
