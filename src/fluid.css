@@ -117,7 +117,13 @@
    recipe-book button sits centred on the heading's line (half of the 32px
    heading minus half of the 44px button) in the same glass as the dock. The
    demo badge rides on the count line so it never slides under that button. */
-:root{--page-top-gap:max(calc(env(safe-area-inset-top) + 10px),28px)}
+/* Installed on an iPhone (iOS 26+), the system lays a blur about 38pt deep
+   under the status bar over whatever sits there, and safe-area-inset-top stays
+   0. --top-clear keeps headings, controls and panel headers below that band;
+   content scrolled into it fades like it does in native apps. */
+:root{--top-clear:env(safe-area-inset-top)}
+@media(display-mode:standalone){:root{--top-clear:calc(env(safe-area-inset-top) + 40px)}}
+:root{--page-top-gap:max(calc(var(--top-clear) + 10px),28px)}
 .shell{padding-top:0}
 .page-top.screen-page-top{padding-top:var(--page-top-gap)}
 .space-switcher,.space-menu{top:calc(var(--page-top-gap) - 6px);right:max(var(--page-side-gap),calc((100vw - 680px)/2))}
@@ -126,7 +132,7 @@
 .page-meta{display:flex;align-items:center;gap:8px;margin-top:6px}
 .page-meta .page-count{margin-top:0}
 .page-meta .data-mode-badge{align-self:center;padding:2px 9px;font-size:11px;line-height:1.5}
-@media(min-width:760px){:root{--page-top-gap:calc(env(safe-area-inset-top) + 58px)}}
+@media(min-width:760px){:root{--page-top-gap:calc(var(--top-clear) + 58px)}}
 
 /* Saved recipe landing, partner arrivals and the shared detail photo. */
 .landing-ghost,.landing-dissolve,.photo-ghost{position:fixed;z-index:400;margin:0;pointer-events:none;box-sizing:border-box}
