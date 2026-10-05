@@ -118,6 +118,11 @@
    heading minus half of the 44px button) in the same glass as the dock. The
    demo badge rides on the count line so it never slides under that button. */
 :root{--page-top-gap:max(calc(env(safe-area-inset-top) + 10px),28px)}
+/* Installed on an iPhone (iOS 26+), the system smears whatever sits just under
+   the status bar unless a fixed, opaque, full-width box covers the top edge;
+   then it simply uses that box's colour. This one is that box, kept above every
+   layer of the app so it is always the one found at the edge. */
+@media(display-mode:standalone){#status-bar-cover{position:fixed;top:0;left:0;right:0;z-index:9000;height:max(env(safe-area-inset-top),12px);background:var(--canvas)}}
 .shell{padding-top:0}
 .page-top.screen-page-top{padding-top:var(--page-top-gap)}
 .space-switcher,.space-menu{top:calc(var(--page-top-gap) - 6px);right:max(var(--page-side-gap),calc((100vw - 680px)/2))}
