@@ -1,5 +1,13 @@
+// A 401 never surfaces as a sync error: local edits stay pending and the
+// sign-in gate re-checks the session (showing the login screen if needed).
+export const SESSION_EXPIRED='SessionExpired';
+export function sessionExpired():Error{
+  if(typeof window!=='undefined')window.dispatchEvent(new Event('uchino:session-expired'));
+  const error=new Error('');error.name=SESSION_EXPIRED;return error;
+}
+export const visibleSyncError=(error:unknown)=>error instanceof Error&&error.name!==SESSION_EXPIRED?error.message:'';
 export async function syncFailure(response:Response):Promise<Error>{
-  if(response.status===401)return new Error('ログインの有効期限が切れています。再ログインすると、端末に保存した変更を同期できます。');
+  if(response.status===401)return sessionExpired();
   if(response.status===403){if(typeof window!=='undefined')window.dispatchEvent(new Event('uchino:spaces-refresh'));return new Error('このレシピ帳へのアクセス権がなくなりました。レシピ帳を切り替えてください。');}
   if(response.status===409){
     const body=await response.json().catch(()=>null) as {code?:string}|null;

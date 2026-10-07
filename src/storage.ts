@@ -2,7 +2,7 @@ import {scopeRequest} from './spaces';
 import {useEffect,useState} from 'react';
 import {validateRecord,recipePhoto,type Kind,type RecordData,type Recipe} from './domain';
 import {samples} from './samples';
-import {syncFailure} from './sync-error';
+import {syncFailure,visibleSyncError} from './sync-error';
 import {demoScope,isLegacyDemoRecipe,localOnlyScope} from './data-mode';
 import {cacheUploadedPhotos,cacheRemotePhotos,hasEmbeddedPhotos} from './photo-cache';
 export type Row = {key:string;kind:Kind;id:string;data:RecordData;revision:number;deleted:boolean;pending:boolean;editId:string;photoMigration?:boolean};
@@ -119,8 +119,8 @@ export function synchronize(scope:string):Promise<void>{
 export function useRecords(scope:string,autoSync=true){
   const [data,setData]=useState<Row[]>([]),[ready,setReady]=useState(false),[error,setError]=useState('');
   useEffect(()=>{let active=true;const load=()=>{void prepareData(scope).then(()=>rows(scope)).then(v=>{if(active){setData(v);setReady(true);}}).catch(e=>{if(active)setError(String(e.message));});};load();window.addEventListener(eventName,load);return()=>{active=false;window.removeEventListener(eventName,load);};},[scope]);
-  useEffect(()=>{if(!autoSync)return;let active=true;const sync=()=>{void synchronize(scope).then(()=>{if(active)setError('');}).catch(e=>{if(active)setError(e.message);});};sync();window.addEventListener('online',sync);window.addEventListener('focus',sync);const timer=setInterval(sync,30000);return()=>{active=false;clearInterval(timer);window.removeEventListener('online',sync);window.removeEventListener('focus',sync);};},[scope,autoSync]);
-  async function save(kind:Kind,record:RecordData,deleted=false){await saveRecord(scope,kind,record,deleted);void synchronize(scope).then(()=>setError('')).catch(e=>setError(e.message));}
-  async function saveMany(kind:Kind,records:RecordData[],deleted=false){await saveRecords(scope,kind,records,deleted);void synchronize(scope).then(()=>setError('')).catch(e=>setError(e.message));}
+  useEffect(()=>{if(!autoSync)return;let active=true;const sync=()=>{void synchronize(scope).then(()=>{if(active)setError('');}).catch(e=>{if(active)setError(visibleSyncError(e));});};sync();window.addEventListener('online',sync);window.addEventListener('focus',sync);const timer=setInterval(sync,30000);return()=>{active=false;clearInterval(timer);window.removeEventListener('online',sync);window.removeEventListener('focus',sync);};},[scope,autoSync]);
+  async function save(kind:Kind,record:RecordData,deleted=false){await saveRecord(scope,kind,record,deleted);void synchronize(scope).then(()=>setError('')).catch(e=>setError(visibleSyncError(e)));}
+  async function saveMany(kind:Kind,records:RecordData[],deleted=false){await saveRecords(scope,kind,records,deleted);void synchronize(scope).then(()=>setError('')).catch(e=>setError(visibleSyncError(e)));}
   return {rows:data.filter(r=>!r.deleted),allRows:data,ready,error,setError,save,saveMany,pending:data.filter(r=>r.pending).length};
 }

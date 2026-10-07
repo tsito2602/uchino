@@ -1,6 +1,7 @@
 import {useCallback,useEffect,useState} from 'react';
 import type {Session} from './auth';
 import {type RecipeSpace} from './spaces';
+import {sessionExpired,visibleSyncError} from './sync-error';
 
 export function useSpaces(session:Session){
   const userId=session.user.id,cacheKey=`uchino-spaces-${userId}`,selectionKey=`uchino-space-${userId}`;
@@ -10,6 +11,7 @@ export function useSpaces(session:Session){
   const api=useCallback(async<T,>(path:string,options:RequestInit={}):Promise<T>=>{
     const response=await fetch(`/api/spaces${path}`,{...options,cache:'no-store',headers:{'Content-Type':'application/json','X-Uchino-User':userId,...options.headers},signal:AbortSignal.timeout(15000)});
     const result=await response.json().catch(()=>null) as {error?:string}|null;
+    if(response.status===401)throw sessionExpired();
     if(!response.ok)throw new Error(result?.error||'レシピ帳を取得できませんでした。');
     return result as T;
   },[userId]);
@@ -20,7 +22,7 @@ export function useSpaces(session:Session){
       if(!Array.isArray(result.spaces))throw new Error('レシピ帳を確認できませんでした。');
       setSpaces(result.spaces);setError('');
       try{localStorage.setItem(cacheKey,JSON.stringify(result.spaces));}catch{}
-    }catch(cause){setError(cause instanceof Error?cause.message:'レシピ帳を取得できませんでした。');throw cause;}
+    }catch(cause){setError(cause instanceof Error?visibleSyncError(cause):'レシピ帳を取得できませんでした。');throw cause;}
     finally{setReady(true);}
   },[session.local,api,userId,cacheKey]);
   useEffect(()=>{let active=true;const load=()=>{if(active)void refresh().catch(()=>{});};load();window.addEventListener('online',load);window.addEventListener('focus',load);window.addEventListener('uchino:spaces-refresh',load);const timer=setInterval(load,30000);return()=>{active=false;clearInterval(timer);window.removeEventListener('online',load);window.removeEventListener('focus',load);window.removeEventListener('uchino:spaces-refresh',load);};},[refresh]);

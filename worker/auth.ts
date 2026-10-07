@@ -14,7 +14,10 @@ export type AuthUser = { id: string; email: string; name: string; avatarUrl?: st
 type AuthEnv = { Bindings: AuthBindings };
 const SESSION_COOKIE = '__Host-uchino_session';
 const FLOW_COOKIE = '__Host-uchino_oauth';
-const SESSION_SECONDS = 86400;
+// Rolling session: any signed-in request older than an hour gets a fresh
+// cookie, so people who use the app keep their login instead of expiring daily.
+const SESSION_SECONDS = 30 * 86400;
+const SESSION_REFRESH_SECONDS = 3600;
 const FLOW_SECONDS = 600;
 const cookieOptions = { httpOnly: true, secure: true, sameSite: 'Lax' as const, path: '/' };
 const googleKeys = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
@@ -40,6 +43,10 @@ export async function sessionUser<E extends AuthEnv>(c: Context<E>): Promise<Aut
   try {
     const payload = await verify(value, c.env, new URL(c.req.url).origin, 'session');
     if (typeof payload.sub !== 'string' || !payload.sub || typeof payload.email !== 'string' || !allowed(payload.email, c.env)) return null;
+    if (Date.now() / 1000 - (payload.iat ?? 0) > SESSION_REFRESH_SECONDS) {
+      const { sub, email, name, picture } = payload;
+      setCookie(c, SESSION_COOKIE, await token({ sub, email, name, ...(picture ? { picture } : {}) }, c.env, new URL(c.req.url).origin, 'session', SESSION_SECONDS), { ...cookieOptions, maxAge: SESSION_SECONDS });
+    }
     return { id: payload.sub, email: payload.email, name: providerName(payload.name), avatarUrl: googleAvatar(payload.picture) };
   } catch { return null; }
 }
