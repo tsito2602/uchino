@@ -22,6 +22,7 @@ import {categories,cookingToday,newRecipe,recipePhoto,todayKey,validateRecord,ty
 import {photoTone} from './photo-tone';
 import {formatIngredientAmount} from './ingredient-amount';
 import {useRecords,synchronize,prepareData,rows} from './storage';
+import {visibleSyncError} from './sync-error';
 import {demoScope,getDataMode,rememberDataMode,type DataMode} from './data-mode';
 import {demoDataAvailable,loadConfig} from './app-config';
 import {Dock,type Tab,type DockContext} from './dock';
@@ -233,7 +234,7 @@ function RecipeApp({session,realScope,dataMode,onDataMode,tab,onTab,spaces,onRea
       {tab==='shopping'&&<>{shoppingList('今回の買い物',true)}{!shopping.length&&<div className={`empty-state${shoppingEmptied?' empty-state-arriving':''}`} onAnimationEnd={event=>{if(event.target===event.currentTarget)setShoppingEmptied(false);}}><ShoppingBasket size={40} strokeWidth={1.4} aria-hidden="true"/><h2>買うものをまとめよう</h2><p>レシピの材料からも追加できます。</p><button className="primary" onClick={()=>open({kind:'shopping'})}><Plus size={18}/>買うものを追加</button></div>}</>}
       {tab==='settings'&&formError&&<p className="form-error" role="alert">{formError}</p>}
       {tab==='settings'&&<SettingsPage onSpaceSettings={spaceControls.openSettings} session={session} staging={staging} pending={pending} updateReady={updateReady} dataMode={dataMode} changingData={busy} onDataMode={mode=>void selectDataMode(mode)}
-        onSync={()=>synchronize(realScope).then(()=>{store.setError('');},e=>{store.setError(e.message);throw e;})}
+        onSync={()=>synchronize(realScope).then(()=>{store.setError('');},e=>{store.setError(visibleSyncError(e));throw e;})}
         onUpdate={()=>void canLeave().then(allowed=>allowed?(updateReady?applyUpdate():checkUpdate()).then(found=>{setUpdateReady(!!found);}):undefined).catch(()=>setFormError('更新を確認できませんでした'))}
         onLogout={()=>void canLeave().then(allowed=>allowed?session.logout():undefined).catch(e=>store.setError(e.message))}/>}
       </div>
