@@ -160,3 +160,12 @@ test('authenticated YouTube NDJSON import preserves phases and timestamps, and s
  const records=(await (await request('/api/data',{headers:{Cookie:auth}})).json()).records;
  assert.deepEqual(records.find(row=>row.id===result.recipe.id).data.stepVideoSeconds,[12,65]);
 });
+test('active sessions roll forward instead of expiring daily',async()=>{
+ const sign=iat=>new SignJWT({sub:'user-a',email:'a@example.test',name:'user-a',purpose:'session'}).setProtectedHeader({alg:'HS256'}).setIssuer('uchino').setAudience('https://example.test').setIssuedAt(iat).setExpirationTime(iat+86400).sign(new TextEncoder().encode(env.SESSION_SECRET));
+ const now=Math.floor(Date.now()/1000);
+ const fresh=await request('/api/auth/session',{headers:{Cookie:`__Host-uchino_session=${await sign(now)}`}});
+ assert.equal(fresh.headers.get('Set-Cookie'),null);
+ const old=await request('/api/auth/session',{headers:{Cookie:`__Host-uchino_session=${await sign(now-7200)}`}});
+ assert.ok((await old.json()).user);
+ assert.match(old.headers.get('Set-Cookie')||'',/__Host-uchino_session=.*Max-Age=2592000/);
+});

@@ -11,6 +11,9 @@ export function AuthGate({children}:{children:(session:Session)=>ReactNode}){
     const reason=new URL(location.href).searchParams.get('auth_error');if(reason){setError(reason==='not_allowed'?'このアカウントには利用権限がありません。':'ログインできませんでした。もう一度お試しください。');history.replaceState(null,'','/');}
     return()=>controller.abort();
   },[]);
+  // A request came back 401: ask the server once more and, only if the session
+  // is really gone, fall back to the sign-in screen. Local edits stay pending.
+  useEffect(()=>{if(!user)return;let checking=false;const recheck=()=>{if(checking||!navigator.onLine)return;checking=true;void fetch('/api/auth/session',{cache:'no-store',signal:AbortSignal.timeout(10000)}).then(async response=>{if(!response.ok)return;const session=await response.json() as {user:User|null};if(!session.user){localStorage.removeItem('uchino-last-user');setUser(null);}}).catch(()=>{}).finally(()=>{checking=false;});};window.addEventListener('uchino:session-expired',recheck);return()=>window.removeEventListener('uchino:session-expired',recheck);},[user]);
   async function logout(){if(user){const response=await fetch('/api/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});if(!response.ok)throw new Error('ログアウトできませんでした。');}localStorage.removeItem('uchino-last-user');localStorage.removeItem('uchino-device-mode');setUser(null);setLocal(false);}
   if(loading)return <main className="login"><p className="login-status" role="status">ログイン状態を確認しています…</p></main>;
   if(user||local)return <>{children({user:user??{id:'guest',email:'',name:'この端末'},local:!user,logout})}</>;
